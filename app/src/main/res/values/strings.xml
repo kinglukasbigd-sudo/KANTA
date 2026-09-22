@@ -3,4 +3,28 @@
 <resources>
     <string name="app_name">Канта</string>
     <string name="map_placeholder">Мапата доаѓа наскоро</string>
+
+    <!-- Container status (§5.1) -->
+    <string name="status_ok">Во ред</string>
+    <string name="status_full">Полн</string>
+    <string name="status_broken">Оштетен</string>
+    <string name="status_destroyed">Уништен</string>
+    <string name="status_missing">Недостасува</string>
+
+    <!-- The three bottom-sheet actions (§4.1) -->
+    <string name="action_full">Полн</string>
+    <string name="action_report">Пријави</string>
+    <string name="action_suggest">Предложи</string>
+    <string name="action_retry">Обиди се повторно</string>
+    <string name="action_cancel">Откажи</string>
+    <string name="action_send">Испрати</string>
+
+    <!-- Shared states (§8) -->
+    <string name="state_offline_title">Нема интернет</string>
+    <string name="state_offline_message">Ќе се испрати кога ќе се вратиш онлајн.</string>
+
+    <!-- Theme (§4.2 settings) -->
+    <string name="theme_system">Системска</string>
+    <string name="theme_light">Светла</string>
+    <string name="theme_dark">Темна</string>
 </resources>

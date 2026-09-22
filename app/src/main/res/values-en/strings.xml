@@ -2,4 +2,24 @@
 <resources>
     <string name="app_name">Kanta</string>
     <string name="map_placeholder">The map is coming soon</string>
+
+    <string name="status_ok">OK</string>
+    <string name="status_full">Full</string>
+    <string name="status_broken">Damaged</string>
+    <string name="status_destroyed">Destroyed</string>
+    <string name="status_missing">Missing</string>
+
+    <string name="action_full">Full</string>
+    <string name="action_report">Report</string>
+    <string name="action_suggest">Suggest</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_send">Send</string>
+
+    <string name="state_offline_title">No connection</string>
+    <string name="state_offline_message">It will be sent when you are back online.</string>
+
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>

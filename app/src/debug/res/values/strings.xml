@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug-only strings; deliberately untranslated (developer-facing, never shipped). -->
+<resources>
+    <string name="debug_gallery_title" translatable="false">Kanta Design</string>
+</resources>

@@ -2,4 +2,24 @@
 <resources>
     <string name="app_name">Kanta</string>
     <string name="map_placeholder">Harta po vjen së shpejti</string>
+
+    <string name="status_ok">Në rregull</string>
+    <string name="status_full">Plot</string>
+    <string name="status_broken">I dëmtuar</string>
+    <string name="status_destroyed">I shkatërruar</string>
+    <string name="status_missing">Mungon</string>
+
+    <string name="action_full">Plot</string>
+    <string name="action_report">Raporto</string>
+    <string name="action_suggest">Sugjero</string>
+    <string name="action_retry">Provo përsëri</string>
+    <string name="action_cancel">Anulo</string>
+    <string name="action_send">Dërgo</string>
+
+    <string name="state_offline_title">Pa lidhje</string>
+    <string name="state_offline_message">Do të dërgohet kur të rikthehesh online.</string>
+
+    <string name="theme_system">Sistemi</string>
+    <string name="theme_light">E ndritshme</string>
+    <string name="theme_dark">E errët</string>
 </resources>

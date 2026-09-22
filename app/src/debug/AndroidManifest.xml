@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only additions. This source set is not part of a release build, so the design gallery
+  and its launcher entry cannot ship to users (KANTA_SPEC.md §8).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name="mk.kanta.app.debug.DesignGalleryActivity"
+            android:exported="true"
+            android:label="@string/debug_gallery_title"
+            android:theme="@style/Theme.Kanta">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

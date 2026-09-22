@@ -14,4 +14,10 @@ object Spacing {
 
     /** Screen side padding. */
     val screenHorizontal = 20.dp
+
+    /** Spec §8: every touch target is at least this tall. */
+    val minTouchTarget = 48.dp
+
+    /** Spec §3.3: separate things with 1dp hairlines, not elevation. */
+    val hairline = 1.dp
 }
