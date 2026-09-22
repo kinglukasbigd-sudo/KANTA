@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple bin glyph: lid + body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,30h24v5h-24z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M36,38h36l-3,36a4,4 0 0,1 -4,4h-22a4,4 0 0,1 -4,-4z" />
+</vector>

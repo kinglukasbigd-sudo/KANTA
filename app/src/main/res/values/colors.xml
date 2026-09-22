@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the values the platform (not Compose) needs. Source of truth: core/designsystem/Color.kt -->
+<resources>
+    <color name="background">#F3F5F2</color>
+    <color name="brand">#1F5A3A</color>
+</resources>

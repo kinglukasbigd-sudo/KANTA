@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android"
+    android:defaultLocale="mk">
+    <locale android:name="mk" />
+    <locale android:name="sq" />
+    <locale android:name="en" />
+</locale-config>

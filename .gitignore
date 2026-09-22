@@ -1,0 +1,37 @@
+# ---- Secrets: never commit ----
+local.properties
+*.jks
+*.keystore
+keystore.properties
+secrets.properties
+google-services.json
+
+# ---- Gradle ----
+.gradle/
+build/
+captures/
+.cxx/
+*.hprof
+
+# ---- Android ----
+/app/release/
+/app/debug/
+*.apk
+*.aab
+*.ap_
+*.dex
+output.json
+release/
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+Thumbs.db
+
+# ---- Kotlin / misc ----
+.kotlin/
+*.log
+local.log

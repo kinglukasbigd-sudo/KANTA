@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Default locale = Macedonian (KANTA_SPEC.md §2). English lives in values-en. -->
+<resources>
+    <string name="app_name">Канта</string>
+    <string name="map_placeholder">Мапата доаѓа наскоро</string>
+</resources>
