@@ -98,6 +98,14 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 - Clustering below zoom 14: soft circle with count; cluster colour = worst status inside (red > orange > green).
 - Selected marker: scales 1.4× with a soft halo in brand colour.
 - A report < 1h old: one-time gentle pulse ring.
+- **Verified vs unverified (4.6).** Governing principle: **filled = it exists, hollow = it's gone.** The two dashed
+  treatments on the map must never be confusable:
+  - **MISSING** — hollow shape, **no fill**, dashed grey (`#8A918C`) outline. The container is gone.
+  - **UNVERIFIED** — normal **filled** shape in its normal type/status colour at **85% opacity**, plus a **1.5dp dashed
+    border** (white in light theme, `#0F1411` in dark) and a tiny **"?" badge** in the top-right corner. The badge is
+    drawn only at **zoom ≥ 16**, so at city zoom an unverified container still reads as an ordinary container.
+  An unverified container can hold any status, so UNVERIFIED composes with the status colours above rather than
+  replacing them; a user-added container reported missing is hollow like any other missing one.
 - Implement markers as MapLibre symbol/circle layers from a GeoJSON source (NOT hundreds of Android views) so it stays fast with 10,000+ points. Generate marker bitmaps once and register them as style images.
 
 ---
@@ -124,6 +132,7 @@ Tapping a container marker opens a **container detail sheet** (replaces the menu
 
 ### 4.2 Auth
 - Browsing is free. First time a user taps Full / Report / Suggest / vote → login sheet: email → 6-digit code → pick display name (+ optional municipality). Then continue the action they started (never lose their intent).
+- **Never interrupt the user's intent.** The "Map your street" prompt (4.6) — or any other post-login prompt — only appears once the action that triggered the login has been completed or cancelled. It is never shown between login and that action.
 - Profile: display name, municipality, language, theme, notification toggles, sign out, delete account (required by Play Store).
 
 ### 4.3 Report flow — camera first, 3 taps
@@ -143,7 +152,7 @@ Tap **Suggest** → map in pick mode with a centre crosshair → confirm spot �
 **Goal:** every logged-in user helps check that the containers and cans near them are on the map. This spreads the work of mapping all of Skopje across many people instead of only the admin (Ivan).
 
 **When it appears**
-- Right after the user's first login (after choosing a display name), and again later only if the user hasn't done a check in 30 days AND is in an area with no recent check (see "area checks"). Never more than once per app session. Always skippable ("Later").
+- Right after the user's first login (after choosing a display name) — but only once the action that triggered the login has been completed or cancelled, never in the middle of it (see 4.2, "never interrupt the user's intent"). If the user logged in to send a report, they finish the report first and see this afterwards. Again later only if the user hasn't done a check in 30 days AND is in an area with no recent check (see "area checks"). Never more than once per app session. Always skippable ("Later").
 - Also permanently available in the bottom sheet under "My reports & profile" → "Map your street".
 
 **The check flow**
@@ -183,7 +192,7 @@ area_checks(id uuid pk, user_id uuid fk, geom geography(point), radius_m int def
 ```
 **RPC additions:** `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` (enforces 30 m, duplicate radius, the 2-container limit unless admin, updates containers_added), `my_add_allowance()` → remaining adds, `confirm_container_exists(container_id, lon, lat)` (50 m, not the adder, verifies at 2), `submit_container_request(...)` (3/day), `submit_area_check(lon, lat, result)`, `should_prompt_area_check(lon, lat)` → bool, admin-only: `admin_review_request(id, approve bool)`, `admin_verify_container(id)`, `admin_delete_container(id)`, `admin_coverage(days int)` → GeoJSON of checks. RLS: container_requests readable only by their author and admins; admin RPCs check role = 'admin'.
 
-**Map marker addition (section 3.4):** unverified containers = same shape and colour but dashed 1.5dp outline and 85% opacity.
+**Map marker addition (section 3.4):** unverified containers keep their normal filled shape and type/status colour at 85% opacity, plus a 1.5dp dashed border and a small "?" badge at zoom ≥ 16. They must never be confused with MISSING, which is hollow. See 3.4 for the full rule and the governing principle (**filled = it exists, hollow = it's gone**).
 
 ### 4.5 Screens list
 1. Splash (brand mark, < 1 s)

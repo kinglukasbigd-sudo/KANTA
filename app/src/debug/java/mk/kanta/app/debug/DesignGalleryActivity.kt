@@ -407,6 +407,62 @@ private fun MarkerSection(darkTheme: Boolean) {
             )
         }
 
+        // §3.4: the two dashed treatments, side by side, because the whole point of the rule is
+        // that they must never be confusable. MISSING is hollow; UNVERIFIED is filled.
+        Text(
+            text = "Unverified (§4.6) vs MISSING · filled = exists, hollow = gone",
+            style = MaterialTheme.typography.labelSmall,
+            color = KantaTheme.colors.onSurfaceMuted,
+        )
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.m),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            MarkerSwatch(
+                label = "UNVER",
+                bitmapProvider = {
+                    factory.marker(
+                        ContainerKind.BIG, ContainerStatus.OK, ContainerCategory.GENERAL,
+                        darkTheme, unverified = true,
+                    )
+                },
+            )
+            MarkerSwatch(
+                label = "UNVER z16",
+                bitmapProvider = {
+                    factory.marker(
+                        ContainerKind.BIG, ContainerStatus.OK, ContainerCategory.GENERAL,
+                        darkTheme, unverified = true, badge = true,
+                    )
+                },
+            )
+            MarkerSwatch(
+                label = "MISSING",
+                bitmapProvider = {
+                    factory.marker(ContainerKind.BIG, ContainerStatus.MISSING, darkTheme = darkTheme)
+                },
+            )
+            MarkerSwatch(
+                label = "UNVER full",
+                bitmapProvider = {
+                    factory.marker(
+                        ContainerKind.BIG, ContainerStatus.FULL, ContainerCategory.GENERAL,
+                        darkTheme, unverified = true, badge = true,
+                    )
+                },
+            )
+            MarkerSwatch(
+                label = "UNVER small",
+                bitmapProvider = {
+                    factory.marker(
+                        ContainerKind.SMALL, ContainerStatus.OK, ContainerCategory.GENERAL,
+                        darkTheme, unverified = true, badge = true,
+                    )
+                },
+            )
+        }
+
         Text(
             text = "Clusters · worst status inside",
             style = MaterialTheme.typography.labelSmall,

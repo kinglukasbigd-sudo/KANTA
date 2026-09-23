@@ -43,6 +43,8 @@ class MarkerBitmapFactory(private val density: Float) {
         status: ContainerStatus,
         category: ContainerCategory = ContainerCategory.GENERAL,
         selected: Boolean = false,
+        unverified: Boolean = false,
+        badge: Boolean = false,
     ): String = buildString {
         append("kanta-")
         append(kind.name.lowercase())
@@ -52,6 +54,10 @@ class MarkerBitmapFactory(private val density: Float) {
             append('-')
             append(category.name.lowercase())
         }
+        if (unverified) append("-unverified")
+        // §3.4: the "?" badge is drawn only at zoom >= 16, so the two variants are separate
+        // style images and the symbol layer picks between them with a step(zoom) expression.
+        if (unverified && badge) append("-q")
         if (selected) append("-selected")
     }
 
@@ -69,6 +75,24 @@ class MarkerBitmapFactory(private val density: Float) {
                         idFor(kind, status, ContainerCategory.GENERAL, selected),
                         marker(kind, status, ContainerCategory.GENERAL, darkTheme, selected),
                     )
+
+                    // §4.6: user-added containers awaiting confirmation. Two variants per
+                    // status because the "?" badge only appears at zoom >= 16. MISSING is
+                    // skipped: a missing container is hollow, and hollow already means gone.
+                    if (status != ContainerStatus.MISSING) {
+                        for (badge in listOf(false, true)) {
+                            put(
+                                idFor(
+                                    kind, status, ContainerCategory.GENERAL,
+                                    selected, unverified = true, badge = badge,
+                                ),
+                                marker(
+                                    kind, status, ContainerCategory.GENERAL, darkTheme,
+                                    selected, unverified = true, badge = badge,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -98,9 +122,15 @@ class MarkerBitmapFactory(private val density: Float) {
         category: ContainerCategory = ContainerCategory.GENERAL,
         darkTheme: Boolean = false,
         selected: Boolean = false,
+        unverified: Boolean = false,
+        badge: Boolean = false,
     ): Bitmap {
         val isFull = status == ContainerStatus.FULL
         val isMissing = status == ContainerStatus.MISSING
+        // §3.4: "filled = it exists, hollow = it's gone". MISSING wins over UNVERIFIED — a
+        // user-added container reported missing is hollow like any other missing one, so the
+        // unverified dashed border is never drawn on top of a hollow shape.
+        val showUnverified = unverified && !isMissing
 
         // §3.1: full markers render 15% larger. §3.4: selected scales 1.4x with a brand halo.
         val scale = (if (isFull) 1.15f else 1f) * (if (selected) 1.4f else 1f)
@@ -121,8 +151,11 @@ class MarkerBitmapFactory(private val density: Float) {
         val border = if (isFull) dp(2f) else 0f
         val haloWidth = if (selected) dp(3f) else 0f
         val missingStroke = if (isMissing) dp(1.5f) else 0f
+        val unverifiedStroke = if (showUnverified) dp(1.5f) else 0f
+        // The "?" badge overhangs the top-right corner, so it needs its own headroom.
+        val badgeRadius = if (showUnverified && badge) dp(3.5f) * scale else 0f
         // Pad for whichever outer decoration is widest, plus a pixel of antialias headroom.
-        val pad = maxOf(border, haloWidth, missingStroke) + dp(2f)
+        val pad = maxOf(border, haloWidth, missingStroke, unverifiedStroke, badgeRadius) + dp(2f)
 
         val width = Math.ceil((shapeW + pad * 2).toDouble()).toInt().coerceAtLeast(1)
         val height = Math.ceil((shapeH + pad * 2).toDouble()).toInt().coerceAtLeast(1)
@@ -163,7 +196,31 @@ class MarkerBitmapFactory(private val density: Float) {
                 },
             )
         } else {
-            drawShape(canvas, kind, rect, fillPaint().apply { this.color = color })
+            // §3.4: an unverified container keeps its normal fill, at 85% opacity.
+            drawShape(
+                canvas, kind, rect,
+                fillPaint().apply {
+                    this.color = color
+                    if (showUnverified) alpha = UNVERIFIED_ALPHA
+                },
+            )
+
+            if (showUnverified) {
+                // 1.5dp dashed border, white in light / background colour in dark, so the
+                // "not yet confirmed" state reads without changing the status colour.
+                //
+                // Offset by half the stroke width so the dashes sit ENTIRELY OUTSIDE the fill.
+                // Stroked on the edge itself they cut into the shape and it reads as a
+                // perforated stamp rather than a filled container with a dashed ring.
+                drawShape(
+                    canvas, kind, inflate(rect, unverifiedStroke / 2f),
+                    strokePaint().apply {
+                        this.color = MarkerColors.fullBorder(darkTheme).toArgb()
+                        strokeWidth = unverifiedStroke
+                        pathEffect = DashPathEffect(floatArrayOf(dp(2f), dp(1.5f)), 0f)
+                    },
+                )
+            }
 
             // §3.4: recycling material dot, 3dp, only meaningful on big containers.
             val dot = recyclingDotColor(category)
@@ -181,7 +238,46 @@ class MarkerBitmapFactory(private val density: Float) {
             }
         }
 
+        if (showUnverified && badge) {
+            drawQuestionBadge(canvas, rect.right, rect.top, badgeRadius, color, darkTheme)
+        }
+
         return bitmap
+    }
+
+    /**
+     * The tiny "?" badge on an unverified container (§3.4), sitting on the shape's top-right
+     * corner. Only ever drawn into the zoom >= 16 variant of the image.
+     */
+    private fun drawQuestionBadge(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        radius: Float,
+        @ColorInt statusColor: Int,
+        darkTheme: Boolean,
+    ) {
+        @ColorInt val plate = MarkerColors.fullBorder(darkTheme).toArgb()
+
+        canvas.drawCircle(cx, cy, radius, fillPaint().apply { color = plate })
+        canvas.drawCircle(
+            cx, cy, radius,
+            strokePaint().apply {
+                color = statusColor
+                strokeWidth = dp(0.75f)
+            },
+        )
+
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = statusColor
+            textSize = radius * 1.6f
+            textAlign = Paint.Align.CENTER
+            isFakeBoldText = true
+        }
+        // Centre the glyph on the badge by its own metrics rather than its baseline.
+        val metrics = text.fontMetrics
+        val baseline = cy - (metrics.ascent + metrics.descent) / 2f
+        canvas.drawText("?", cx, baseline, text)
     }
 
     /**
@@ -332,6 +428,9 @@ class MarkerBitmapFactory(private val density: Float) {
     }
 
     companion object {
+        /** §3.4: unverified containers render at 85% opacity. */
+        private const val UNVERIFIED_ALPHA = 217  // 0.85 * 255
+
         const val SUGGESTION_ID = "kanta-suggestion"
 
         /** Same mapping as the UI's `statusColor`, resolved to an Android colour int. */
