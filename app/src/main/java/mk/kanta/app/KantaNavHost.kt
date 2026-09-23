@@ -19,6 +19,7 @@ import mk.kanta.app.feature.auth.AuthViewModel
 import mk.kanta.app.feature.auth.LoginSheetHost
 import mk.kanta.app.feature.map.MapScreen
 import mk.kanta.app.feature.profile.ProfileScreen
+import mk.kanta.app.feature.report.ReportScreen
 
 /** Type-safe navigation routes (spec §4.5). */
 @Serializable object MapRoute
@@ -34,6 +35,9 @@ import mk.kanta.app.feature.profile.ProfileScreen
 @Serializable data class ReportRoute(val presetFull: Boolean = false)
 
 @Serializable object SuggestRoute
+
+/** §5.2 "Nearest containers with space" — the next step; a placeholder for now. */
+@Serializable object NearestAlternativesRoute
 
 /**
  * Navigation plus the one app-wide sign-in sheet.
@@ -104,7 +108,20 @@ fun KantaNavHost(
                 PlaceholderScreen(stringResource(R.string.menu_suggestions), navController::popBackStack)
             }
             composable<ReportRoute> {
-                PlaceholderScreen(stringResource(R.string.action_report), navController::popBackStack)
+                ReportScreen(
+                    onClose = navController::popBackStack,
+                    // §4.3: a sent Full report goes straight on to the alternatives.
+                    // The report screen is removed from the stack, so Back from the
+                    // alternatives returns to the map rather than to a spent camera.
+                    onFullSent = {
+                        navController.navigate(NearestAlternativesRoute) {
+                            popUpTo<ReportRoute> { inclusive = true }
+                        }
+                    },
+                )
+            }
+            composable<NearestAlternativesRoute> {
+                PlaceholderScreen(stringResource(R.string.alternatives_title), navController::popBackStack)
             }
             composable<SuggestRoute> {
                 PlaceholderScreen(stringResource(R.string.action_suggest), navController::popBackStack)

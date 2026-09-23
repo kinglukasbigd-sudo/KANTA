@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import mk.kanta.app.core.data.local.ContainerDao
 import mk.kanta.app.core.data.local.KantaDatabase
+import mk.kanta.app.core.data.local.PendingReportDao
 import javax.inject.Singleton
 
 @Module
@@ -19,12 +20,17 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): KantaDatabase =
         Room.databaseBuilder(context, KantaDatabase::class.java, "kanta.db")
-            // The container table is a cache of server state, never the source of
-            // truth, so throwing it away on a schema change is correct and avoids
-            // carrying migrations for data we can re-fetch.
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Version 1 held only the container cache, so moving from it by
+            // dropping everything is harmless. It is deliberately limited to v1:
+            // from v2 the database holds unsent reports, and a later schema change
+            // without a Migration must fail loudly in development rather than
+            // silently delete a user's queued reports.
+            .fallbackToDestructiveMigrationFrom(true, 1)
             .build()
 
     @Provides
     fun provideContainerDao(database: KantaDatabase): ContainerDao = database.containerDao()
+
+    @Provides
+    fun providePendingReportDao(database: KantaDatabase): PendingReportDao = database.pendingReportDao()
 }

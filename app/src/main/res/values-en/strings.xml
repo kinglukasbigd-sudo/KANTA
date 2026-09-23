@@ -114,4 +114,73 @@
     <string name="notice_me_too">Thanks — your confirmation was added.</string>
     <string name="notice_emptied_closed">Marked as emptied. Thank you!</string>
     <string name="notice_emptied_pending">Thanks — it closes when one more neighbour confirms.</string>
+
+    <!-- Report flow (§4.3) and add container (§4.6) -->
+    <string name="camera_close">Close camera</string>
+    <string name="camera_torch_on">Turn torch on</string>
+    <string name="camera_torch_off">Turn torch off</string>
+    <string name="camera_capture_failed">The photo didn’t work. Try again.</string>
+    <string name="camera_shutter">Take photo</string>
+    <string name="report_photo_rejected">We couldn’t check that photo for faces, so it wasn’t sent. Please take it again.</string>
+    <string name="report_processing">Blurring faces and preparing your photo…</string>
+    <string name="report_camera_needed_title">Camera needed</string>
+    <string name="report_camera_needed_message">A report is a photo of what’s there now. Without the camera there’s nothing to report.</string>
+    <string name="report_allow_camera">Allow camera</string>
+    <string name="report_retake">Retake</string>
+    <string name="report_title">Report a problem</string>
+    <string name="report_title_full">The container is full</string>
+    <string name="report_photo">Your photo</string>
+    <string name="report_container">Container</string>
+    <string name="report_location_needed">Turn on location — we check you’re at the container (within 60 m).</string>
+    <string name="report_container_line">Container %1$s · %2$d m</string>
+    <string name="report_change">Change</string>
+    <string name="report_no_container">No container on the map here.</string>
+    <string name="report_not_on_map">Not on the map — add this container</string>
+    <string name="report_whats_wrong">What’s wrong</string>
+    <string name="report_note">Note (optional)</string>
+    <string name="report_note_hint">Anything worth knowing?</string>
+    <string name="report_sending">Sending…</string>
+    <string name="report_too_far_metres">You’re %1$d m away. Move within 60 m, or add a new container here.</string>
+    <string name="report_add_here">Add a new container here</string>
+    <string name="report_kind_damaged">Damaged</string>
+    <string name="report_kind_destroyed">Destroyed</string>
+    <string name="report_kind_burning">Burning</string>
+    <string name="report_kind_missing">Missing</string>
+    <string name="report_kind_dumped_around">Trash dumped around</string>
+    <string name="report_pick_title">Which container?</string>
+    <string name="report_pick_too_far">Over 60 m — move closer</string>
+    <string name="add_title">Add this container</string>
+    <string name="add_allowance_admin">Admin — no limit.</string>
+    <string name="add_limit_reached">You’ve already added your 2 containers — thank you! If another one is missing, send it for review.</string>
+    <string name="add_allowance_two">You can add 2 containers.</string>
+    <string name="add_duplicate_title">Is it this one?</string>
+    <string name="add_duplicate_use">Yes, report on this one</string>
+    <string name="add_duplicate_different">No, it’s a different one</string>
+    <string name="add_type">Type</string>
+    <string name="add_category">Kind</string>
+    <string name="add_pin_here">It’s placed where you’re standing.</string>
+    <string name="add_send_for_review">Send for review</string>
+    <string name="add_submit">Add container</string>
+    <string name="category_general">General</string>
+    <string name="category_glass">Glass</string>
+    <string name="category_paper">Paper</string>
+    <string name="category_plastic">Plastic</string>
+    <string name="report_queued">Will send when you’re online.</string>
+    <string name="report_request_sent">Sent for review — thank you. It appears on the map once it’s checked.</string>
+    <string name="report_sent_full">Sent. Thank you!</string>
+    <string name="report_sent">Thanks — you’re the first to report this. Neighbours can confirm it.</string>
+    <string name="report_done">Done</string>
+    <string name="alternatives_title">Nearest containers with space</string>
+    <plurals name="report_faces_blurred">
+        <item quantity="one">%d face blurred for privacy.</item>
+        <item quantity="other">%d faces blurred for privacy.</item>
+    </plurals>
+    <plurals name="add_allowance_more">
+        <item quantity="one">You can add %d more container.</item>
+        <item quantity="other">You can add %d more containers.</item>
+    </plurals>
+    <plurals name="report_merged">
+        <item quantity="one">%d neighbour already reported this — we added your confirmation.</item>
+        <item quantity="other">%d neighbours already reported this — we added your confirmation.</item>
+    </plurals>
 </resources>

@@ -119,4 +119,73 @@
     <string name="notice_me_too">Благодариме — твојата потврда е додадена.</string>
     <string name="notice_emptied_closed">Означено како испразнет. Благодариме!</string>
     <string name="notice_emptied_pending">Благодариме — ќе се затвори кога уште еден сосед ќе потврди.</string>
+
+    <!-- Report flow (§4.3) and add container (§4.6) -->
+    <string name="camera_close">Затвори камера</string>
+    <string name="camera_torch_on">Вклучи светилка</string>
+    <string name="camera_torch_off">Исклучи светилка</string>
+    <string name="camera_capture_failed">Фотографијата не успеа. Обиди се повторно.</string>
+    <string name="camera_shutter">Сликај</string>
+    <string name="report_photo_rejected">Не можевме да ја провериме фотографијата за лица, па не е испратена. Сликај повторно.</string>
+    <string name="report_processing">Ги заматуваме лицата и ја подготвуваме фотографијата…</string>
+    <string name="report_camera_needed_title">Потребна е камера</string>
+    <string name="report_camera_needed_message">Пријавата е фотографија од она што е таму сега. Без камера не може да се пријави.</string>
+    <string name="report_allow_camera">Дозволи камера</string>
+    <string name="report_retake">Сликај повторно</string>
+    <string name="report_title">Пријави проблем</string>
+    <string name="report_title_full">Контејнерот е полн</string>
+    <string name="report_photo">Твојата фотографија</string>
+    <string name="report_container">Контејнер</string>
+    <string name="report_location_needed">Вклучи локација — проверуваме дали си до контејнерот (до 60 м).</string>
+    <string name="report_container_line">Контејнер %1$s · %2$d м</string>
+    <string name="report_change">Промени</string>
+    <string name="report_no_container">Нема контејнер на мапата тука.</string>
+    <string name="report_not_on_map">Не е на мапата — додај го овој контејнер</string>
+    <string name="report_whats_wrong">Што не е во ред</string>
+    <string name="report_note">Белешка (незадолжително)</string>
+    <string name="report_note_hint">Нешто што треба да се знае?</string>
+    <string name="report_sending">Се испраќа…</string>
+    <string name="report_too_far_metres">Оддалечен си %1$d м. Пријди до 60 м, или додај нов контејнер тука.</string>
+    <string name="report_add_here">Додај нов контејнер тука</string>
+    <string name="report_kind_damaged">Оштетен</string>
+    <string name="report_kind_destroyed">Уништен</string>
+    <string name="report_kind_burning">Гори</string>
+    <string name="report_kind_missing">Недостасува</string>
+    <string name="report_kind_dumped_around">Отпад околу него</string>
+    <string name="report_pick_title">Кој контејнер?</string>
+    <string name="report_pick_too_far">Подалеку од 60 м — пријди поблиску</string>
+    <string name="add_title">Додај го овој контејнер</string>
+    <string name="add_allowance_admin">Администратор — без ограничување.</string>
+    <string name="add_limit_reached">Веќе ги додаде твоите 2 контејнери — благодариме! Ако недостасува уште еден, испрати го на проверка.</string>
+    <string name="add_allowance_two">Можеш да додадеш 2 контејнери.</string>
+    <string name="add_duplicate_title">Дали е овој?</string>
+    <string name="add_duplicate_use">Да, пријави на овој</string>
+    <string name="add_duplicate_different">Не, различен е</string>
+    <string name="add_type">Тип</string>
+    <string name="add_category">Вид</string>
+    <string name="add_pin_here">Се поставува таму каде што стоиш.</string>
+    <string name="add_send_for_review">Испрати на проверка</string>
+    <string name="add_submit">Додај контејнер</string>
+    <string name="category_general">Мешан</string>
+    <string name="category_glass">Стакло</string>
+    <string name="category_paper">Хартија</string>
+    <string name="category_plastic">Пластика</string>
+    <string name="report_queued">Ќе се испрати кога ќе бидеш онлајн.</string>
+    <string name="report_request_sent">Испратено на проверка — благодариме. Ќе се појави на мапата кога ќе се провери.</string>
+    <string name="report_sent_full">Испратено. Благодариме!</string>
+    <string name="report_sent">Благодариме — ти си првиот што го пријави ова. Соседите можат да потврдат.</string>
+    <string name="report_done">Готово</string>
+    <string name="alternatives_title">Најблиски контејнери со место</string>
+    <plurals name="report_faces_blurred">
+        <item quantity="one">%d лице е заматено за приватност.</item>
+        <item quantity="other">%d лица се заматени за приватност.</item>
+    </plurals>
+    <plurals name="add_allowance_more">
+        <item quantity="one">Можеш да додадеш уште %d контејнер.</item>
+        <item quantity="other">Можеш да додадеш уште %d контејнери.</item>
+    </plurals>
+    <plurals name="report_merged">
+        <item quantity="one">%d сосед веќе го пријави ова — ја додадовме твојата потврда.</item>
+        <item quantity="other">%d соседи веќе го пријавија ова — ја додадовме твојата потврда.</item>
+    </plurals>
 </resources>

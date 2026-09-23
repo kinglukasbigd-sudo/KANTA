@@ -134,7 +134,7 @@ grant execute on function
     my_impact(),
     my_reports(int),
     my_resolved_since(timestamptz),
-    add_container(double precision, double precision, text, text, text, double precision, double precision),
+    add_container(double precision, double precision, text, text, text, double precision, double precision, boolean),
     my_add_allowance(),
     confirm_container_exists(uuid, double precision, double precision),
     submit_container_request(double precision, double precision, text, text, text, text),

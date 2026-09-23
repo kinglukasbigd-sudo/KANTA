@@ -240,6 +240,7 @@ class KantaRepository @Inject constructor(
         photoPath: String,
         deviceLon: Double,
         deviceLat: Double,
+        confirmDifferent: Boolean = false,
     ): Flow<KantaResult<AddContainerResultDto>> = rpcFirst("add_container") {
         put("p_lon", lon)
         put("p_lat", lat)
@@ -248,6 +249,7 @@ class KantaRepository @Inject constructor(
         put("p_photo_path", photoPath)
         put("p_device_lon", deviceLon)
         put("p_device_lat", deviceLat)
+        put("p_confirm_different", confirmDifferent)
     }
 
     /** `confirm_container_exists` — the one-tap "Yes, it's here". */

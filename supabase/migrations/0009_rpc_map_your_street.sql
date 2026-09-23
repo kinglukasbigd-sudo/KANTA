@@ -73,7 +73,11 @@ create or replace function add_container(
     p_category   text,
     p_photo_path text,
     p_device_lon double precision,
-    p_device_lat double precision
+    p_device_lat double precision,
+    -- §4.6: on a duplicate the app asks "Is it this one?". If the user answers
+    -- "no, it's a different one", the call is repeated with this set. The 30 m
+    -- rule and the 2-container limit still apply; only the duplicate check yields.
+    p_confirm_different boolean default false
 )
 returns table (
     container_id uuid,
@@ -127,9 +131,10 @@ begin
      order by c.geom <-> v_pin
      limit 1;
 
-    if v_dupe is not null then
-        -- The app shows "Is it this one?" with this container; the user must
-        -- move the pin or confirm the existing one instead.
+    if v_dupe is not null and not coalesce(p_confirm_different, false) then
+        -- The app shows "Is it this one?" with this container. The user either
+        -- reports on the existing one, or confirms theirs is different and the
+        -- call comes back with p_confirm_different = true.
         raise exception 'duplicate container nearby'
             using errcode = 'KA003', detail = v_dupe::text;
     end if;

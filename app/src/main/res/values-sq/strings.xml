@@ -114,4 +114,73 @@
     <string name="notice_me_too">Faleminderit — konfirmimi yt u shtua.</string>
     <string name="notice_emptied_closed">U shënua si i zbrazur. Faleminderit!</string>
     <string name="notice_emptied_pending">Faleminderit — mbyllet kur edhe një fqinj ta konfirmojë.</string>
+
+    <!-- Report flow (§4.3) and add container (§4.6) -->
+    <string name="camera_close">Mbyll kamerën</string>
+    <string name="camera_torch_on">Ndiz dritën</string>
+    <string name="camera_torch_off">Fik dritën</string>
+    <string name="camera_capture_failed">Fotografia nuk doli. Provo përsëri.</string>
+    <string name="camera_shutter">Bëj foto</string>
+    <string name="report_photo_rejected">Nuk mundëm ta kontrollojmë foton për fytyra, ndaj nuk u dërgua. Bëje përsëri.</string>
+    <string name="report_processing">Po turbullojmë fytyrat dhe po përgatisim foton…</string>
+    <string name="report_camera_needed_title">Duhet kamera</string>
+    <string name="report_camera_needed_message">Raportimi është foto e asaj që është aty tani. Pa kamerë nuk ka çfarë të raportohet.</string>
+    <string name="report_allow_camera">Lejo kamerën</string>
+    <string name="report_retake">Bëje përsëri</string>
+    <string name="report_title">Raporto një problem</string>
+    <string name="report_title_full">Kontejneri është plot</string>
+    <string name="report_photo">Fotoja jote</string>
+    <string name="report_container">Kontejneri</string>
+    <string name="report_location_needed">Ndiz vendndodhjen — kontrollojmë që je te kontejneri (brenda 60 m).</string>
+    <string name="report_container_line">Kontejneri %1$s · %2$d m</string>
+    <string name="report_change">Ndrysho</string>
+    <string name="report_no_container">Nuk ka kontejner në hartë këtu.</string>
+    <string name="report_not_on_map">Nuk është në hartë — shto këtë kontejner</string>
+    <string name="report_whats_wrong">Çfarë nuk shkon</string>
+    <string name="report_note">Shënim (opsional)</string>
+    <string name="report_note_hint">Diçka që ia vlen të dihet?</string>
+    <string name="report_sending">Po dërgohet…</string>
+    <string name="report_too_far_metres">Je %1$d m larg. Afrohu brenda 60 m, ose shto një kontejner të ri këtu.</string>
+    <string name="report_add_here">Shto një kontejner të ri këtu</string>
+    <string name="report_kind_damaged">I dëmtuar</string>
+    <string name="report_kind_destroyed">I shkatërruar</string>
+    <string name="report_kind_burning">Po digjet</string>
+    <string name="report_kind_missing">Mungon</string>
+    <string name="report_kind_dumped_around">Mbeturina përreth</string>
+    <string name="report_pick_title">Cili kontejner?</string>
+    <string name="report_pick_too_far">Mbi 60 m — afrohu</string>
+    <string name="add_title">Shto këtë kontejner</string>
+    <string name="add_allowance_admin">Administrator — pa kufi.</string>
+    <string name="add_limit_reached">I ke shtuar tashmë 2 kontejnerët e tu — faleminderit! Nëse mungon edhe një, dërgoje për shqyrtim.</string>
+    <string name="add_allowance_two">Mund të shtosh 2 kontejnerë.</string>
+    <string name="add_duplicate_title">A është ky?</string>
+    <string name="add_duplicate_use">Po, raporto për këtë</string>
+    <string name="add_duplicate_different">Jo, është tjetër</string>
+    <string name="add_type">Lloji</string>
+    <string name="add_category">Kategoria</string>
+    <string name="add_pin_here">Vendoset aty ku qëndron.</string>
+    <string name="add_send_for_review">Dërgo për shqyrtim</string>
+    <string name="add_submit">Shto kontejnerin</string>
+    <string name="category_general">I përzier</string>
+    <string name="category_glass">Qelq</string>
+    <string name="category_paper">Letër</string>
+    <string name="category_plastic">Plastikë</string>
+    <string name="report_queued">Do të dërgohet kur të jesh online.</string>
+    <string name="report_request_sent">U dërgua për shqyrtim — faleminderit. Shfaqet në hartë pasi të kontrollohet.</string>
+    <string name="report_sent_full">U dërgua. Faleminderit!</string>
+    <string name="report_sent">Faleminderit — je i pari që e raporton këtë. Fqinjët mund ta konfirmojnë.</string>
+    <string name="report_done">Gati</string>
+    <string name="alternatives_title">Kontejnerët më të afërt me vend</string>
+    <plurals name="report_faces_blurred">
+        <item quantity="one">%d fytyrë u turbullua për privatësi.</item>
+        <item quantity="other">%d fytyra u turbulluan për privatësi.</item>
+    </plurals>
+    <plurals name="add_allowance_more">
+        <item quantity="one">Mund të shtosh edhe %d kontejner.</item>
+        <item quantity="other">Mund të shtosh edhe %d kontejnerë.</item>
+    </plurals>
+    <plurals name="report_merged">
+        <item quantity="one">%d fqinj e ka raportuar tashmë këtë — shtuam konfirmimin tënd.</item>
+        <item quantity="other">%d fqinjë e kanë raportuar tashmë këtë — shtuam konfirmimin tënd.</item>
+    </plurals>
 </resources>
