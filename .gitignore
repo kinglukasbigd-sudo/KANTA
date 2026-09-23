@@ -35,3 +35,6 @@ Thumbs.db
 .kotlin/
 *.log
 local.log
+
+# ---- OSM import cache (regenerable) ----
+tools/import_osm/.cache/
