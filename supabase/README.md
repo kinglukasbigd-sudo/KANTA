@@ -37,13 +37,14 @@ depends on the ones before it.
 | 12 | `migrations/0012_account_deletion.sql` | `delete_my_account()` |
 | 13 | `migrations/0013_rls.sql` | Row Level Security + function grants |
 | 14 | `migrations/0014_storage.sql` | `photos` bucket + policies |
-| 15 | `seed/0001_municipalities.sql` | The 10 Skopje municipalities |
+| 15 | `migrations/0015_map_your_street_fixes.sql` | §4.6 fixes: missing-report removal, request limit, "Yes, it's here" eligibility |
+| 16 | `seed/0001_municipalities.sql` | The 10 Skopje municipalities |
 
 > **If step 1 fails on `pg_cron`:** go to **Database → Extensions**, search
 > `pg_cron`, enable it there, then re-run the file. Some projects need it
 > enabled through the dashboard first.
 
-After step 15, verify:
+After step 16, verify:
 
 ```sql
 select count(*) from municipalities;                    -- 10
@@ -186,5 +187,13 @@ these to string resources.
   boundaries are loaded, `municipality_at()` returns NULL and city stats group
   everything as unassigned; expected, not a bug.
 - **Re-running migrations.** The files are written to be idempotent
-  (`create or replace`, `if not exists`, `on conflict`). Re-running any of them
-  is safe.
+  (`create or replace`, `if not exists`, `on conflict`), so re-running the
+  whole sequence **in order** is safe. Re-run in order rather than picking single
+  files: 0015 reshapes functions first defined in 0005 and 0009, and always has
+  to run after them.
+- **Testing the rules.** `python3 supabase/tests/map_your_street_test.py` walks
+  every §4.6 rule (2-add limit, requests, 30 m, duplicates, "Yes, it's here",
+  missing removal, admin review, area checks) as real test users, inside one
+  transaction that is always rolled back — it leaves nothing in the database.
+  Needs `pip install "psycopg[binary]"` and the connection string in
+  `supabase/.db-url` (git-ignored; the Session pooler URI from **Connect**).

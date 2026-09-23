@@ -59,6 +59,9 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+    -- Names like container_id / state are both OUT columns of this function and
+    -- table columns; inside the body they always mean the table column.
+#variable_conflict use_column
 declare
     v_uid       uuid := require_user();
     v_distance  double precision;
@@ -154,6 +157,9 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+    -- Names like container_id / state are both OUT columns of this function and
+    -- table columns; inside the body they always mean the table column.
+#variable_conflict use_column
 declare
     v_uid       uuid := require_user();
     v_container uuid;

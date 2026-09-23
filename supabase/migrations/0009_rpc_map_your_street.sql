@@ -89,6 +89,9 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+    -- Names like container_id / state are both OUT columns of this function and
+    -- table columns; inside the body they always mean the table column.
+#variable_conflict use_column
 declare
     v_uid        uuid := require_user();
     v_admin      boolean := is_admin(v_uid);
@@ -198,6 +201,9 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+    -- Names like container_id / state are both OUT columns of this function and
+    -- table columns; inside the body they always mean the table column.
+#variable_conflict use_column
 declare
     v_uid      uuid := require_user();
     v_point    geography := st_setsrid(st_makepoint(p_lon, p_lat), 4326)::geography;
@@ -357,6 +363,10 @@ $$;
 
 -- Unverified containers inside the check radius, so the sheet can offer
 -- "Yes, it's here" in one tap (§4.6 step 3).
+-- 0015 widens this function's result; dropping first keeps this file re-runnable
+-- (create or replace cannot change a return type). 0015 re-creates its version.
+drop function if exists unverified_nearby(double precision, double precision, int);
+
 create or replace function unverified_nearby(
     p_lon   double precision,
     p_lat   double precision,

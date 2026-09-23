@@ -41,6 +41,9 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+    -- Names like container_id / state are both OUT columns of this function and
+    -- table columns; inside the body they always mean the table column.
+#variable_conflict use_column
 declare
     v_uid      uuid := require_user();
     v_point    geography := st_setsrid(st_makepoint(p_lon, p_lat), 4326)::geography;
@@ -90,6 +93,9 @@ language plpgsql
 security definer
 set search_path = public, extensions
 as $$
+    -- Names like container_id / state are both OUT columns of this function and
+    -- table columns; inside the body they always mean the table column.
+#variable_conflict use_column
 declare
     v_uid uuid := require_user();
 begin
