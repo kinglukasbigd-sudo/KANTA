@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -18,6 +19,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import mk.kanta.app.R
+import mk.kanta.app.core.auth.AuthGate
+import mk.kanta.app.core.auth.PendingAction
 import mk.kanta.app.core.data.local.ContainerDao
 import mk.kanta.app.core.data.local.ContainerEntity
 import mk.kanta.app.core.data.model.ContainerCategory
@@ -83,6 +87,8 @@ data class MapUiState(
     /** §4.1 "Near you": the nearest container that is not full. */
     val nearest: NearestContainerUi? = null,
     val nearestLoading: Boolean = false,
+    /** A one-line success message (string resource), e.g. after "Me too". */
+    val notice: Int? = null,
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -91,6 +97,7 @@ class MapViewModel @Inject constructor(
     private val repository: KantaRepository,
     private val containerDao: ContainerDao,
     private val locationProvider: LocationProvider,
+    private val authGate: AuthGate,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MapUiState())
@@ -107,6 +114,69 @@ class MapViewModel @Inject constructor(
         observeCache()
         refreshOnIdle()
         resolveInitialCamera()
+        runConfirmationsWhenReady()
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Me too / It's been emptied (§4.1, §5.1) — through the auth gate (§4.2)
+    // -----------------------------------------------------------------------------------------
+
+    fun onMeToo() = requestConfirmation(kind = "me_too")
+
+    fun onEmptied() = requestConfirmation(kind = "resolved")
+
+    /**
+     * Both buttons act on the open `full` report — they are only offered while the
+     * container is full. Signed out, the gate stores this and it runs after sign-in.
+     */
+    private fun requestConfirmation(kind: String) {
+        val detail = _state.value.detail ?: return
+        val containerId = _state.value.selectedId ?: return
+        val report = detail.reports.firstOrNull { it.state == "open" && it.kind == "full" }
+        if (report == null) {
+            _state.value = _state.value.copy(error = KantaError.ReportNotOpen)
+            return
+        }
+        authGate.request(PendingAction.ConfirmReport(containerId, report.id, kind))
+    }
+
+    private fun runConfirmationsWhenReady() {
+        authGate.ready
+            .filterIsInstance<PendingAction.ConfirmReport>()
+            .onEach { action ->
+                authGate.consume(action)
+                confirm(action)
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun confirm(action: PendingAction.ConfirmReport) {
+        repository.confirmReport(action.reportId, action.kind).collect { result ->
+            when (result) {
+                is KantaResult.Loading -> Unit
+                is KantaResult.Failure -> _state.value = _state.value.copy(error = result.error)
+                is KantaResult.Success -> {
+                    // Say what actually happened. A resolved confirmation without a
+                    // photo is one of two (§5.1) — pretending it closed the report
+                    // would be a small lie the user discovers later.
+                    val notice = when {
+                        action.kind == "me_too" -> R.string.notice_me_too
+                        result.data.reportState == "resolved" -> R.string.notice_emptied_closed
+                        else -> R.string.notice_emptied_pending
+                    }
+                    _state.value = _state.value.copy(notice = notice)
+                    if (_state.value.selectedId == action.containerId) {
+                        loadDetail(action.containerId)
+                        loadReports(action.containerId)
+                    }
+                    viewport.value?.let { refresh(it) }
+                }
+            }
+        }
+    }
+
+    fun dismissNotice() {
+        _state.value = _state.value.copy(notice = null)
     }
 
     /**

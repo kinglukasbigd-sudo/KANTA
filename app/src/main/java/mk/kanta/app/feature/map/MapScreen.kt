@@ -155,7 +155,12 @@ fun MapScreen(
                     onSuggestions = onSuggestionsList,
                 )
             } else {
-                ContainerDetailContent(state = detail)
+                ContainerDetailContent(
+                    state = detail,
+                    onMeToo = viewModel::onMeToo,
+                    onEmptied = viewModel::onEmptied,
+                    onReportOther = onReport,
+                )
             }
         },
     ) {
@@ -293,6 +298,26 @@ fun MapScreen(
             modifier = Modifier.align(Alignment.Center),
         ) {
             MapLoadingSkeleton()
+        }
+
+        // Success notices ("Thanks — noted."), auto-dismissed after a few seconds.
+        LaunchedEffect(state.notice) {
+            if (state.notice != null) {
+                haptics.success()
+                kotlinx.coroutines.delay(3_500)
+                viewModel.dismissNotice()
+            }
+        }
+        AnimatedVisibility(
+            visible = state.notice != null,
+            enter = slideInVertically { -it } + fadeIn(),
+            exit = slideOutVertically { -it } + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 56.dp),
+        ) {
+            state.notice?.let { MapNoticeBanner(textRes = it) }
         }
 
         // §8 offline / error state: a banner, never a blank map. Cached markers
@@ -486,6 +511,33 @@ private fun MapErrorBanner(error: KantaError, onDismiss: () -> Unit) {
                     tint = KantaTheme.colors.onSurfaceMuted,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun MapNoticeBanner(textRes: Int) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.l)
+            .kantaSoftShadow(KantaShape.card),
+        shape = KantaShape.card,
+        color = MaterialTheme.colorScheme.surface,
+    ) {
+        Row(modifier = Modifier.padding(Spacing.l), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = KantaIcons.Success,
+                contentDescription = null,
+                tint = KantaTheme.colors.brand,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(Spacing.m))
+            Text(
+                text = stringResource(textRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }

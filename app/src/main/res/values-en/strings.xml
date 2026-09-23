@@ -75,4 +75,43 @@
     <string name="menu_suggestions_subtitle">Suggested places, vote</string>
     <string name="placeholder_message">This screen is coming soon.</string>
     <string name="action_back">Back</string>
+
+    <!-- Sign-in and profile (§4.2) -->
+    <string name="login_title">Sign in to continue</string>
+    <string name="login_email_subtitle">We’ll email you a 6-digit code. No password.</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_send_code">Send code</string>
+    <string name="login_sending">Sending…</string>
+    <string name="login_code_title">Enter the code</string>
+    <string name="login_code_sent_to">Sent to %1$s</string>
+    <string name="login_change_email">Change email</string>
+    <string name="login_resend">Send a new code</string>
+    <string name="login_resend_in">New code in %1$s</string>
+    <string name="login_verify">Verify</string>
+    <string name="login_verifying">Checking…</string>
+    <string name="login_name_title">What should we call you?</string>
+    <string name="login_name_subtitle">Only you see this. Others just see “a neighbour”.</string>
+    <string name="login_name_label">Name</string>
+    <string name="login_municipality_optional">Your municipality (optional)</string>
+    <string name="login_continue">Continue</string>
+    <string name="error_wrong_code">That code isn’t right. Check your email and try again.</string>
+    <string name="error_code_expired">That code has expired. Ask for a new one.</string>
+    <string name="error_too_many_codes">Too many codes requested. Wait a minute and try again.</string>
+    <string name="error_invalid_email">That email address doesn’t look right.</string>
+    <string name="profile_title">Profile</string>
+    <string name="profile_signed_out_title">You’re not signed in</string>
+    <string name="profile_signed_out_message">Sign in to see your reports and change your name.</string>
+    <string name="profile_sign_in">Sign in</string>
+    <string name="profile_municipality">Municipality</string>
+    <string name="profile_save">Save</string>
+    <string name="profile_saved">Saved</string>
+    <string name="profile_sign_out">Sign out</string>
+    <string name="profile_delete_account">Delete account</string>
+    <string name="profile_delete_title">Delete your account?</string>
+    <string name="profile_delete_message">Your profile will be deleted. Your reports stay on the map, but anonymously — without your name. This can’t be undone.</string>
+    <string name="profile_delete_confirm">Delete</string>
+    <string name="profile_deleting">Deleting…</string>
+    <string name="notice_me_too">Thanks — your confirmation was added.</string>
+    <string name="notice_emptied_closed">Marked as emptied. Thank you!</string>
+    <string name="notice_emptied_pending">Thanks — it closes when one more neighbour confirms.</string>
 </resources>

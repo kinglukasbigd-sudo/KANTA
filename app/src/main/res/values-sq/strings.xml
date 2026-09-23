@@ -75,4 +75,43 @@
     <string name="menu_suggestions_subtitle">Vendet e sugjeruara, voto</string>
     <string name="placeholder_message">Ky ekran po vjen së shpejti.</string>
     <string name="action_back">Prapa</string>
+
+    <!-- Sign-in and profile (§4.2) -->
+    <string name="login_title">Hyr për të vazhduar</string>
+    <string name="login_email_subtitle">Do të të dërgojmë një kod me 6 shifra me email. Pa fjalëkalim.</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_send_code">Dërgo kodin</string>
+    <string name="login_sending">Po dërgohet…</string>
+    <string name="login_code_title">Shkruaj kodin</string>
+    <string name="login_code_sent_to">Dërguar te %1$s</string>
+    <string name="login_change_email">Ndrysho emailin</string>
+    <string name="login_resend">Dërgo kod të ri</string>
+    <string name="login_resend_in">Kod i ri pas %1$s</string>
+    <string name="login_verify">Verifiko</string>
+    <string name="login_verifying">Po kontrollohet…</string>
+    <string name="login_name_title">Si të të thërrasim?</string>
+    <string name="login_name_subtitle">Këtë e sheh vetëm ti. Të tjerët shohin “një fqinj”.</string>
+    <string name="login_name_label">Emri</string>
+    <string name="login_municipality_optional">Komuna jote (opsionale)</string>
+    <string name="login_continue">Vazhdo</string>
+    <string name="error_wrong_code">Kodi nuk është i saktë. Kontrollo emailin dhe provo përsëri.</string>
+    <string name="error_code_expired">Kodi ka skaduar. Kërko një të ri.</string>
+    <string name="error_too_many_codes">Janë kërkuar shumë kode. Prit një minutë dhe provo përsëri.</string>
+    <string name="error_invalid_email">Ky email nuk duket i saktë.</string>
+    <string name="profile_title">Profili</string>
+    <string name="profile_signed_out_title">Nuk je i kyçur</string>
+    <string name="profile_signed_out_message">Hyr për të parë raportimet e tua dhe për të ndryshuar emrin.</string>
+    <string name="profile_sign_in">Hyr</string>
+    <string name="profile_municipality">Komuna</string>
+    <string name="profile_save">Ruaj</string>
+    <string name="profile_saved">U ruajt</string>
+    <string name="profile_sign_out">Dil</string>
+    <string name="profile_delete_account">Fshi llogarinë</string>
+    <string name="profile_delete_title">Të fshihet llogaria?</string>
+    <string name="profile_delete_message">Profili yt do të fshihet. Raportimet e tua mbeten në hartë, por në mënyrë anonime — pa emrin tënd. Kjo nuk mund të kthehet.</string>
+    <string name="profile_delete_confirm">Fshi</string>
+    <string name="profile_deleting">Po fshihet…</string>
+    <string name="notice_me_too">Faleminderit — konfirmimi yt u shtua.</string>
+    <string name="notice_emptied_closed">U shënua si i zbrazur. Faleminderit!</string>
+    <string name="notice_emptied_pending">Faleminderit — mbyllet kur edhe një fqinj ta konfirmojë.</string>
 </resources>

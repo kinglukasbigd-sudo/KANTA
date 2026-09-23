@@ -74,6 +74,7 @@ begin
                select count(distinct c.user_id)
                  from report_confirmations c
                 where c.report_id = r.id and c.kind = 'me_too'
+                  and c.user_id is distinct from r.user_id
            ) >= 2
     ) into v_exists;
     if v_exists then
@@ -92,6 +93,7 @@ begin
                    select count(distinct c.user_id)
                      from report_confirmations c
                     where c.report_id = r.id and c.kind = 'me_too'
+                  and c.user_id is distinct from r.user_id
                ) >= 2
         ) into v_exists;
         if v_exists then
@@ -130,6 +132,7 @@ begin
                          from report_confirmations c
                         where c.report_id = r.id
                           and c.kind = 'me_too'
+                          and c.user_id is distinct from r.user_id
                           and c.created_at <= r.created_at + interval '6 hours'
                    ) + 1 >= 2
                    -- ...or one report from a trusted user (§5.1).

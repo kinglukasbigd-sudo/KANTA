@@ -89,6 +89,27 @@ sealed interface KantaError {
         override val messageRes = R.string.error_admin_only
     }
 
+    // --- Sign-in (§4.2) -----------------------------------------------------------------
+
+    /** The 6-digit code does not match. Inside the expiry window, so it was mistyped. */
+    data object WrongCode : KantaError {
+        override val messageRes = R.string.error_wrong_code
+    }
+
+    /** The code was right once but its time ran out. A new one is needed. */
+    data object CodeExpired : KantaError {
+        override val messageRes = R.string.error_code_expired
+    }
+
+    /** Supabase throttles code emails per address. Waiting fixes it; retrying at once does not. */
+    data object TooManyCodeRequests : KantaError {
+        override val messageRes = R.string.error_too_many_codes
+    }
+
+    data object InvalidEmail : KantaError {
+        override val messageRes = R.string.error_invalid_email
+    }
+
     // --- Missing rows ------------------------------------------------------------------
 
     data object ContainerNotFound : KantaError {

@@ -67,13 +67,21 @@ The app signs people in with a 6-digit code, not a magic link (spec §2).
      what makes Supabase send a **code** rather than a link:
 
    ```html
-   <h2>Кanta</h2>
+   <h2>Канта</h2>
    <p>Твојот код за најава е:</p>
    <p style="font-size:28px;letter-spacing:4px;"><strong>{{ .Token }}</strong></p>
    <p>Кодот важи 1 час.</p>
    ```
-3. **Authentication → Providers → Email → OTP Expiry**: 3600 seconds is fine.
-4. Leave **Confirm email** on — the OTP itself is the confirmation.
+3. **Authentication → Providers → Email → OTP Expiry**: **3600** seconds. The app
+   uses this number to tell a *wrong* code from an *expired* one (Supabase returns
+   the same error for both), so if you change it, change `OTP_EXPIRY_SECONDS` in
+   `AuthErrorMapper.kt` to match.
+4. **Authentication → Rate Limits → minimum interval between emails** (per
+   address): set it to **30** seconds. The app offers "Send a new code" after 30 s;
+   Supabase's default is 60 s, which would make the first early resend fail with
+   "Too many codes requested". The app handles that politely either way — this
+   just makes the button honest.
+5. Leave **Confirm email** on — the OTP itself is the confirmation.
 
 On the client this is `signInWith(OTP) { email = ... }` followed by
 `verifyEmailOtp(type = OtpType.Email.EMAIL, email, token)`.
@@ -169,13 +177,14 @@ these to string resources.
 
 ---
 
-## 7. Still to come
+## 7. After the migrations
 
-- **Container import** (spec §7): the Overpass query for Skopje's
-  `waste_disposal` / `waste_basket` / `recycling` nodes, plus the OSM
-  `admin_level=8` boundaries that fill `municipalities.geom`. Until the
+- **Containers and boundaries** come from OpenStreetMap:
+  `python3 tools/import_osm/import_osm.py`, then run the generated
+  `seed/containers.sql` here. Note that Skopje's municipalities are OSM
+  **admin_level=7**, not 8 as spec §7 says — the importer handles it. Until the
   boundaries are loaded, `municipality_at()` returns NULL and city stats group
-  everything as unassigned — expected, not a bug.
+  everything as unassigned; expected, not a bug.
 - **Re-running migrations.** The files are written to be idempotent
   (`create or replace`, `if not exists`, `on conflict`). Re-running any of them
   is safe.

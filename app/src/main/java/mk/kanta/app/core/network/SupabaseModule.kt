@@ -1,8 +1,10 @@
 package mk.kanta.app.core.network
 
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
@@ -11,6 +13,7 @@ import io.github.jan.supabase.functions.Functions
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.storage.Storage
 import mk.kanta.app.BuildConfig
+import mk.kanta.app.core.auth.EncryptedSessionManager
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +32,9 @@ import javax.inject.Singleton
  * dead screen.
  */
 @Singleton
-class SupabaseClientHolder @Inject constructor() {
+class SupabaseClientHolder @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
 
     val isConfigured: Boolean =
         BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_ANON_KEY.isNotBlank()
@@ -44,7 +49,16 @@ class SupabaseClientHolder @Inject constructor() {
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY,
         ) {
             install(Postgrest)
-            install(Auth)
+            install(Auth) {
+                // Encrypted at rest under an Android Keystore key (brief: "session
+                // persisted securely").
+                sessionManager = EncryptedSessionManager(context)
+                autoLoadFromStorage = true
+                autoSaveToStorage = true
+                // Refresh the access token before it expires, for as long as the
+                // app runs (brief: "auto refresh").
+                alwaysAutoRefresh = true
+            }
             install(Storage)
             install(Functions)
         }

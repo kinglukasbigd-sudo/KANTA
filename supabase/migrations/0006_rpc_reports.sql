@@ -173,6 +173,14 @@ begin
         raise exception 'report is no longer open' using errcode = 'KA013';
     end if;
 
+    -- §5.1 counts "reporter + 1 me-too" as two voices. The reporter agreeing
+    -- with themselves is still one voice, so it must not count as a second.
+    -- (Resolving your own report is fine: you saw it emptied.)
+    if p_kind = 'me_too'
+       and exists (select 1 from reports where id = p_report_id and user_id = v_uid) then
+        raise exception 'cannot confirm your own report' using errcode = 'KA008';
+    end if;
+
     insert into report_confirmations (report_id, user_id, kind, photo_path)
     values (p_report_id, v_uid, p_kind, nullif(p_photo_path, ''))
     on conflict (report_id, user_id, kind) do nothing;

@@ -80,4 +80,43 @@
     <string name="menu_suggestions_subtitle">Предложени места, гласај</string>
     <string name="placeholder_message">Овој екран доаѓа наскоро.</string>
     <string name="action_back">Назад</string>
+
+    <!-- Sign-in and profile (§4.2) -->
+    <string name="login_title">Најави се за да продолжиш</string>
+    <string name="login_email_subtitle">Ќе ти испратиме код од 6 цифри на е-пошта. Без лозинка.</string>
+    <string name="login_email_label">Е-пошта</string>
+    <string name="login_send_code">Испрати код</string>
+    <string name="login_sending">Се испраќа…</string>
+    <string name="login_code_title">Внеси го кодот</string>
+    <string name="login_code_sent_to">Испратен на %1$s</string>
+    <string name="login_change_email">Промени е-пошта</string>
+    <string name="login_resend">Испрати нов код</string>
+    <string name="login_resend_in">Нов код за %1$s</string>
+    <string name="login_verify">Потврди</string>
+    <string name="login_verifying">Се проверува…</string>
+    <string name="login_name_title">Како да те викаме?</string>
+    <string name="login_name_subtitle">Само ти го гледаш ова. Другите гледаат „сосед“.</string>
+    <string name="login_name_label">Име</string>
+    <string name="login_municipality_optional">Твоја општина (незадолжително)</string>
+    <string name="login_continue">Продолжи</string>
+    <string name="error_wrong_code">Кодот не е точен. Провери ја е-поштата и обиди се повторно.</string>
+    <string name="error_code_expired">Кодот истече. Побарај нов.</string>
+    <string name="error_too_many_codes">Побаравте премногу кодови. Почекај минута и обиди се повторно.</string>
+    <string name="error_invalid_email">Оваа е-пошта не изгледа точно.</string>
+    <string name="profile_title">Профил</string>
+    <string name="profile_signed_out_title">Не си најавен</string>
+    <string name="profile_signed_out_message">Најави се за да ги видиш твоите пријави и да го смениш името.</string>
+    <string name="profile_sign_in">Најави се</string>
+    <string name="profile_municipality">Општина</string>
+    <string name="profile_save">Зачувај</string>
+    <string name="profile_saved">Зачувано</string>
+    <string name="profile_sign_out">Одјави се</string>
+    <string name="profile_delete_account">Избриши сметка</string>
+    <string name="profile_delete_title">Да се избрише сметката?</string>
+    <string name="profile_delete_message">Профилот ќе се избрише. Твоите пријави остануваат на мапата, но без твоето име — анонимно. Ова не може да се врати.</string>
+    <string name="profile_delete_confirm">Избриши</string>
+    <string name="profile_deleting">Се брише…</string>
+    <string name="notice_me_too">Благодариме — твојата потврда е додадена.</string>
+    <string name="notice_emptied_closed">Означено како испразнет. Благодариме!</string>
+    <string name="notice_emptied_pending">Благодариме — ќе се затвори кога уште еден сосед ќе потврди.</string>
 </resources>
