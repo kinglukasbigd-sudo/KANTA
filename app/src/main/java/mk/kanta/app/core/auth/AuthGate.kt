@@ -7,8 +7,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import mk.kanta.app.core.data.di.ApplicationScope
@@ -42,6 +45,20 @@ class AuthGate @Inject constructor(
     private val _ready = MutableStateFlow<PendingAction?>(null)
     val ready: StateFlow<PendingAction?> = _ready.asStateFlow()
 
+    /** Between "sign-in finished" and the stored intent landing on [ready]. */
+    private val _resolving = MutableStateFlow(false)
+
+    /**
+     * True when no intent is in flight: no sign-in sheet requested, nothing being
+     * read back from disk, nothing waiting on [ready].
+     *
+     * §4.2 "never interrupt the user's intent": a post-login prompt waits for
+     * this, so it can never slip in between sign-in and the action that caused it.
+     */
+    val idle: StateFlow<Boolean> = combine(_loginRequested, _resolving, _ready) { login, resolving, ready ->
+        !login && !resolving && ready == null
+    }.stateIn(scope, SharingStarted.Eagerly, true)
+
     fun request(action: PendingAction) {
         if (auth.isSignedIn) {
             _ready.value = action
@@ -63,6 +80,8 @@ class AuthGate @Inject constructor(
 
     /** Called by the login sheet once the whole flow — code AND name — is done. */
     fun onSignInCompleted() {
+        // Set before the sheet flag drops, so [idle] never reads true in between.
+        _resolving.value = true
         _loginRequested.value = false
         scope.launch {
             val stored = readStored()
@@ -74,6 +93,7 @@ class AuthGate @Inject constructor(
                     AuthErrorMapper.OTP_EXPIRY_SECONDS * 1_000
             }
             _ready.value = fresh?.action
+            _resolving.value = false
         }
     }
 

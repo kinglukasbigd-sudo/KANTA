@@ -38,6 +38,7 @@ import mk.kanta.app.core.data.remote.dto.SubmitSuggestionResultDto
 import mk.kanta.app.core.data.remote.dto.SuggestionDto
 import mk.kanta.app.core.data.remote.dto.UnverifiedContainerDto
 import mk.kanta.app.core.data.remote.dto.VoteSuggestionResultDto
+import mk.kanta.app.core.location.LatLon
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -110,10 +111,21 @@ class KantaRepository @Inject constructor(
         put("p_max_m", maxMetres)
     }
 
-    /** `container_detail` — everything the detail sheet needs in one call (§4.1). */
-    fun containerDetail(containerId: String): Flow<KantaResult<ContainerDetailDto?>> =
+    /**
+     * `container_detail` — everything the detail sheet needs in one call (§4.1).
+     * [from] is where the phone is; with it the server can say whether
+     * "Yes, it's here" is allowed (§4.6). Without it that answer is simply no.
+     */
+    fun containerDetail(
+        containerId: String,
+        from: LatLon? = null,
+    ): Flow<KantaResult<ContainerDetailDto?>> =
         rpcFirstOrNull("container_detail") {
             put("p_container_id", containerId)
+            if (from != null) {
+                put("p_lon", from.lon)
+                put("p_lat", from.lat)
+            }
         }
 
     // =========================================================================================

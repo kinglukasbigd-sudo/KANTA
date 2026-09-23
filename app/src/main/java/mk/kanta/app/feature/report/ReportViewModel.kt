@@ -4,12 +4,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mk.kanta.app.core.data.model.ContainerCategory
 import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.data.model.ContainerStatus
@@ -21,12 +23,37 @@ import mk.kanta.app.core.data.report.ReportDraft
 import mk.kanta.app.core.data.report.ReportGateway
 import mk.kanta.app.core.image.PhotoProcessor
 import mk.kanta.app.core.image.ProcessedPhoto
+import mk.kanta.app.core.location.GeoMath
 import mk.kanta.app.core.location.LatLon
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 
-enum class ReportStage { Camera, Processing, Compose, Sending, Done }
+enum class ReportStage {
+    Camera,
+    Processing,
+    Compose,
+
+    /** §4.6 "One is missing": the photo is taken and the Add container sheet is up. */
+    Adding,
+    Sending,
+    Done,
+}
+
+/**
+ * What the flow was opened for. [Report] is §4.3; [AddContainer] is §4.6's
+ * "One is missing" — the same camera and privacy processing, then straight into
+ * the Add container flow with no report at the end.
+ */
+enum class ReportMode(val wire: String) {
+    Report("report"),
+    AddContainer("add"),
+    ;
+
+    companion object {
+        fun from(wire: String?) = entries.firstOrNull { it.wire == wire } ?: Report
+    }
+}
 
 /** The report kinds a user can pick (§4.3). `full` is preset by the Full tile, never a chip. */
 enum class ReportKind(val wire: String) {
@@ -46,6 +73,12 @@ enum class ReportKind(val wire: String) {
 
 data class AddContainerUiState(
     val loading: Boolean = true,
+    /** Where the phone is — the server measures the pin against this (§4.6: 30 m). */
+    val device: LatLon? = null,
+    /** §4.6: "user drags the pin to the exact spot". Starts where the phone is. */
+    val pin: LatLon? = null,
+    /** Containers already around, drawn under the pin so a duplicate is visible before it's refused. */
+    val nearby: List<ContainerCandidate> = emptyList(),
     val remaining: Int? = null,
     val isAdmin: Boolean = false,
     /** §4.6: allowance used up — offer "Send for review" instead. */
@@ -57,12 +90,19 @@ data class AddContainerUiState(
     val submitting: Boolean = false,
     val error: KantaError? = null,
 ) {
-    val canSubmit: Boolean get() = kind != null && !submitting && !limitReached
+    val canSubmit: Boolean get() = kind != null && pin != null && !submitting && !limitReached
+
+    /** Shown under the map ("Pin is 8 m from you") — information only; the server decides. */
+    val pinDistanceMetres: Double?
+        get() = if (device != null && pin != null) GeoMath.distanceMetres(device, pin) else null
 }
 
 data class ReportUiState(
     val stage: ReportStage = ReportStage.Camera,
+    val mode: ReportMode = ReportMode.Report,
     val presetFull: Boolean = false,
+    /** Opened from the §4.6 area check: its answer is recorded when this flow succeeds. */
+    val fromAreaCheck: Boolean = false,
     val photo: ProcessedPhoto? = null,
     /** Face check failed: the photo is refused rather than published unblurred (§8). */
     val photoRejected: Boolean = false,
@@ -103,16 +143,26 @@ class ReportViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val presetFull: Boolean = savedState.get<Boolean>("presetFull") ?: false
+    private val mode: ReportMode = ReportMode.from(savedState.get<String>("mode"))
+
+    /** §4.6 "One on the map is not here": the marker the user tapped. */
+    private val presetContainerId: String? = savedState.get<String>("containerId")
 
     private val _state = MutableStateFlow(
         ReportUiState(
+            mode = mode,
             presetFull = presetFull,
-            kind = if (presetFull) ReportKind.Full else null,
+            fromAreaCheck = savedState.get<Boolean>("fromAreaCheck") ?: false,
+            kind = when {
+                presetFull -> ReportKind.Full
+                // §4.6: "with kind 'missing' preselected". Still a chip the user can change.
+                else -> ReportKind.entries.firstOrNull { it.wire == savedState.get<String>("presetKind") }
+            },
         ),
     )
     val state: StateFlow<ReportUiState> = _state.asStateFlow()
 
-    /** One id per photo: its storage name, shared by an add and the report so it uploads once. */
+    /** One id per photo: its storage name, so a retried upload overwrites rather than duplicates. */
     private var draftId: String = UUID.randomUUID().toString()
 
     // -----------------------------------------------------------------------------------------
@@ -135,7 +185,12 @@ class ReportViewModel @Inject constructor(
             processed.onSuccess { photo ->
                 _state.update { it.copy(photo = photo) }
                 located.await()
-                _state.update { it.copy(stage = ReportStage.Compose) }
+                if (mode == ReportMode.AddContainer) {
+                    _state.update { it.copy(stage = ReportStage.Adding) }
+                    openAddContainer()
+                } else {
+                    _state.update { it.copy(stage = ReportStage.Compose) }
+                }
             }.onFailure { error ->
                 if (error is kotlinx.coroutines.CancellationException) throw error
                 raw.delete()
@@ -150,7 +205,9 @@ class ReportViewModel @Inject constructor(
 
     fun retake() {
         _state.value.photo?.file?.delete()
-        _state.update { it.copy(stage = ReportStage.Camera, photo = null, outcome = null, photoRejected = false) }
+        _state.update {
+            it.copy(stage = ReportStage.Camera, photo = null, outcome = null, photoRejected = false, add = null)
+        }
     }
 
     private suspend fun locateAndSnap() {
@@ -163,6 +220,14 @@ class ReportViewModel @Inject constructor(
             return
         }
         _state.update { it.copy(device = device, locationUnavailable = false) }
+
+        // §4.6: the user already pointed at the container on the map.
+        presetContainerId?.let { id ->
+            gateway.containerById(id, device)?.let { chosen ->
+                _state.update { it.copy(snapping = false, container = chosen) }
+                return
+            }
+        }
 
         val snapped = when (val result = gateway.nearestContainer(device)) {
             is KantaResult.Success -> result.data
@@ -202,7 +267,16 @@ class ReportViewModel @Inject constructor(
     // -----------------------------------------------------------------------------------------
 
     fun openAddContainer() {
-        _state.update { it.copy(add = AddContainerUiState(), pickerOpen = false) }
+        val device = _state.value.device
+        _state.update {
+            it.copy(add = AddContainerUiState(device = device, pin = device), pickerOpen = false)
+        }
+        viewModelScope.launch {
+            if (device != null) {
+                val nearby = gateway.containersAround(device, PICKER_RADIUS_M)
+                updateAdd { it.copy(nearby = nearby) }
+            }
+        }
         viewModelScope.launch {
             when (val result = gateway.addAllowance()) {
                 is KantaResult.Success -> updateAdd {
@@ -219,7 +293,16 @@ class ReportViewModel @Inject constructor(
         }
     }
 
-    fun closeAddContainer() = _state.update { it.copy(add = null) }
+    /**
+     * Closing the sheet. In the report flow that returns to the compose sheet; in
+     * "One is missing" there is nothing underneath, so it goes back to the camera.
+     */
+    fun closeAddContainer() {
+        if (mode == ReportMode.AddContainer) retake() else _state.update { it.copy(add = null) }
+    }
+
+    /** The map under the pin settled (§4.6 "drags the pin to the exact spot"). */
+    fun movePin(to: LatLon) = updateAdd { it.copy(pin = to, error = null, duplicateOf = null) }
 
     fun addKind(kind: ContainerKind) = updateAdd {
         // Small cans have no recycling category (§3.4); reset it so a stale
@@ -234,7 +317,17 @@ class ReportViewModel @Inject constructor(
         viewModelScope.launch {
             updateAdd { it.copy(submitting = true, error = null, duplicateOf = null) }
             when (val result = gateway.addContainer(draft)) {
-                is KantaResult.Success -> {
+                is KantaResult.Success -> if (mode == ReportMode.AddContainer) {
+                    // "One is missing" ends here: the container IS the contribution.
+                    _state.update {
+                        it.copy(
+                            add = null,
+                            stage = ReportStage.Done,
+                            outcome = SendOutcome.ContainerAdded(verified = result.data.verified),
+                        )
+                    }
+                    recordAreaCheck(AREA_ADDED)
+                } else {
                     val added = ContainerCandidate(
                         id = result.data.containerId,
                         code = result.data.code,
@@ -263,6 +356,12 @@ class ReportViewModel @Inject constructor(
     /** "Is it this one?" → yes: report on the existing container instead of adding. */
     fun useDuplicate() {
         val existing = _state.value.add?.duplicateOf ?: return
+        if (mode == ReportMode.AddContainer) {
+            // It was on the map after all — which is exactly what the check wanted to know.
+            _state.update { it.copy(add = null, stage = ReportStage.Done, outcome = SendOutcome.AlreadyOnMap) }
+            recordAreaCheck(AREA_ALL_PRESENT)
+            return
+        }
         _state.update { it.copy(container = existing, add = null, outcome = null) }
     }
 
@@ -272,8 +371,11 @@ class ReportViewModel @Inject constructor(
         viewModelScope.launch {
             updateAdd { it.copy(submitting = true, error = null) }
             when (val result = gateway.requestContainer(draft, _state.value.note.ifBlank { null })) {
-                is KantaResult.Success -> _state.update {
-                    it.copy(add = null, stage = ReportStage.Done, outcome = SendOutcome.RequestSent)
+                is KantaResult.Success -> {
+                    _state.update {
+                        it.copy(add = null, stage = ReportStage.Done, outcome = SendOutcome.RequestSent)
+                    }
+                    recordAreaCheck(AREA_ADDED)
                 }
                 is KantaResult.Failure -> updateAdd { it.copy(submitting = false, error = result.error) }
                 KantaResult.Loading -> Unit
@@ -283,14 +385,16 @@ class ReportViewModel @Inject constructor(
 
     private fun containerDraft(confirmDifferent: Boolean): ContainerDraft? {
         val s = _state.value
-        val kind = s.add?.kind ?: return null
+        val add = s.add ?: return null
+        val kind = add.kind ?: return null
+        val device = s.device ?: return null
         return ContainerDraft(
-            // The user is standing at the container they just photographed, so the
-            // pin starts where the phone is. The server still checks the 30 m rule.
-            pin = s.device ?: return null,
-            device = s.device,
+            // The pin starts where the phone is and the user drags it onto the
+            // container (§4.6). The server checks it against the phone: 30 m.
+            pin = add.pin ?: device,
+            device = device,
             kind = kind,
-            category = s.add?.category ?: ContainerCategory.GENERAL,
+            category = add.category,
             photo = s.photo?.file ?: return null,
             photoId = draftId,
             confirmDifferent = confirmDifferent,
@@ -342,7 +446,29 @@ class ReportViewModel @Inject constructor(
                     outcome = outcome,
                 )
             }
+            // §4.6 "One on the map is not here": the check is answered once the
+            // server has the report. A queued one records nothing yet — it may
+            // still be refused when it finally sends.
+            if (kind == ReportKind.Missing &&
+                (outcome is SendOutcome.Sent || outcome is SendOutcome.MergedMeToo)
+            ) {
+                recordAreaCheck(AREA_REPORTED_MISSING)
+            }
         }
+    }
+
+    /**
+     * §4.6: the area check this flow was opened from is answered by the flow's
+     * success. Best effort: the report or container already landed, which is the
+     * part that matters; a lost check only means the user may be asked again.
+     */
+    private fun recordAreaCheck(result: String) {
+        val s = _state.value
+        if (!s.fromAreaCheck) return
+        val at = s.device ?: return
+        // NonCancellable: "Done" closes the screen (and this scope) at once; the
+        // one small write should still reach the server.
+        viewModelScope.launch { withContext(NonCancellable) { gateway.submitAreaCheck(at, result) } }
     }
 
     fun dismissOutcome() = _state.update { it.copy(outcome = null) }
@@ -355,6 +481,11 @@ class ReportViewModel @Inject constructor(
 
     companion object {
         const val MAX_NOTE = 280
+
+        /** area_checks.result values (§6). */
+        const val AREA_ALL_PRESENT = "all_present"
+        const val AREA_ADDED = "added"
+        const val AREA_REPORTED_MISSING = "reported_missing"
 
         /** Wider than the 60 m report rule so the picker can show why a far one won't work. */
         const val PICKER_RADIUS_M = 120.0

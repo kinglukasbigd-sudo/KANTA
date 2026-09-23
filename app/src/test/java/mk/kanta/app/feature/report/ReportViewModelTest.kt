@@ -56,8 +56,11 @@ class ReportViewModelTest {
 
     @After fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(full: Boolean) =
-        ReportViewModel(SavedStateHandle(mapOf("presetFull" to full)), gateway, processor)
+    private fun viewModel(full: Boolean, vararg extra: Pair<String, Any?>) =
+        ReportViewModel(SavedStateHandle(mapOf("presetFull" to full, *extra)), gateway, processor)
+
+    /** §4.6 "One is missing", opened from the area check. */
+    private fun addFromCheck() = viewModel(full = false, "mode" to "add", "fromAreaCheck" to true)
 
     private fun rawFile() = File.createTempFile("raw", ".jpg")
 
@@ -322,6 +325,148 @@ class ReportViewModelTest {
         assertEquals(ContainerCategory.GENERAL, vm.state.value.add!!.category)
     }
 
+    // --- §4.6 Map your street: the flow opened from the area check -----------------------
+
+    @Test fun `"One is missing" goes from the photo straight into Add container`() = runTest(dispatcher) {
+        val vm = addFromCheck()
+
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+
+        with(vm.state.value) {
+            assertEquals(ReportStage.Adding, stage)
+            assertEquals(here, add?.pin) // the pin starts where the phone is
+            assertEquals(2, add?.remaining)
+        }
+    }
+
+    @Test fun `adding from the check ends the flow and records "added"`() = runTest(dispatcher) {
+        val vm = addFromCheck()
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        vm.addKind(ContainerKind.SMALL)
+
+        vm.submitAdd(); advanceUntilIdle()
+
+        with(vm.state.value) {
+            assertEquals(ReportStage.Done, stage)
+            assertEquals(SendOutcome.ContainerAdded(verified = false), outcome)
+        }
+        assertTrue(gateway.submitted.isEmpty()) // no report: the container is the contribution
+        assertEquals(listOf("added"), gateway.areaChecks)
+    }
+
+    @Test fun `the dragged pin is sent, the phone position stays the phone`() = runTest(dispatcher) {
+        val vm = addFromCheck()
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        vm.addKind(ContainerKind.BIG)
+        val dragged = LatLon(here.lat + 0.0001, here.lon)
+
+        vm.movePin(dragged)
+        assertEquals(11, vm.state.value.add?.pinDistanceMetres?.let { kotlin.math.round(it).toInt() })
+        vm.submitAdd(); advanceUntilIdle()
+
+        assertEquals(dragged, gateway.added.single().pin)
+        assertEquals(here, gateway.added.single().device)
+    }
+
+    @Test fun `at the limit, send for review also answers the check`() = runTest(dispatcher) {
+        gateway.allowance = KantaResult.Success(AddAllowanceDto(isAdmin = false, containersAdded = 2, remaining = 0))
+        val vm = addFromCheck()
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        assertTrue(vm.state.value.add!!.limitReached)
+        vm.addKind(ContainerKind.BIG)
+
+        vm.sendForReview(); advanceUntilIdle()
+
+        assertEquals(SendOutcome.RequestSent, vm.state.value.outcome)
+        assertEquals(1, gateway.requested.size)
+        assertEquals(listOf("added"), gateway.areaChecks)
+    }
+
+    @Test fun `the server's refusal is shown in the sheet, not guessed`() = runTest(dispatcher) {
+        gateway.addResults += KantaResult.Failure(KantaError.TooFarToAdd(41))
+        val vm = addFromCheck()
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        vm.addKind(ContainerKind.BIG)
+
+        vm.submitAdd(); advanceUntilIdle()
+
+        assertEquals(KantaError.TooFarToAdd(41), vm.state.value.add?.error)
+        assertEquals(ReportStage.Adding, vm.state.value.stage)
+        assertTrue(gateway.areaChecks.isEmpty())
+    }
+
+    @Test fun `"Is it this one?" yes means nothing was missing`() = runTest(dispatcher) {
+        gateway.around = listOf(sk412)
+        gateway.addResults += KantaResult.Failure(KantaError.DuplicateContainer("c-412"))
+        val vm = addFromCheck()
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        vm.addKind(ContainerKind.BIG)
+        vm.submitAdd(); advanceUntilIdle()
+
+        vm.useDuplicate()
+        advanceUntilIdle()
+
+        assertEquals(SendOutcome.AlreadyOnMap, vm.state.value.outcome)
+        assertEquals(listOf("all_present"), gateway.areaChecks)
+    }
+
+    @Test fun `closing the add sheet in add mode goes back to the camera`() = runTest(dispatcher) {
+        val vm = addFromCheck()
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+
+        vm.closeAddContainer()
+
+        assertEquals(ReportStage.Camera, vm.state.value.stage)
+        assertNull(vm.state.value.add)
+    }
+
+    @Test fun `"not here" preselects the tapped container and kind missing`() = runTest(dispatcher) {
+        val tapped = candidate("c-77", "SK-00077", distance = 14.0)
+        gateway.byId["c-77"] = tapped
+        gateway.nearest = KantaResult.Success(sk412) // must NOT win over the tapped one
+        val vm = viewModel(
+            full = false,
+            "containerId" to "c-77",
+            "presetKind" to "missing",
+            "fromAreaCheck" to true,
+        )
+
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        with(vm.state.value) {
+            assertEquals("SK-00077", container?.code)
+            assertEquals(ReportKind.Missing, kind)
+            assertTrue(canSend)
+        }
+
+        vm.send(); advanceUntilIdle()
+        assertEquals("missing", gateway.submitted.single().kind)
+        assertEquals(listOf("reported_missing"), gateway.areaChecks)
+    }
+
+    @Test fun `a queued missing report does not answer the check yet`() = runTest(dispatcher) {
+        gateway.byId["c-77"] = candidate("c-77", "SK-00077", distance = 14.0)
+        gateway.submitResult = KantaResult.Failure(KantaError.Offline)
+        val vm = viewModel(full = false, "containerId" to "c-77", "presetKind" to "missing", "fromAreaCheck" to true)
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+
+        vm.send(); advanceUntilIdle()
+
+        assertEquals(SendOutcome.Queued, vm.state.value.outcome)
+        assertTrue(gateway.areaChecks.isEmpty())
+    }
+
+    @Test fun `a normal report never writes an area check`() = runTest(dispatcher) {
+        gateway.nearest = KantaResult.Success(sk412)
+        val vm = viewModel(full = false)
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        vm.selectKind(ReportKind.Missing)
+
+        vm.send(); advanceUntilIdle()
+
+        assertEquals(SendOutcome.Sent, vm.state.value.outcome)
+        assertTrue(gateway.areaChecks.isEmpty())
+    }
+
     // ---------------------------------------------------------------------------------------
 
     private fun candidate(id: String, code: String, distance: Double) = ContainerCandidate(
@@ -362,6 +507,18 @@ class ReportViewModelTest {
         }
         override suspend fun requestContainer(draft: ContainerDraft, note: String?) =
             KantaResult.Success(ContainerRequestResultDto("req-1", remainingToday = 2))
+                .also { requested += draft }
+
+        override suspend fun containerById(id: String, from: LatLon) = byId[id]
+
+        override suspend fun submitAreaCheck(at: LatLon, result: String): KantaResult<Unit> {
+            areaChecks += result
+            return KantaResult.Success(Unit)
+        }
+
+        val byId = mutableMapOf<String, ContainerCandidate>()
+        val requested = mutableListOf<ContainerDraft>()
+        val areaChecks = mutableListOf<String>()
     }
 
     private class FakeProcessor : PhotoProcessor {

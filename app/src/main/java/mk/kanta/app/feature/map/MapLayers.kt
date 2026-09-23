@@ -5,8 +5,11 @@ import androidx.compose.ui.graphics.toArgb
 import mk.kanta.app.core.data.model.ContainerCategory
 import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.data.model.ContainerStatus
+import mk.kanta.app.core.designsystem.BrandDark
+import mk.kanta.app.core.designsystem.BrandLight
 import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.marker.MarkerBitmapFactory
+import mk.kanta.app.core.location.LatLon
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
@@ -47,6 +50,30 @@ object MapLayers {
     const val LAYER_CONTAINERS_MID = "kanta-containers-mid"
     const val LAYER_CONTAINERS_NEAR = "kanta-containers-near"
     const val LAYER_SUGGESTIONS = "kanta-suggestions-layer"
+
+    /** §4.6: the 150 m "near you" ring of an area check. */
+    const val RING_SOURCE = "kanta-ring"
+    const val LAYER_RING = "kanta-ring-layer"
+
+    /** §4.6 admin: where area checks happened in the last 90 days. */
+    const val COVERAGE_SOURCE = "kanta-coverage"
+    const val LAYER_COVERAGE = "kanta-coverage-layer"
+
+    /** Admin review: a ring around the request or container being looked at. */
+    const val FOCUS_SOURCE = "kanta-focus"
+    const val LAYER_FOCUS = "kanta-focus-layer"
+
+    /** Radius in metres, carried on ring and coverage features. */
+    private const val PROP_RADIUS = "r"
+
+    /**
+     * Metres per logical pixel at zoom 0 on the equator (MapLibre's 512 px world).
+     * Dividing by cos(latitude) gives the local scale.
+     */
+    private const val METRES_PER_PX_Z0 = 78_271.517
+
+    /** Skopje's latitude, for the coverage layer: the whole city is within 0.1°. */
+    private const val SKOPJE_LAT = 42.0
 
     /** Feature properties. Kept short: they are repeated 10,000 times. */
     const val PROP_ID = "id"
@@ -176,10 +203,141 @@ object MapLayers {
             ),
         )
         style.addSource(GeoJsonSource(SUGGESTION_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+        style.addSource(GeoJsonSource(COVERAGE_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+        style.addSource(GeoJsonSource(RING_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+        style.addSource(GeoJsonSource(FOCUS_SOURCE, FeatureCollection.fromFeatures(emptyList())))
 
+        // Area shading sits under every marker; the focus ring sits on top.
+        addCoverageLayer(style, darkTheme)
+        addRingLayer(style, darkTheme)
         addClusterLayers(style)
         addContainerLayers(style)
         addSuggestionLayer(style)
+        addFocusLayer(style, darkTheme)
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // §4.6 area layers — real-world radii, so they are drawn in metres, not pixels
+    // -----------------------------------------------------------------------------------------
+
+    /**
+     * circle-radius for a radius in metres. Pixels per metre double with every
+     * zoom level, so an exponential(2) interpolation between two far-apart stops
+     * is exact at every zoom in between.
+     */
+    private fun metresToPixels(metres: Expression, latitude: Double): Expression {
+        val pxPerMetreZ0 = 1.0 / (METRES_PER_PX_Z0 * kotlin.math.cos(Math.toRadians(latitude)))
+        return Expression.interpolate(
+            Expression.exponential(2),
+            Expression.zoom(),
+            Expression.stop(0, Expression.product(metres, Expression.literal(pxPerMetreZ0))),
+            Expression.stop(22, Expression.product(metres, Expression.literal(pxPerMetreZ0 * (1 shl 22)))),
+        )
+    }
+
+    private fun brand(darkTheme: Boolean) = if (darkTheme) BrandDark else BrandLight
+
+    /** §4.6 admin coverage: soft green where someone checked; everything else untouched. */
+    private fun addCoverageLayer(style: Style, darkTheme: Boolean) {
+        style.addLayer(
+            CircleLayer(LAYER_COVERAGE, COVERAGE_SOURCE).apply {
+                withProperties(
+                    PropertyFactory.circleRadius(
+                        metresToPixels(Expression.toNumber(Expression.get(PROP_RADIUS)), SKOPJE_LAT),
+                    ),
+                    PropertyFactory.circleColor(MarkerColors.BigOk.toArgb()),
+                    PropertyFactory.circleOpacity(if (darkTheme) 0.26f else 0.18f),
+                    PropertyFactory.circleBlur(0.15f),
+                    PropertyFactory.circlePitchAlignment("map"),
+                    PropertyFactory.visibility("none"),
+                )
+            },
+        )
+    }
+
+    private fun addRingLayer(style: Style, darkTheme: Boolean) {
+        style.addLayer(
+            CircleLayer(LAYER_RING, RING_SOURCE).apply {
+                withProperties(
+                    PropertyFactory.circleRadius(
+                        metresToPixels(Expression.toNumber(Expression.get(PROP_RADIUS)), SKOPJE_LAT),
+                    ),
+                    PropertyFactory.circleColor(brand(darkTheme).toArgb()),
+                    PropertyFactory.circleOpacity(0.06f),
+                    PropertyFactory.circleStrokeWidth(1.5f),
+                    PropertyFactory.circleStrokeColor(brand(darkTheme).toArgb()),
+                    PropertyFactory.circleStrokeOpacity(0.7f),
+                    PropertyFactory.circlePitchAlignment("map"),
+                )
+            },
+        )
+    }
+
+    private fun addFocusLayer(style: Style, darkTheme: Boolean) {
+        style.addLayer(
+            CircleLayer(LAYER_FOCUS, FOCUS_SOURCE).apply {
+                withProperties(
+                    PropertyFactory.circleRadius(18f),
+                    PropertyFactory.circleOpacity(0f),
+                    PropertyFactory.circleStrokeWidth(3f),
+                    PropertyFactory.circleStrokeColor(brand(darkTheme).toArgb()),
+                )
+            },
+        )
+    }
+
+    /** Draws the check ring around [centre], or clears it with null. */
+    fun setRing(style: Style, centre: LatLon?, radiusMetres: Int) {
+        val source = style.getSourceAs<GeoJsonSource>(RING_SOURCE) ?: return
+        if (centre == null) {
+            source.setGeoJson(FeatureCollection.fromFeatures(emptyList()))
+            return
+        }
+        // The layer's metres-to-pixels scale is for Skopje's latitude; re-set it
+        // for the exact centre so the ring is true wherever the user stands.
+        style.getLayer(LAYER_RING)?.setProperties(
+            PropertyFactory.circleRadius(
+                metresToPixels(Expression.toNumber(Expression.get(PROP_RADIUS)), centre.lat),
+            ),
+        )
+        source.setGeoJson(
+            Feature.fromGeometry(Point.fromLngLat(centre.lon, centre.lat)).apply {
+                addNumberProperty(PROP_RADIUS, radiusMetres)
+            },
+        )
+    }
+
+    /**
+     * Shows admin_coverage()'s GeoJSON (points with `radius_m`), or hides the
+     * layer with null. The server's property is renamed to [PROP_RADIUS] here so
+     * the layer does not depend on a SQL column name.
+     */
+    fun setCoverage(style: Style, geoJson: String?) {
+        val source = style.getSourceAs<GeoJsonSource>(COVERAGE_SOURCE) ?: return
+        val layer = style.getLayer(LAYER_COVERAGE) ?: return
+        if (geoJson == null) {
+            layer.setProperties(PropertyFactory.visibility("none"))
+            return
+        }
+        val parsed = runCatching { FeatureCollection.fromJson(geoJson) }.getOrNull() ?: return
+        val features = parsed.features().orEmpty().map { feature ->
+            val radius = feature.getNumberProperty("radius_m")?.toDouble() ?: 150.0
+            Feature.fromGeometry(feature.geometry()).apply { addNumberProperty(PROP_RADIUS, radius) }
+        }
+        source.setGeoJson(FeatureCollection.fromFeatures(features))
+        layer.setProperties(PropertyFactory.visibility("visible"))
+    }
+
+    /** Rings one point for the admin review, or clears it with null. */
+    fun setFocus(style: Style, point: LatLon?) {
+        val source = style.getSourceAs<GeoJsonSource>(FOCUS_SOURCE) ?: return
+        source.setGeoJson(
+            if (point == null) {
+                FeatureCollection.fromFeatures(emptyList())
+            } else {
+                FeatureCollection.fromFeatures(listOf(Feature.fromGeometry(Point.fromLngLat(point.lon, point.lat))))
+            },
+        )
     }
 
     private fun addClusterLayers(style: Style) {

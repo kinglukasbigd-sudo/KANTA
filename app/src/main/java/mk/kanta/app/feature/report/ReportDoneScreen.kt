@@ -81,6 +81,12 @@ fun ReportDoneScreen(state: ReportUiState, onDone: () -> Unit) {
                     )
                     SendOutcome.Queued -> stringResource(R.string.report_queued)
                     SendOutcome.RequestSent -> stringResource(R.string.report_request_sent)
+                    // §4.6: say which kind of "added" it was — on the map for good, or
+                    // dashed until two neighbours confirm it.
+                    is SendOutcome.ContainerAdded -> stringResource(
+                        if (outcome.verified) R.string.add_done_verified else R.string.add_done_unverified,
+                    )
+                    SendOutcome.AlreadyOnMap -> stringResource(R.string.add_done_already_there)
                     else -> stringResource(
                         if (state.presetFull) R.string.report_sent_full else R.string.report_sent,
                     )

@@ -15,10 +15,12 @@ import kotlinx.coroutines.launch
 import mk.kanta.app.core.auth.AuthGate
 import mk.kanta.app.core.auth.AuthInput
 import mk.kanta.app.core.auth.AuthRepository
+import mk.kanta.app.core.auth.CurrentProfile
 import mk.kanta.app.core.auth.PendingAction
 import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
+import mk.kanta.app.feature.street.AreaCheckPrompter
 import javax.inject.Inject
 
 enum class LoginStep { Email, Code, Name }
@@ -54,6 +56,8 @@ class AuthViewModel @Inject constructor(
     private val auth: AuthRepository,
     private val gate: AuthGate,
     private val kanta: KantaRepository,
+    private val areaCheckPrompter: AreaCheckPrompter,
+    private val currentProfile: CurrentProfile,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -183,7 +187,7 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             _state.update { it.copy(loading = true, error = null) }
             when (val result = auth.updateProfile(name, _state.value.municipalityId)) {
-                is KantaResult.Success -> finish()
+                is KantaResult.Success -> finishNewAccount()
                 is KantaResult.Failure -> _state.update { it.copy(loading = false, error = result.error) }
                 KantaResult.Loading -> Unit
             }
@@ -210,7 +214,7 @@ class AuthViewModel @Inject constructor(
      */
     fun dismiss() {
         if (_state.value.step == LoginStep.Name) {
-            finish()
+            finishNewAccount()
         } else {
             reset()
             gate.onLoginDismissed()
@@ -219,7 +223,19 @@ class AuthViewModel @Inject constructor(
 
     private fun finish() {
         reset()
+        currentProfile.refresh()
         gate.onSignInCompleted()
+    }
+
+    /**
+     * Only a brand-new account reaches the name step. §4.6: it is asked "Are all
+     * containers near you on the map?" — but only once whatever it signed in to
+     * do is finished. Marked before the gate releases that intent, so the map
+     * knows to wait for it rather than racing it.
+     */
+    private fun finishNewAccount() {
+        areaCheckPrompter.markFirstLogin()
+        finish()
     }
 
     private fun reset() {

@@ -10,7 +10,9 @@ import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Navigation
@@ -46,6 +48,10 @@ object KantaIcons {
     // --- Sheet sections (§4.1) ---
     val Profile: ImageVector = Icons.Rounded.Person
     val Stats: ImageVector = Icons.Rounded.Insights
+    /** §4.6 "Map your street". */
+    val MapStreet: ImageVector = Icons.Rounded.TaskAlt
+    /** §4.6 the hidden Admin row. */
+    val Admin: ImageVector = Icons.Rounded.AdminPanelSettings
     val Settings: ImageVector = Icons.Rounded.Settings
 
     // --- States & feedback (§4.5 screen 14) ---

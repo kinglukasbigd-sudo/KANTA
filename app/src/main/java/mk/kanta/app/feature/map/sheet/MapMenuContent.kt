@@ -89,6 +89,9 @@ fun ColumnScope.MapMenuBody(
     onMyReports: () -> Unit,
     onCityStats: () -> Unit,
     onSuggestions: () -> Unit,
+    onMapYourStreet: () -> Unit,
+    showAdmin: Boolean,
+    onAdmin: () -> Unit,
 ) {
     // §3.3: separate with tone and 1dp hairlines, never cards or shadows.
     Hairline()
@@ -148,6 +151,13 @@ fun ColumnScope.MapMenuBody(
         icon = KantaIcons.Profile,
         onClick = onMyReports,
     )
+    // §4.6: "permanently available … under My reports & profile → Map your street".
+    MenuRow(
+        title = stringResource(R.string.menu_map_street),
+        subtitle = stringResource(R.string.menu_map_street_subtitle),
+        icon = KantaIcons.MapStreet,
+        onClick = onMapYourStreet,
+    )
     Hairline()
     MenuRow(
         title = stringResource(R.string.menu_city_stats),
@@ -162,6 +172,17 @@ fun ColumnScope.MapMenuBody(
         icon = KantaIcons.Suggest,
         onClick = onSuggestions,
     )
+
+    // §4.6: hidden unless profiles.role = 'admin'. The server re-checks every call.
+    if (showAdmin) {
+        Hairline()
+        MenuRow(
+            title = stringResource(R.string.menu_admin),
+            subtitle = stringResource(R.string.menu_admin_subtitle),
+            icon = KantaIcons.Admin,
+            onClick = onAdmin,
+        )
+    }
 
     Spacer(Modifier.height(Spacing.xl))
 }

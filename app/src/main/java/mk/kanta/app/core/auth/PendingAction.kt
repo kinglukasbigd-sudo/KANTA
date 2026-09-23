@@ -36,6 +36,14 @@ sealed interface PendingAction {
         val kind: String,
     ) : PendingAction
 
+    /**
+     * "Map your street" from the sheet (§4.6). Checking an area writes an
+     * area_check, which needs an account.
+     */
+    @Serializable
+    @SerialName("open_area_check")
+    data object OpenAreaCheck : PendingAction
+
     /** Vote on a suggestion (§5.3). */
     @Serializable
     @SerialName("vote")

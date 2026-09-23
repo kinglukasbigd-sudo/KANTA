@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,11 +62,20 @@ import mk.kanta.app.core.designsystem.kantaSoftShadow
 import mk.kanta.app.core.designsystem.marker.MarkerBitmapFactory
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
 import mk.kanta.app.core.location.LatLon
+import mk.kanta.app.feature.admin.AdminContent
+import mk.kanta.app.feature.admin.AdminEvent
+import mk.kanta.app.feature.admin.AdminTab
+import mk.kanta.app.feature.admin.AdminViewModel
+import mk.kanta.app.feature.admin.CoverageLegend
 import mk.kanta.app.feature.map.sheet.KantaBottomSheetScaffold
 import mk.kanta.app.feature.map.sheet.KantaSheetValue
 import mk.kanta.app.feature.map.sheet.MapMenuBody
 import mk.kanta.app.feature.map.sheet.MapMenuHeader
 import mk.kanta.app.feature.map.sheet.rememberKantaSheetState
+import mk.kanta.app.feature.street.AreaCheckContent
+import mk.kanta.app.feature.street.AreaCheckEvent
+import mk.kanta.app.feature.street.AreaCheckPhase
+import mk.kanta.app.feature.street.AreaCheckViewModel
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -71,11 +83,10 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
 
 /**
- * The main screen (§4.1): a full-screen map with quiet chrome on top.
- *
- * The bottom sheet from §4.1 lands in a later step; this screen delivers the map,
- * the markers, the overlays, the detail sheet and the loading/offline/error
- * states.
+ * The main screen (§4.1): a full-screen map with quiet chrome on top and the one
+ * persistent sheet below. The sheet shows the menu, a container's detail, the
+ * §4.6 area check, or Admin — one at a time, each replacing the menu, with the
+ * map above doing the spatial part (the ring, the coverage, the reviewed pin).
  */
 @Composable
 fun MapScreen(
@@ -87,14 +98,27 @@ fun MapScreen(
     onMyReports: () -> Unit = {},
     onCityStats: () -> Unit = {},
     onSuggestionsList: () -> Unit = {},
+    /** §4.6 "One is missing" → camera → Add container. */
+    onAddContainerFromCheck: () -> Unit = {},
+    /** §4.6 "One on the map is not here" → that marker → report, kind missing. */
+    onReportMissing: (containerId: String) -> Unit = {},
     viewModel: MapViewModel = hiltViewModel(),
+    areaCheckViewModel: AreaCheckViewModel = hiltViewModel(),
+    adminViewModel: AdminViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val areaCheck by areaCheckViewModel.state.collectAsStateWithLifecycle()
+    val admin by adminViewModel.state.collectAsStateWithLifecycle()
+    val isAdmin by adminViewModel.isAdmin.collectAsStateWithLifecycle()
     val cameraTarget by viewModel.cameraTarget.collectAsStateWithLifecycle()
     val darkTheme = KantaTheme.colors.isDark
     val context = LocalContext.current
     val density = LocalDensity.current.density
     val haptics = rememberKantaHaptics()
+    // Room for the wordmark and profile button when framing something on the map.
+    val topInsetPx = with(LocalDensity.current) {
+        (WindowInsets.statusBars.getTop(this) + 64.dp.roundToPx()).toFloat()
+    }
 
     val markerFactory = remember(density) { MarkerBitmapFactory(density) }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
@@ -108,44 +132,101 @@ fun MapScreen(
 
     val sheetState = rememberKantaSheetState()
 
-    // §4.1: the detail sheet replaces the menu. Opening one lifts the sheet to
-    // half so the content is visible without burying the marker that was tapped.
-    LaunchedEffect(state.detail != null) {
-        if (state.detail != null && sheetState.isCollapsed) {
+    // What the one sheet (§4.1) is showing. The check outranks everything while it
+    // runs; a container detail sits on top of Admin, so closing it returns there.
+    val mode = when {
+        areaCheck.active -> SheetMode.AreaCheck
+        state.detail != null -> SheetMode.Detail
+        admin.open -> SheetMode.Admin
+        else -> SheetMode.Menu
+    }
+
+    // §4.1: anything that replaces the menu lifts the sheet to half, so it is
+    // readable without burying the map it is about.
+    LaunchedEffect(mode) {
+        if (mode != SheetMode.Menu && sheetState.isCollapsed) {
             sheetState.animateTo(KantaSheetValue.Half)
         }
     }
 
-    // Swiping the sheet all the way down while the detail is open returns to the
-    // menu, which is what "back/swipe returns to the menu" means as a gesture.
-    LaunchedEffect(sheetState.currentValue, state.detail != null) {
-        if (state.detail != null && sheetState.currentValue == KantaSheetValue.Collapsed) {
-            viewModel.dismissDetail()
+    // Swiping all the way down means "done with this": back to the menu. For
+    // the check that is "Later" (§4.6: always skippable).
+    LaunchedEffect(sheetState.currentValue, mode) {
+        if (sheetState.currentValue == KantaSheetValue.Collapsed) {
+            when (mode) {
+                SheetMode.Detail -> viewModel.dismissDetail()
+                SheetMode.AreaCheck -> areaCheckViewModel.later()
+                SheetMode.Admin -> adminViewModel.close()
+                SheetMode.Menu -> Unit
+            }
         }
     }
 
-    // Back closes the detail first, then collapses an open menu, and only then
-    // falls through to the system.
-    BackHandler(enabled = state.detail != null || !sheetState.isCollapsed) {
-        if (state.detail != null) viewModel.dismissDetail() else sheetState.collapse()
+    // Back steps out one level at a time, and only then falls through to the system.
+    BackHandler(enabled = mode != SheetMode.Menu || !sheetState.isCollapsed) {
+        when (mode) {
+            SheetMode.AreaCheck ->
+                if (areaCheck.phase == AreaCheckPhase.PickingMissing) {
+                    areaCheckViewModel.cancelPicking()
+                } else {
+                    areaCheckViewModel.later()
+                }
+            SheetMode.Detail -> viewModel.dismissDetail()
+            SheetMode.Admin -> adminViewModel.close()
+            SheetMode.Menu -> sheetState.collapse()
+        }
+    }
+
+    // §4.6 prompt timing: the check only asks when the plain menu is showing,
+    // i.e. whatever the user was doing is finished (§4.2).
+    LaunchedEffect(mode, state.userLocation) {
+        areaCheckViewModel.onMapContext(menuShowing = mode == SheetMode.Menu, location = state.userLocation)
+    }
+
+    LaunchedEffect(Unit) {
+        areaCheckViewModel.events.collect { event ->
+            when (event) {
+                AreaCheckEvent.AddContainer -> onAddContainerFromCheck()
+                is AreaCheckEvent.ReportMissing -> onReportMissing(event.containerId)
+                AreaCheckEvent.RefreshMap -> viewModel.refreshNow()
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        adminViewModel.events.collect { event ->
+            when (event) {
+                AdminEvent.RefreshMap -> viewModel.refreshNow()
+            }
+        }
+    }
+
+    // Marker taps, read through the latest state: the map's click listener is
+    // registered once per style, long before the check or Admin opens.
+    val onMarkerTap by rememberUpdatedState { containerId: String ->
+        when {
+            // §4.6 "One on the map is not here" → the user taps that marker.
+            areaCheckViewModel.onMarkerTapped(containerId) -> Unit
+            // The check is about the ring as a whole; a stray tap should not
+            // replace it with a detail sheet.
+            areaCheck.active -> Unit
+            else -> viewModel.onContainerSelected(containerId)
+        }
     }
 
     KantaBottomSheetScaffold(
         sheetState = sheetState,
         modifier = modifier,
         header = {
-            if (state.detail == null) {
+            if (mode == SheetMode.Menu) {
                 MapMenuHeader(onFull = onFull, onReport = onReport, onSuggest = onSuggest)
             } else {
-                // The detail's own handle, so the sheet is still draggable while
-                // it is showing.
+                // Its own handle, so the sheet stays draggable whatever it shows.
                 KantaDragHandle()
             }
         },
         body = {
-            val detail = state.detail
-            if (detail == null) {
-                MapMenuBody(
+            when (mode) {
+                SheetMode.Menu -> MapMenuBody(
                     nearest = state.nearest,
                     nearestLoading = state.nearestLoading,
                     onWhereToThrow = onSuggestionsList,
@@ -153,13 +234,39 @@ fun MapScreen(
                     onMyReports = onMyReports,
                     onCityStats = onCityStats,
                     onSuggestions = onSuggestionsList,
+                    onMapYourStreet = areaCheckViewModel::requestFromMenu,
+                    showAdmin = isAdmin,
+                    onAdmin = adminViewModel::open,
                 )
-            } else {
-                ContainerDetailContent(
-                    state = detail,
-                    onMeToo = viewModel::onMeToo,
-                    onEmptied = viewModel::onEmptied,
-                    onReportOther = onReport,
+                SheetMode.Detail -> state.detail?.let { detail ->
+                    ContainerDetailContent(
+                        state = detail,
+                        onMeToo = viewModel::onMeToo,
+                        onEmptied = viewModel::onEmptied,
+                        onReportOther = onReport,
+                        onConfirmExists = viewModel::onConfirmExists,
+                    )
+                }
+                SheetMode.AreaCheck -> AreaCheckContent(
+                    state = areaCheck,
+                    onAllPresent = areaCheckViewModel::answerAllPresent,
+                    onMissingOne = areaCheckViewModel::answerMissingOne,
+                    onNotHere = areaCheckViewModel::answerNotHere,
+                    onCancelPicking = areaCheckViewModel::cancelPicking,
+                    onConfirmExists = areaCheckViewModel::confirmExists,
+                    onLater = areaCheckViewModel::later,
+                )
+                SheetMode.Admin -> AdminContent(
+                    state = admin,
+                    onTab = adminViewModel::selectTab,
+                    onRetry = adminViewModel::retry,
+                    onFocus = adminViewModel::focus,
+                    onApprove = adminViewModel::approve,
+                    onReject = adminViewModel::reject,
+                    onVerify = adminViewModel::verify,
+                    onDelete = adminViewModel::askDelete,
+                    onConfirmDelete = adminViewModel::confirmDelete,
+                    onDismissDelete = adminViewModel::dismissDelete,
                 )
             }
         },
@@ -214,7 +321,7 @@ fun MapScreen(
                     val containerId = MapLayers.containerAt(map, screenPoint, slop)
                     if (containerId != null) {
                         haptics.tick()
-                        viewModel.onContainerSelected(containerId)
+                        onMarkerTap(containerId)
                         return@addOnMapClickListener true
                     }
 
@@ -254,6 +361,82 @@ fun MapScreen(
             MapLayers.setSuggestionsVisible(style, state.showSuggestions)
         }
 
+        // §4.6: the 150 m ring while the check runs.
+        LaunchedEffect(styleRef, areaCheck.active, areaCheck.centre) {
+            val style = styleRef ?: return@LaunchedEffect
+            MapLayers.setRing(
+                style,
+                if (areaCheck.active) areaCheck.centre else null,
+                AreaCheckViewModel.RADIUS_M,
+            )
+        }
+
+        // Frame the ring in the part of the map the half sheet leaves visible —
+        // "a small map of a 150 m radius around the user".
+        LaunchedEffect(mapRef, areaCheck.active, areaCheck.centre) {
+            val map = mapRef ?: return@LaunchedEffect
+            val centre = areaCheck.centre ?: return@LaunchedEffect
+            if (!areaCheck.active) return@LaunchedEffect
+            map.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    framedAboveSheet(
+                        centre = centre,
+                        radiusMetres = AreaCheckViewModel.RADIUS_M.toDouble(),
+                        mapWidthPx = mapView.width,
+                        mapHeightPx = mapView.height,
+                        sheetTopPx = sheetState.anchors[KantaSheetValue.Half] ?: (mapView.height * 0.55f),
+                        topInsetPx = topInsetPx,
+                        density = density,
+                    ),
+                ),
+                CAMERA_MS,
+            )
+        }
+
+        // §4.6 admin coverage: shaded only while the Coverage tab is open.
+        LaunchedEffect(styleRef, admin.open, admin.tab, admin.coverage) {
+            val style = styleRef ?: return@LaunchedEffect
+            val show = admin.open && admin.tab == AdminTab.Coverage && mode == SheetMode.Admin
+            MapLayers.setCoverage(style, if (show) admin.coverage else null)
+        }
+        LaunchedEffect(mapRef, admin.open, admin.tab) {
+            val map = mapRef ?: return@LaunchedEffect
+            if (admin.open && admin.tab == AdminTab.Coverage) {
+                // The whole city, so the unchecked parts are what stands out.
+                map.animateCamera(
+                    CameraUpdateFactory.newLatLngZoom(
+                        LatLng(LatLon.SKOPJE_CENTRE.lat, LatLon.SKOPJE_CENTRE.lon),
+                        CITY_ZOOM,
+                    ),
+                    CAMERA_MS,
+                )
+            }
+        }
+
+        // Admin review: ring the request or container being looked at, and go there.
+        LaunchedEffect(styleRef, mapRef, admin.open, admin.focus) {
+            val style = styleRef ?: return@LaunchedEffect
+            val focus = if (admin.open) admin.focus else null
+            MapLayers.setFocus(style, focus)
+            val map = mapRef ?: return@LaunchedEffect
+            if (focus != null) {
+                map.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        framedAboveSheet(
+                            centre = focus,
+                            radiusMetres = FOCUS_RADIUS_M,
+                            mapWidthPx = mapView.width,
+                            mapHeightPx = mapView.height,
+                            sheetTopPx = sheetState.offset.value,
+                            topInsetPx = topInsetPx,
+                            density = density,
+                        ),
+                    ),
+                    CAMERA_MS,
+                )
+            }
+        }
+
         // Fly to a new camera target once, then clear it.
         LaunchedEffect(cameraTarget, mapRef) {
             val target = cameraTarget ?: return@LaunchedEffect
@@ -289,6 +472,19 @@ fun MapScreen(
             },
             onToggleSuggestions = viewModel::toggleSuggestions,
         )
+
+        // §4.6: "with a legend" — on the map itself, where the colour is.
+        AnimatedVisibility(
+            visible = mode == SheetMode.Admin && admin.tab == AdminTab.Coverage,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 64.dp),
+        ) {
+            CoverageLegend()
+        }
 
         // Loading skeleton over the map until the cache has produced a first frame.
         AnimatedVisibility(
@@ -339,6 +535,43 @@ fun MapScreen(
 }
 
 private const val DEFAULT_ZOOM = 15.0
+private const val CITY_ZOOM = 11.4
+private const val CAMERA_MS = 600
+
+/** Enough map around a reviewed pin to see what else stands there. */
+private const val FOCUS_RADIUS_M = 60.0
+
+/** What the one sheet is showing (§4.1: it is the only menu). */
+private enum class SheetMode { Menu, Detail, AreaCheck, Admin }
+
+/**
+ * A camera that fits a circle of [radiusMetres] around [centre] into the map
+ * area left between the top chrome and the sheet's top edge — so the ring is
+ * framed where the user can see it, not behind the sheet.
+ *
+ * MapLibre's zoom scale is in density-independent pixels: at zoom z one dp
+ * covers 78 271.517 · cos(lat) / 2^z metres.
+ */
+private fun framedAboveSheet(
+    centre: LatLon,
+    radiusMetres: Double,
+    mapWidthPx: Int,
+    mapHeightPx: Int,
+    sheetTopPx: Float,
+    topInsetPx: Float,
+    density: Float,
+): CameraPosition {
+    val visibleHeightPx = (sheetTopPx - topInsetPx).coerceAtLeast(mapHeightPx * 0.25f)
+    val fitPx = minOf(visibleHeightPx, mapWidthPx.toFloat()) * 0.86f
+    val fitDp = (fitPx / density).coerceAtLeast(1f)
+    val metresPerDp = (radiusMetres * 2.0) / fitDp
+    val zoom = kotlin.math.log2(78_271.517 * kotlin.math.cos(Math.toRadians(centre.lat)) / metresPerDp)
+    return CameraPosition.Builder()
+        .target(LatLng(centre.lat, centre.lon))
+        .zoom(zoom.coerceIn(12.0, 19.0))
+        .padding(0.0, topInsetPx.toDouble(), 0.0, (mapHeightPx - sheetTopPx).toDouble().coerceAtLeast(0.0))
+        .build()
+}
 
 // -------------------------------------------------------------------------------------------
 // Overlays

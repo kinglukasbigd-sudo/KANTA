@@ -158,7 +158,7 @@
     <string name="add_duplicate_different">Jo, është tjetër</string>
     <string name="add_type">Lloji</string>
     <string name="add_category">Kategoria</string>
-    <string name="add_pin_here">Vendoset aty ku qëndron.</string>
+    <string name="add_pin_here">Lëviz hartën që gjilpëra të jetë mbi kontejner.</string>
     <string name="add_send_for_review">Dërgo për shqyrtim</string>
     <string name="add_submit">Shto kontejnerin</string>
     <string name="category_general">I përzier</string>
@@ -182,5 +182,67 @@
     <plurals name="report_merged">
         <item quantity="one">%d fqinj e ka raportuar tashmë këtë — shtuam konfirmimin tënd.</item>
         <item quantity="other">%d fqinjë e kanë raportuar tashmë këtë — shtuam konfirmimin tënd.</item>
+    </plurals>
+
+    <!-- §4.6 Map your street, admin -->
+    <string name="add_pin_map">Harta. Lëvize që gjilpëra të jetë mbi kontejner.</string>
+    <string name="add_pin_distance">Gjilpëra është %1$d m larg teje.</string>
+    <string name="add_done_verified">U shtua — është në hartë. Faleminderit!</string>
+    <string name="add_done_unverified">U shtua — faleminderit! Shfaqet me vijë të ndërprerë derisa 2 fqinj të konfirmojnë që është aty.</string>
+    <string name="add_done_already_there">Mirë — është tashmë në hartë. Faleminderit që kontrollove.</string>
+    <string name="menu_map_street">Harto rrugën tënde</string>
+    <string name="menu_map_street_subtitle">Kontrollo nëse kontejnerët pranë teje janë në hartë</string>
+    <string name="menu_admin">Administrimi</string>
+    <string name="menu_admin_subtitle">Kërkesat, të pakonfirmuarit, mbulimi</string>
+    <string name="street_title">A janë të gjithë kontejnerët pranë teje në hartë?</string>
+    <string name="street_hint">Shiko përreth, rreth 150 m. Kontejnerët e mëdhenj janë drejtkëndësha, koshat e vegjël trekëndësha.</string>
+    <string name="street_yes">Po, çdo gjë është aty</string>
+    <string name="street_missing">Mungon një</string>
+    <string name="street_not_here">Një në hartë nuk është këtu</string>
+    <string name="street_later">Më vonë</string>
+    <string name="street_location_needed">Ndiz vendndodhjen — kontrolli ka të bëjë me 150 m përreth teje.</string>
+    <string name="street_unverified_title">Shtuar nga fqinjët — ende të pakonfirmuar</string>
+    <string name="street_yours">E ke shtuar ti</string>
+    <string name="street_confirmed">E ke konfirmuar</string>
+    <string name="street_move_closer">Afrohu brenda 50 m për ta konfirmuar</string>
+    <string name="street_pick_title">Prek atë që nuk është këtu</string>
+    <string name="street_pick_hint">Pastaj fotografo vendin bosh.</string>
+    <string name="street_thanks">Faleminderit — rruga jote është e përditësuar.</string>
+    <string name="container_action_exists">Po, është këtu</string>
+    <string name="container_detail_unverified_mine">E ke shtuar ti. Konfirmohet kur 2 fqinj thonë që është këtu.</string>
+    <string name="container_detail_unverified_confirmed">Konfirmove që është këtu — pritet edhe një fqinj.</string>
+    <string name="notice_confirmed">Faleminderit — konfirmimi yt u shtua.</string>
+    <string name="notice_confirmed_verified">U konfirmua — tani është përfundimisht në hartë.</string>
+    <string name="admin_title">Administrimi</string>
+    <string name="admin_tab_requests">Kërkesat</string>
+    <string name="admin_tab_unverified">Të pakonfirmuar</string>
+    <string name="admin_tab_coverage">Mbulimi</string>
+    <string name="admin_requests_empty_title">Asnjë kërkesë në pritje</string>
+    <string name="admin_requests_empty_message">Këtu shfaqen kërkesat nga njerëzit që i kanë përdorur 2 shtimet e tyre.</string>
+    <string name="admin_unverified_empty_title">Çdo gjë është e konfirmuar</string>
+    <string name="admin_unverified_empty_message">Kontejnerët e shtuar nga fqinjët presin këtu derisa të konfirmohen.</string>
+    <string name="admin_request_photo">Foto e dërguar me kërkesën</string>
+    <string name="admin_show_on_map">Prek për ta shfaqur në hartë</string>
+    <string name="admin_on_map">Shfaqur në hartë</string>
+    <string name="admin_approve">Mirato</string>
+    <string name="admin_reject">Refuzo</string>
+    <string name="admin_verify">Konfirmo</string>
+    <string name="admin_delete">Fshi</string>
+    <string name="admin_delete_title">Të hiqet nga harta?</string>
+    <string name="admin_delete_message">%1$s zhduket nga harta. Historia ruhet.</string>
+    <string name="admin_coverage_hint">Rrathët e gjelbër janë zona që dikush i ka ecur dhe kontrolluar në 90 ditët e fundit. Çdo gjë tjetër ende duhet hartuar.</string>
+    <string name="admin_coverage_legend_checked">Kontrolluar në 90 ditët e fundit</string>
+    <string name="admin_coverage_legend_unchecked">Ende pa kontrolluar</string>
+    <string name="notice_admin_approved">U miratua — kontejneri është në hartë.</string>
+    <string name="notice_admin_rejected">Kërkesa u refuzua.</string>
+    <string name="notice_admin_verified">U konfirmua.</string>
+    <string name="notice_admin_deleted">U hoq nga harta.</string>
+    <plurals name="admin_confirmations">
+        <item quantity="one">%d konfirmim</item>
+        <item quantity="other">%d konfirmime</item>
+    </plurals>
+    <plurals name="admin_coverage_summary">
+        <item quantity="one">%d kontroll zone në 90 ditët e fundit</item>
+        <item quantity="other">%d kontrolle zonash në 90 ditët e fundit</item>
     </plurals>
 </resources>

@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import mk.kanta.app.BuildConfig
 import mk.kanta.app.R
 import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.data.model.ContainerStatus
@@ -44,6 +43,7 @@ import mk.kanta.app.core.designsystem.component.KantaSectionHeader
 import mk.kanta.app.core.designsystem.component.KantaStatusBadge
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
 import mk.kanta.app.core.designsystem.tabularFigures
+import mk.kanta.app.core.network.publicPhotoUrl
 import kotlin.math.roundToInt
 
 /**
@@ -61,6 +61,7 @@ fun ColumnScope.ContainerDetailContent(
     onMeToo: () -> Unit = {},
     onEmptied: () -> Unit = {},
     onReportOther: () -> Unit = {},
+    onConfirmExists: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -102,6 +103,7 @@ fun ColumnScope.ContainerDetailContent(
         onMeToo = onMeToo,
         onEmptied = onEmptied,
         onReportOther = onReportOther,
+        onConfirmExists = onConfirmExists,
         onNavigate = {
             // §5.2: "Navigate (opens external maps app via geo: intent — no API
             // needed)". The label makes the pin show a name rather than raw
@@ -183,7 +185,13 @@ private fun DetailHeader(state: ContainerDetailState) {
         if (!state.verified) {
             Spacer(Modifier.height(Spacing.s))
             Text(
-                text = stringResource(R.string.container_detail_unverified),
+                text = stringResource(
+                    when {
+                        state.addedByMe -> R.string.container_detail_unverified_mine
+                        state.iConfirmed -> R.string.container_detail_unverified_confirmed
+                        else -> R.string.container_detail_unverified
+                    },
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = KantaTheme.colors.onSurfaceMuted,
             )
@@ -202,7 +210,7 @@ private fun PhotoTimeline(reports: List<PublicReportDto>) {
         items(reports, key = { it.id }) { report ->
             Column(modifier = Modifier.width(140.dp)) {
                 AsyncImage(
-                    model = photoUrl(report.photoPath),
+                    model = publicPhotoUrl(report.photoPath),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -234,12 +242,28 @@ private fun DetailActions(
     onMeToo: () -> Unit,
     onEmptied: () -> Unit,
     onReportOther: () -> Unit,
+    onConfirmExists: () -> Unit,
     onNavigate: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
+        // §4.6: one tap to confirm an unverified container. Offered only when the
+        // server says it would accept it (within 50 m, not your own, not twice);
+        // then it is the most useful thing on the sheet, so it leads.
+        if (state.canConfirmExists) {
+            KantaPrimaryButton(
+                text = stringResource(
+                    if (state.confirmingExists) R.string.report_sending else R.string.container_action_exists,
+                ),
+                onClick = onConfirmExists,
+                icon = KantaIcons.Success,
+                enabled = !state.confirmingExists,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         // The primary action depends on what is wrong: confirming a problem when
         // there is one, otherwise reporting it (§4.1).
         if (state.status == ContainerStatus.FULL) {
@@ -251,6 +275,13 @@ private fun DetailActions(
             KantaSecondaryButton(
                 text = stringResource(R.string.container_action_emptied),
                 onClick = onEmptied,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else if (state.canConfirmExists) {
+            KantaSecondaryButton(
+                text = stringResource(R.string.container_action_report_other),
+                onClick = onReportOther,
+                icon = KantaIcons.Camera,
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
@@ -284,13 +315,6 @@ private fun DetailSkeleton() {
         KantaListRowSkeleton()
     }
 }
-
-/**
- * Public URL for a photo in the `photos` bucket (§6: public read).
- * Built here rather than stored per row so moving the bucket is one change.
- */
-private fun photoUrl(path: String): String =
-    "${BuildConfig.SUPABASE_URL}/storage/v1/object/public/photos/$path"
 
 /**
  * "31 h", "3 d", "just now". Deliberately coarse: §4.1 wants a sense of how long

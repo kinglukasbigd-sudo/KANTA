@@ -30,11 +30,22 @@ sealed interface SendOutcome {
     /** §4.6: allowance used up, so a container request went to review instead. */
     data object RequestSent : SendOutcome
 
+    /**
+     * §4.6 "One is missing": the container was added. [verified] is true for an
+     * admin (on the map for good at once), false for everyone else (dashed until
+     * two neighbours confirm it).
+     */
+    data class ContainerAdded(val verified: Boolean) : SendOutcome
+
+    /** §4.6 "Is it this one?" → yes: nothing was missing after all. */
+    data object AlreadyOnMap : SendOutcome
+
     data class Failed(val error: KantaError) : SendOutcome
 
     /** True when the flow is over and the user should see the success screen. */
     val isFinal: Boolean
-        get() = this is Sent || this is MergedMeToo || this is Queued || this is RequestSent
+        get() = this is Sent || this is MergedMeToo || this is Queued || this is RequestSent ||
+            this is ContainerAdded || this is AlreadyOnMap
 }
 
 /**

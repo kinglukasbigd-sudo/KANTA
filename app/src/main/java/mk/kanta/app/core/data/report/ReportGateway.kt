@@ -66,6 +66,12 @@ interface ReportGateway {
     /** Everything the mini-map picker can offer around [at], nearest first. */
     suspend fun containersAround(at: LatLon, radiusMetres: Double): List<ContainerCandidate>
 
+    /**
+     * A container the user already chose on the map (§4.6 "One on the map is not
+     * here" → tap it), with its distance from [from]. Null if it is not cached.
+     */
+    suspend fun containerById(id: String, from: LatLon): ContainerCandidate?
+
     /** Uploads the photo (idempotently) and files the report. */
     suspend fun submit(draft: ReportDraft): KantaResult<SubmitReportResultDto>
 
@@ -79,4 +85,10 @@ interface ReportGateway {
 
     /** §4.6: when the allowance is used up, send for admin review instead. */
     suspend fun requestContainer(draft: ContainerDraft, note: String?): KantaResult<ContainerRequestResultDto>
+
+    /**
+     * §4.6: record that the 150 m around [at] was checked. [result] is one of
+     * `all_present`, `added`, `reported_missing` — the values area_checks accepts.
+     */
+    suspend fun submitAreaCheck(at: LatLon, result: String): KantaResult<Unit>
 }

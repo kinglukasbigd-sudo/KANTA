@@ -69,6 +69,12 @@ data class ContainerDetailState(
     val unconfirmedFull: Long = 0,
     val reports: List<PublicReportDto> = emptyList(),
     val error: KantaError? = null,
+    /** §4.6: "Added by you" — never offered "Yes, it's here" on your own. */
+    val addedByMe: Boolean = false,
+    val iConfirmed: Boolean = false,
+    /** The server's answer to "may this person say it exists?" (0015). */
+    val canConfirmExists: Boolean = false,
+    val confirmingExists: Boolean = false,
 )
 
 data class MapUiState(
@@ -371,9 +377,64 @@ class MapViewModel @Inject constructor(
         loadReports(containerId)
     }
 
-    private fun loadDetail(containerId: String) {
+    /** Re-reads the viewport now, e.g. after an admin approved a container. */
+    fun refreshNow() {
+        viewModelScope.launch { viewport.value?.let { refresh(it) } }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // §4.6 "Yes, it's here" on an unverified container
+    // -----------------------------------------------------------------------------------------
+
+    fun onConfirmExists() {
+        val containerId = _state.value.selectedId ?: return
+        val detail = _state.value.detail ?: return
+        if (detail.confirmingExists) return
+        _state.value = _state.value.copy(detail = detail.copy(confirmingExists = true))
+
         viewModelScope.launch {
-            repository.containerDetail(containerId).collect { result ->
+            // The server measures this against the container (50 m): a fresh fix,
+            // not the cached one the map was centred with.
+            val here = locationProvider.fresh()
+            if (here == null) {
+                setConfirming(false)
+                _state.value = _state.value.copy(error = KantaError.TooFarToConfirm(null))
+                return@launch
+            }
+            repository.confirmContainerExists(containerId, here.lon, here.lat).collect { result ->
+                when (result) {
+                    is KantaResult.Loading -> Unit
+                    is KantaResult.Failure -> {
+                        setConfirming(false)
+                        _state.value = _state.value.copy(error = result.error)
+                    }
+                    is KantaResult.Success -> {
+                        setConfirming(false)
+                        _state.value = _state.value.copy(
+                            userLocation = here,
+                            notice = if (result.data.verified) {
+                                R.string.notice_confirmed_verified
+                            } else {
+                                R.string.notice_confirmed
+                            },
+                        )
+                        if (_state.value.selectedId == containerId) loadDetail(containerId, here)
+                        // A container verified just now loses its dashed outline.
+                        viewport.value?.let { refresh(it) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setConfirming(value: Boolean) {
+        val detail = _state.value.detail ?: return
+        _state.value = _state.value.copy(detail = detail.copy(confirmingExists = value))
+    }
+
+    private fun loadDetail(containerId: String, from: LatLon? = _state.value.userLocation) {
+        viewModelScope.launch {
+            repository.containerDetail(containerId, from).collect { result ->
                 val current = _state.value.detail ?: ContainerDetailState()
                 _state.value = when (result) {
                     is KantaResult.Loading -> _state.value
@@ -402,13 +463,36 @@ class MapViewModel @Inject constructor(
                                     lat = dto.lat,
                                     lon = dto.lon,
                                     unconfirmedFull = dto.unconfirmedFull,
+                                    addedByMe = dto.addedByMe,
+                                    iConfirmed = dto.iConfirmed,
+                                    canConfirmExists = dto.canConfirmExists,
                                     error = null,
                                 ),
-                            )
+                            ).also {
+                                // Unverified and someone else's: whether "Yes, it's here"
+                                // is offered depends on 50 m, so ask again with a fresh
+                                // fix rather than trust the cached one (§4.6).
+                                if (!dto.verified && !dto.addedByMe && !dto.iConfirmed &&
+                                    !dto.canConfirmExists && from == _state.value.userLocation
+                                ) {
+                                    recheckWithFreshFix(containerId)
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    private fun recheckWithFreshFix(containerId: String) {
+        viewModelScope.launch {
+            val here = locationProvider.fresh() ?: return@launch
+            val previous = _state.value.userLocation
+            _state.value = _state.value.copy(userLocation = here)
+            val moved = previous == null ||
+                mk.kanta.app.core.location.GeoMath.distanceMetres(previous, here) > 5.0
+            if (moved && _state.value.selectedId == containerId) loadDetail(containerId, here)
         }
     }
 

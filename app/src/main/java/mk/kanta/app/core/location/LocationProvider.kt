@@ -55,4 +55,27 @@ class LocationProvider @Inject constructor(
                     ?.let { LatLon(it.latitude, it.longitude) }
         }.getOrNull()
     }
+
+    /**
+     * A fresh, high-accuracy fix, for the moments a distance rule is checked
+     * against it — 60 m to report (§4.3), 30 m to add, 50 m to confirm (§4.6).
+     * The cached location [current] uses can be minutes old or a coarse network
+     * fix, which is fine for centring a map and wrong for "are you standing at
+     * this container". Falls back to the cached fix if GPS gives nothing in time.
+     */
+    @SuppressLint("MissingPermission") // guarded by hasPermission()
+    suspend fun fresh(): LatLon? {
+        if (!hasPermission()) return null
+
+        val fix = runCatching {
+            kotlinx.coroutines.withTimeoutOrNull(FRESH_FIX_TIMEOUT_MS) {
+                client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).await()
+            }?.let { LatLon(it.latitude, it.longitude) }
+        }.getOrNull()
+        return fix ?: current()
+    }
+
+    private companion object {
+        const val FRESH_FIX_TIMEOUT_MS = 8_000L
+    }
 }

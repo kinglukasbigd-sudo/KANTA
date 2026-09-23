@@ -158,7 +158,7 @@
     <string name="add_duplicate_different">No, it’s a different one</string>
     <string name="add_type">Type</string>
     <string name="add_category">Kind</string>
-    <string name="add_pin_here">It’s placed where you’re standing.</string>
+    <string name="add_pin_here">Move the map so the pin sits on the container.</string>
     <string name="add_send_for_review">Send for review</string>
     <string name="add_submit">Add container</string>
     <string name="category_general">General</string>
@@ -182,5 +182,67 @@
     <plurals name="report_merged">
         <item quantity="one">%d neighbour already reported this — we added your confirmation.</item>
         <item quantity="other">%d neighbours already reported this — we added your confirmation.</item>
+    </plurals>
+
+    <!-- §4.6 Map your street, admin -->
+    <string name="add_pin_map">Map. Move it so the pin sits on the container.</string>
+    <string name="add_pin_distance">The pin is %1$d m from you.</string>
+    <string name="add_done_verified">Added — it’s on the map. Thank you!</string>
+    <string name="add_done_unverified">Added — thank you! It shows dashed until 2 neighbours confirm it’s there.</string>
+    <string name="add_done_already_there">Good — it’s already on the map. Thanks for checking.</string>
+    <string name="menu_map_street">Map your street</string>
+    <string name="menu_map_street_subtitle">Check the containers near you are on the map</string>
+    <string name="menu_admin">Admin</string>
+    <string name="menu_admin_subtitle">Review queue, unverified, coverage</string>
+    <string name="street_title">Are all containers near you on the map?</string>
+    <string name="street_hint">Look around within about 150 m. Big containers are rectangles, small cans are triangles.</string>
+    <string name="street_yes">Yes, everything is there</string>
+    <string name="street_missing">One is missing</string>
+    <string name="street_not_here">One on the map is not here</string>
+    <string name="street_later">Later</string>
+    <string name="street_location_needed">Turn on location — the check is about the 150 m around you.</string>
+    <string name="street_unverified_title">Added by neighbours — not yet confirmed</string>
+    <string name="street_yours">Added by you</string>
+    <string name="street_confirmed">You confirmed it</string>
+    <string name="street_move_closer">Get within 50 m to confirm</string>
+    <string name="street_pick_title">Tap the one that’s not here</string>
+    <string name="street_pick_hint">Then take a photo of the empty spot.</string>
+    <string name="street_thanks">Thank you — your street is up to date.</string>
+    <string name="container_action_exists">Yes, it’s here</string>
+    <string name="container_detail_unverified_mine">You added this. It’s confirmed once 2 neighbours say it’s here.</string>
+    <string name="container_detail_unverified_confirmed">You confirmed it’s here — waiting for one more neighbour.</string>
+    <string name="notice_confirmed">Thanks — your confirmation was added.</string>
+    <string name="notice_confirmed_verified">Confirmed — it’s on the map for good now.</string>
+    <string name="admin_title">Admin</string>
+    <string name="admin_tab_requests">Requests</string>
+    <string name="admin_tab_unverified">Unverified</string>
+    <string name="admin_tab_coverage">Coverage</string>
+    <string name="admin_requests_empty_title">No requests waiting</string>
+    <string name="admin_requests_empty_message">Requests from people who have used their 2 adds appear here.</string>
+    <string name="admin_unverified_empty_title">Everything is verified</string>
+    <string name="admin_unverified_empty_message">Containers added by neighbours wait here until they’re confirmed.</string>
+    <string name="admin_request_photo">Photo sent with the request</string>
+    <string name="admin_show_on_map">Tap to show on the map</string>
+    <string name="admin_on_map">Shown on the map</string>
+    <string name="admin_approve">Approve</string>
+    <string name="admin_reject">Reject</string>
+    <string name="admin_verify">Verify</string>
+    <string name="admin_delete">Delete</string>
+    <string name="admin_delete_title">Remove from the map?</string>
+    <string name="admin_delete_message">%1$s disappears from the map. Its history is kept.</string>
+    <string name="admin_coverage_hint">Green circles are areas someone walked and checked in the last 90 days. Everything else still needs mapping.</string>
+    <string name="admin_coverage_legend_checked">Checked in the last 90 days</string>
+    <string name="admin_coverage_legend_unchecked">Not checked yet</string>
+    <string name="notice_admin_approved">Approved — the container is on the map.</string>
+    <string name="notice_admin_rejected">Request rejected.</string>
+    <string name="notice_admin_verified">Verified.</string>
+    <string name="notice_admin_deleted">Removed from the map.</string>
+    <plurals name="admin_confirmations">
+        <item quantity="one">%d confirmation</item>
+        <item quantity="other">%d confirmations</item>
+    </plurals>
+    <plurals name="admin_coverage_summary">
+        <item quantity="one">%d area check in the last 90 days</item>
+        <item quantity="other">%d area checks in the last 90 days</item>
     </plurals>
 </resources>

@@ -48,7 +48,8 @@ class DefaultReportGateway @Inject constructor(
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : ReportGateway {
 
-    override suspend fun currentLocation(): LatLon? = location.current()
+    /** Fresh GPS: the server measures this against the container (§4.3 / §4.6). */
+    override suspend fun currentLocation(): LatLon? = location.fresh()
 
     override suspend fun nearestContainer(at: LatLon): KantaResult<ContainerCandidate?> =
         repository.nearestContainerTo(at.lon, at.lat, maxMetres = 60).settle().map { dto ->
@@ -89,8 +90,23 @@ class DefaultReportGateway @Inject constructor(
             .sortedBy { it.distanceMetres }
     }
 
+    override suspend fun containerById(id: String, from: LatLon): ContainerCandidate? =
+        containerDao.byId(id)?.let {
+            val position = LatLon(it.lat, it.lon)
+            ContainerCandidate(
+                id = it.id,
+                code = it.code,
+                kind = it.kind.toKind(),
+                category = it.category.toCategory(),
+                status = it.status.toStatus(),
+                verified = it.verified,
+                position = position,
+                distanceMetres = GeoMath.distanceMetres(from, position),
+            )
+        }
+
     override suspend fun submit(draft: ReportDraft): KantaResult<SubmitReportResultDto> {
-        val path = when (val upload = uploadPhoto(draft.id, draft.photo)) {
+        val path = when (val upload = uploadPhoto(FOLDER_REPORTS, draft.id, draft.photo)) {
             is KantaResult.Success -> upload.data
             is KantaResult.Failure -> return upload
             KantaResult.Loading -> return KantaResult.Failure(KantaError.Unknown("upload loading"))
@@ -124,7 +140,7 @@ class DefaultReportGateway @Inject constructor(
         repository.myAddAllowance().settle()
 
     override suspend fun addContainer(draft: ContainerDraft): KantaResult<AddContainerResultDto> {
-        val path = when (val upload = uploadPhoto(draft.photoId, draft.photo)) {
+        val path = when (val upload = uploadPhoto(FOLDER_CONTAINERS, draft.photoId, draft.photo)) {
             is KantaResult.Success -> upload.data
             is KantaResult.Failure -> return upload
             KantaResult.Loading -> return KantaResult.Failure(KantaError.Unknown("upload loading"))
@@ -145,7 +161,7 @@ class DefaultReportGateway @Inject constructor(
         draft: ContainerDraft,
         note: String?,
     ): KantaResult<ContainerRequestResultDto> {
-        val path = when (val upload = uploadPhoto(draft.photoId, draft.photo)) {
+        val path = when (val upload = uploadPhoto(FOLDER_REQUESTS, draft.photoId, draft.photo)) {
             is KantaResult.Success -> upload.data
             is KantaResult.Failure -> return upload
             KantaResult.Loading -> return KantaResult.Failure(KantaError.Unknown("upload loading"))
@@ -160,20 +176,23 @@ class DefaultReportGateway @Inject constructor(
         ).settle()
     }
 
+    override suspend fun submitAreaCheck(at: LatLon, result: String): KantaResult<Unit> =
+        repository.submitAreaCheck(at.lon, at.lat, result).settle().map { }
+
     // -----------------------------------------------------------------------------------------
 
     /**
-     * Uploads to `reports/{uid}/{id}.jpg` (§6 storage paths) with upsert, so the
-     * same photo sent twice — a retry, or a report after an add — lands on the same
-     * object. One photo, one file, however many calls use it.
+     * Uploads to `{folder}/{uid}/{id}.jpg` (§6 storage paths: reports/,
+     * containers/, container_requests/) with upsert, so the same photo sent twice
+     * — a retry — lands on the same object rather than a second copy.
      */
-    private suspend fun uploadPhoto(id: String, file: File): KantaResult<String> {
+    private suspend fun uploadPhoto(folder: String, id: String, file: File): KantaResult<String> {
         if (!supabase.isConfigured) return KantaResult.Failure(KantaError.BackendNotConfigured)
         return withContext(io) {
             try {
                 val uid = supabase.client.auth.currentUserOrNull()?.id
                     ?: return@withContext KantaResult.Failure(KantaError.NotSignedIn)
-                val path = "reports/$uid/$id.jpg"
+                val path = "$folder/$uid/$id.jpg"
                 supabase.client.storage.from("photos").upload(path, file.readBytes()) {
                     upsert = true
                     contentType = ContentType.Image.JPEG
@@ -189,6 +208,10 @@ class DefaultReportGateway @Inject constructor(
 
     companion object {
         const val UPLOAD_WORK = "kanta-report-upload"
+
+        private const val FOLDER_REPORTS = "reports"
+        private const val FOLDER_CONTAINERS = "containers"
+        private const val FOLDER_REQUESTS = "container_requests"
 
         /**
          * One unique chain, run when there is a network. APPEND_OR_REPLACE so a

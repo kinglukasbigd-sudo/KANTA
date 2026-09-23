@@ -32,7 +32,20 @@ import mk.kanta.app.feature.report.ReportScreen
 
 @Serializable object SuggestionsRoute
 
-@Serializable data class ReportRoute(val presetFull: Boolean = false)
+/**
+ * The camera-first flow. §4.3 reports use the defaults; §4.6 "Map your street"
+ * reuses it: `mode = "add"` for "One is missing", or a tapped [containerId] with
+ * `presetKind = "missing"` for "One on the map is not here". [fromAreaCheck]
+ * makes the flow record the area check when it succeeds.
+ */
+@Serializable
+data class ReportRoute(
+    val presetFull: Boolean = false,
+    val mode: String = "report",
+    val containerId: String? = null,
+    val presetKind: String? = null,
+    val fromAreaCheck: Boolean = false,
+)
 
 @Serializable object SuggestRoute
 
@@ -73,7 +86,8 @@ fun KantaNavHost(
                 authViewModel.consume(action)
                 authViewModel.vote(action.suggestionId)
             }
-            is PendingAction.ConfirmReport, null -> Unit
+            // The map consumes these: it owns the detail it refreshes and the check it opens.
+            is PendingAction.ConfirmReport, PendingAction.OpenAreaCheck, null -> Unit
         }
     }
 
@@ -88,6 +102,14 @@ fun KantaNavHost(
                     onMyReports = { navController.navigate(MyReportsRoute) },
                     onCityStats = { navController.navigate(CityStatsRoute) },
                     onSuggestionsList = { navController.navigate(SuggestionsRoute) },
+                    onAddContainerFromCheck = {
+                        navController.navigate(ReportRoute(mode = "add", fromAreaCheck = true))
+                    },
+                    onReportMissing = { containerId ->
+                        navController.navigate(
+                            ReportRoute(containerId = containerId, presetKind = "missing", fromAreaCheck = true),
+                        )
+                    },
                 )
             }
 

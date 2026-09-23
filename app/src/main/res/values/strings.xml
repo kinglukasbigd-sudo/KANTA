@@ -163,7 +163,7 @@
     <string name="add_duplicate_different">Не, различен е</string>
     <string name="add_type">Тип</string>
     <string name="add_category">Вид</string>
-    <string name="add_pin_here">Се поставува таму каде што стоиш.</string>
+    <string name="add_pin_here">Помести ја мапата за иглата да стои на контејнерот.</string>
     <string name="add_send_for_review">Испрати на проверка</string>
     <string name="add_submit">Додај контејнер</string>
     <string name="category_general">Мешан</string>
@@ -187,5 +187,67 @@
     <plurals name="report_merged">
         <item quantity="one">%d сосед веќе го пријави ова — ја додадовме твојата потврда.</item>
         <item quantity="other">%d соседи веќе го пријавија ова — ја додадовме твојата потврда.</item>
+    </plurals>
+
+    <!-- §4.6 Map your street, admin -->
+    <string name="add_pin_map">Мапа. Помести ја за иглата да стои на контејнерот.</string>
+    <string name="add_pin_distance">Иглата е %1$d м од тебе.</string>
+    <string name="add_done_verified">Додаден — на мапата е. Благодариме!</string>
+    <string name="add_done_unverified">Додаден — благодариме! Се прикажува со испрекината линија додека 2 соседи не потврдат дека е тука.</string>
+    <string name="add_done_already_there">Одлично — веќе е на мапата. Благодариме што провери.</string>
+    <string name="menu_map_street">Мапирај ја твојата улица</string>
+    <string name="menu_map_street_subtitle">Провери дали контејнерите околу тебе се на мапата</string>
+    <string name="menu_admin">Администрација</string>
+    <string name="menu_admin_subtitle">Барања, непотврдени, покриеност</string>
+    <string name="street_title">Дали сите контејнери околу тебе се на мапата?</string>
+    <string name="street_hint">Погледни наоколу, околу 150 м. Големите контејнери се правоаголници, малите канти се триаголници.</string>
+    <string name="street_yes">Да, сè е тука</string>
+    <string name="street_missing">Еден недостасува</string>
+    <string name="street_not_here">Еден од мапата го нема</string>
+    <string name="street_later">Подоцна</string>
+    <string name="street_location_needed">Вклучи локација — проверката е за 150 м околу тебе.</string>
+    <string name="street_unverified_title">Додадени од соседи — сè уште непотврдени</string>
+    <string name="street_yours">Го додаде ти</string>
+    <string name="street_confirmed">Го потврди</string>
+    <string name="street_move_closer">Приближи се до 50 м за да потврдиш</string>
+    <string name="street_pick_title">Допри го оној што го нема</string>
+    <string name="street_pick_hint">Потоа сликај го празното место.</string>
+    <string name="street_thanks">Благодариме — твојата улица е ажурирана.</string>
+    <string name="container_action_exists">Да, тука е</string>
+    <string name="container_detail_unverified_mine">Ти го додаде. Се потврдува кога 2 соседи ќе кажат дека е тука.</string>
+    <string name="container_detail_unverified_confirmed">Потврди дека е тука — се чека уште еден сосед.</string>
+    <string name="notice_confirmed">Благодариме — твојата потврда е додадена.</string>
+    <string name="notice_confirmed_verified">Потврдено — сега е трајно на мапата.</string>
+    <string name="admin_title">Администрација</string>
+    <string name="admin_tab_requests">Барања</string>
+    <string name="admin_tab_unverified">Непотврдени</string>
+    <string name="admin_tab_coverage">Покриеност</string>
+    <string name="admin_requests_empty_title">Нема барања на чекање</string>
+    <string name="admin_requests_empty_message">Тука се појавуваат барања од луѓе што ги искористиле своите 2 додавања.</string>
+    <string name="admin_unverified_empty_title">Сè е потврдено</string>
+    <string name="admin_unverified_empty_message">Контејнерите што ги додале соседи чекаат тука додека не се потврдат.</string>
+    <string name="admin_request_photo">Слика испратена со барањето</string>
+    <string name="admin_show_on_map">Допри за да се прикаже на мапата</string>
+    <string name="admin_on_map">Прикажано на мапата</string>
+    <string name="admin_approve">Одобри</string>
+    <string name="admin_reject">Одбиј</string>
+    <string name="admin_verify">Потврди</string>
+    <string name="admin_delete">Избриши</string>
+    <string name="admin_delete_title">Да се отстрани од мапата?</string>
+    <string name="admin_delete_message">%1$s исчезнува од мапата. Историјата се чува.</string>
+    <string name="admin_coverage_hint">Зелените кругови се области што некој ги прошетал и проверил во последните 90 дена. Сè друго сè уште треба да се мапира.</string>
+    <string name="admin_coverage_legend_checked">Проверено во последните 90 дена</string>
+    <string name="admin_coverage_legend_unchecked">Сè уште непроверено</string>
+    <string name="notice_admin_approved">Одобрено — контејнерот е на мапата.</string>
+    <string name="notice_admin_rejected">Барањето е одбиено.</string>
+    <string name="notice_admin_verified">Потврдено.</string>
+    <string name="notice_admin_deleted">Отстрането од мапата.</string>
+    <plurals name="admin_confirmations">
+        <item quantity="one">%d потврда</item>
+        <item quantity="other">%d потврди</item>
+    </plurals>
+    <plurals name="admin_coverage_summary">
+        <item quantity="one">%d проверка на област во последните 90 дена</item>
+        <item quantity="other">%d проверки на области во последните 90 дена</item>
     </plurals>
 </resources>

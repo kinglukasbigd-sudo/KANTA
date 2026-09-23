@@ -39,6 +39,9 @@ class PendingActionTest {
 
     @Test fun `vote survives`() = assertEquals(PendingAction.Vote("s-3"), roundTrip(PendingAction.Vote("s-3")))
 
+    @Test fun `map your street survives`() =
+        assertEquals(PendingAction.OpenAreaCheck, roundTrip(PendingAction.OpenAreaCheck))
+
     @Test fun `stored json is stable and readable`() {
         val encoded = json.encodeToString(
             StoredPendingAction.serializer(),

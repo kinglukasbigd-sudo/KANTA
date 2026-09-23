@@ -75,7 +75,9 @@ fun ReportScreen(
     }
 
     // Back from the compose sheet returns to the camera (retake), not out of the flow.
-    BackHandler(enabled = state.stage == ReportStage.Compose) { viewModel.retake() }
+    BackHandler(enabled = state.stage == ReportStage.Compose || state.stage == ReportStage.Adding) {
+        viewModel.retake()
+    }
 
     // §4.3: a successful Full report goes straight on to the alternatives.
     LaunchedEffect(state.goToAlternatives) {
@@ -113,6 +115,10 @@ fun ReportScreen(
                 onDismissOutcome = viewModel::dismissOutcome,
             )
 
+            // §4.6 "One is missing": the photo stays in view behind the Add sheet,
+            // so the user can see what they are placing.
+            ReportStage.Adding -> PhotoBackdrop(state.photo?.file)
+
             ReportStage.Done -> ReportDoneScreen(state = state, onDone = onClose)
         }
     }
@@ -137,8 +143,24 @@ fun ReportScreen(
             onConfirmDifferent = { viewModel.submitAdd(confirmDifferent = true) },
             onUseExisting = viewModel::useDuplicate,
             onSendForReview = viewModel::sendForReview,
+            onPinMoved = viewModel::movePin,
             onDismiss = viewModel::closeAddContainer,
         )
+    }
+}
+
+@Composable
+private fun PhotoBackdrop(file: java.io.File?) {
+    Surface(Modifier.fillMaxSize(), color = Color.Black) {
+        if (file != null) {
+            coil3.compose.AsyncImage(
+                model = file,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                alpha = 0.55f,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 

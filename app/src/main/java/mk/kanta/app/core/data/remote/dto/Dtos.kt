@@ -90,6 +90,14 @@ data class ContainerDetailDto(
     @SerialName("open_reports") val openReports: Long,
     /** §5.1: "1 person says it's full" before the marker turns orange. */
     @SerialName("unconfirmed_full") val unconfirmedFull: Long,
+    /** §4.6: the caller added this container ("Added by you"). */
+    @SerialName("added_by_me") val addedByMe: Boolean = false,
+    @SerialName("i_confirmed") val iConfirmed: Boolean = false,
+    /**
+     * §4.6: whether "Yes, it's here" would be accepted — decided by the server
+     * (50 m, not the adder, not already confirmed), never re-derived here.
+     */
+    @SerialName("can_confirm_exists") val canConfirmExists: Boolean = false,
 )
 
 // -------------------------------------------------------------------------------------------
@@ -267,6 +275,8 @@ data class UnverifiedContainerDto(
     @SerialName("distance_m") val distanceM: Double,
     @SerialName("i_confirmed") val iConfirmed: Boolean,
     @SerialName("is_mine") val isMine: Boolean,
+    /** The server's answer to "may I show 'Yes, it's here'?" (0015). */
+    @SerialName("can_confirm") val canConfirm: Boolean = false,
 )
 
 // -------------------------------------------------------------------------------------------

@@ -20,6 +20,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import mk.kanta.app.R
@@ -36,6 +37,7 @@ import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
 import mk.kanta.app.core.designsystem.tabularFigures
+import mk.kanta.app.core.location.LatLon
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 
@@ -54,11 +56,15 @@ fun AddContainerSheet(
     onConfirmDifferent: () -> Unit,
     onUseExisting: () -> Unit,
     onSendForReview: () -> Unit,
+    onPinMoved: (LatLon) -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        // The pin map inside pans with a drag; the sheet must not steal that
+        // drag. Back and a tap outside still close it.
+        sheetGesturesEnabled = false,
         shape = KantaShape.bottomSheet,
         containerColor = MaterialTheme.colorScheme.surface,
         dragHandle = { KantaDragHandle() },
@@ -84,6 +90,34 @@ fun AddContainerSheet(
                     } else {
                         pluralStringResource(R.plurals.add_allowance_more, state.remaining, state.remaining)
                     },
+                )
+            }
+
+            // --- Pin (§4.6: "user drags the pin to the exact spot") ---------------------
+            val start = state.device
+            if (start == null) {
+                Spacer(Modifier.height(Spacing.l))
+                Muted(stringResource(R.string.report_location_needed))
+            } else {
+                Spacer(Modifier.height(Spacing.l))
+                PinPickerMap(
+                    start = start,
+                    device = state.device,
+                    nearby = state.nearby,
+                    onPinMoved = onPinMoved,
+                    contentDescription = stringResource(R.string.add_pin_map),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(184.dp)
+                        .clip(KantaShape.card),
+                )
+                Spacer(Modifier.height(Spacing.s))
+                Text(
+                    text = state.pinDistanceMetres?.let {
+                        stringResource(R.string.add_pin_distance, it.roundToInt())
+                    } ?: stringResource(R.string.add_pin_here),
+                    style = MaterialTheme.typography.bodySmall.tabularFigures(),
+                    color = KantaTheme.colors.onSurfaceMuted,
                 )
             }
 
@@ -163,9 +197,6 @@ fun AddContainerSheet(
                     }
                 }
             }
-
-            Spacer(Modifier.height(Spacing.l))
-            Muted(stringResource(R.string.add_pin_here))
 
             state.error?.let {
                 Spacer(Modifier.height(Spacing.m))

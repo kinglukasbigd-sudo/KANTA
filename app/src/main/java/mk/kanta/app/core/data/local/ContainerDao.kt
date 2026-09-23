@@ -32,6 +32,10 @@ interface ContainerDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(containers: List<ContainerEntity>)
 
+    /** One cached container — the marker the user just tapped is always in here. */
+    @Query("SELECT * FROM containers WHERE id = :id")
+    suspend fun byId(id: String): ContainerEntity?
+
     @Query("SELECT COUNT(*) FROM containers")
     suspend fun count(): Int
 
