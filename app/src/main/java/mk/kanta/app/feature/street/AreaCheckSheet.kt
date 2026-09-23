@@ -21,6 +21,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -44,6 +45,7 @@ import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
 import mk.kanta.app.core.designsystem.component.KantaSectionHeader
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
+import mk.kanta.app.core.designsystem.rememberKantaHaptics
 import mk.kanta.app.feature.report.SuccessCheck
 
 /**
@@ -284,6 +286,9 @@ private fun Picking(onCancel: () -> Unit) {
 /** §4.6: "Thank-you micro-animation". The sheet closes by itself a moment later. */
 @Composable
 private fun Thanks() {
+    // §3.3: the confirm haptic on a successful send.
+    val haptics = rememberKantaHaptics()
+    LaunchedEffect(Unit) { haptics.success() }
     Column(
         modifier = Modifier
             .fillMaxWidth()
