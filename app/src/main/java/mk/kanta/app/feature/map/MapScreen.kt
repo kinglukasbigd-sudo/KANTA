@@ -1,6 +1,7 @@
 package mk.kanta.app.feature.map
 
 import android.Manifest
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -51,12 +52,18 @@ import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaDragHandle
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.kantaSoftShadow
 import mk.kanta.app.core.designsystem.marker.MarkerBitmapFactory
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
 import mk.kanta.app.core.location.LatLon
+import mk.kanta.app.feature.map.sheet.KantaBottomSheetScaffold
+import mk.kanta.app.feature.map.sheet.KantaSheetValue
+import mk.kanta.app.feature.map.sheet.MapMenuBody
+import mk.kanta.app.feature.map.sheet.MapMenuHeader
+import mk.kanta.app.feature.map.sheet.rememberKantaSheetState
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
@@ -74,6 +81,12 @@ import org.maplibre.android.maps.Style
 fun MapScreen(
     modifier: Modifier = Modifier,
     onProfileClick: () -> Unit = {},
+    onFull: () -> Unit = {},
+    onReport: () -> Unit = {},
+    onSuggest: () -> Unit = {},
+    onMyReports: () -> Unit = {},
+    onCityStats: () -> Unit = {},
+    onSuggestionsList: () -> Unit = {},
     viewModel: MapViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -93,7 +106,59 @@ fun MapScreen(
         viewModel.onLocationPermissionResult(grants.values.any { it })
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    val sheetState = rememberKantaSheetState()
+
+    // §4.1: the detail sheet replaces the menu. Opening one lifts the sheet to
+    // half so the content is visible without burying the marker that was tapped.
+    LaunchedEffect(state.detail != null) {
+        if (state.detail != null && sheetState.isCollapsed) {
+            sheetState.animateTo(KantaSheetValue.Half)
+        }
+    }
+
+    // Swiping the sheet all the way down while the detail is open returns to the
+    // menu, which is what "back/swipe returns to the menu" means as a gesture.
+    LaunchedEffect(sheetState.currentValue, state.detail != null) {
+        if (state.detail != null && sheetState.currentValue == KantaSheetValue.Collapsed) {
+            viewModel.dismissDetail()
+        }
+    }
+
+    // Back closes the detail first, then collapses an open menu, and only then
+    // falls through to the system.
+    BackHandler(enabled = state.detail != null || !sheetState.isCollapsed) {
+        if (state.detail != null) viewModel.dismissDetail() else sheetState.collapse()
+    }
+
+    KantaBottomSheetScaffold(
+        sheetState = sheetState,
+        modifier = modifier,
+        header = {
+            if (state.detail == null) {
+                MapMenuHeader(onFull = onFull, onReport = onReport, onSuggest = onSuggest)
+            } else {
+                // The detail's own handle, so the sheet is still draggable while
+                // it is showing.
+                KantaDragHandle()
+            }
+        },
+        body = {
+            val detail = state.detail
+            if (detail == null) {
+                MapMenuBody(
+                    nearest = state.nearest,
+                    nearestLoading = state.nearestLoading,
+                    onWhereToThrow = onSuggestionsList,
+                    onNearestClick = viewModel::onContainerSelected,
+                    onMyReports = onMyReports,
+                    onCityStats = onCityStats,
+                    onSuggestions = onSuggestionsList,
+                )
+            } else {
+                ContainerDetailContent(state = detail)
+            }
+        },
+    ) {
 
         // ---------------------------------------------------------------------------------
         // The map
@@ -245,14 +310,6 @@ fun MapScreen(
                 MapErrorBanner(error = error, onDismiss = viewModel::dismissError)
             }
         }
-    }
-
-    // §4.1: tapping a marker opens the container detail sheet.
-    state.detail?.let { detail ->
-        ContainerDetailSheet(
-            state = detail,
-            onDismiss = viewModel::dismissDetail,
-        )
     }
 }
 

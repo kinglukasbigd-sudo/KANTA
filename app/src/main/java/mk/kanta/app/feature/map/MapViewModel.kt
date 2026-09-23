@@ -29,6 +29,8 @@ import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.core.data.remote.dto.PublicReportDto
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
+import mk.kanta.app.feature.map.sheet.NearestContainerUi
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 /** The viewport, in the form `containers_in_bbox` wants. */
@@ -78,6 +80,9 @@ data class MapUiState(
     /** Set when a refresh failed. The cached map stays on screen underneath. */
     val error: KantaError? = null,
     val refreshing: Boolean = false,
+    /** §4.1 "Near you": the nearest container that is not full. */
+    val nearest: NearestContainerUi? = null,
+    val nearestLoading: Boolean = false,
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -102,6 +107,43 @@ class MapViewModel @Inject constructor(
         observeCache()
         refreshOnIdle()
         resolveInitialCamera()
+    }
+
+    /**
+     * §4.1/§5.2: the nearest container that is not full, from wherever the user
+     * is. Recomputed when we get a location rather than on every camera move —
+     * "near you" means near the person, not near the viewport.
+     */
+    private fun loadNearest(from: LatLon) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(nearestLoading = true)
+            repository.nearestContainers(
+                lon = from.lon,
+                lat = from.lat,
+                limit = 1,
+            ).collect { result ->
+                when (result) {
+                    is KantaResult.Loading -> Unit
+                    is KantaResult.Failure ->
+                        _state.value = _state.value.copy(nearestLoading = false, nearest = null)
+                    is KantaResult.Success -> {
+                        val row = result.data.firstOrNull()
+                        _state.value = _state.value.copy(
+                            nearestLoading = false,
+                            nearest = row?.let {
+                                NearestContainerUi(
+                                    id = it.id,
+                                    code = it.code,
+                                    kind = if (it.kind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+                                    status = it.status.toStatus(),
+                                    distanceMetres = it.distanceM.roundToInt(),
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -188,6 +230,7 @@ class MapViewModel @Inject constructor(
                 userLocation = location,
             )
             _cameraTarget.value = location ?: LatLon.SKOPJE_CENTRE
+            loadNearest(location ?: LatLon.SKOPJE_CENTRE)
         }
     }
 
@@ -205,7 +248,10 @@ class MapViewModel @Inject constructor(
             viewModelScope.launch {
                 val location = locationProvider.current()
                 _state.value = _state.value.copy(userLocation = location)
-                if (location != null) _cameraTarget.value = location
+                if (location != null) {
+                    _cameraTarget.value = location
+                    loadNearest(location)
+                }
             }
         }
     }
@@ -215,6 +261,7 @@ class MapViewModel @Inject constructor(
             val location = locationProvider.current() ?: return@launch
             _state.value = _state.value.copy(userLocation = location)
             _cameraTarget.value = location
+            loadNearest(location)
         }
     }
 

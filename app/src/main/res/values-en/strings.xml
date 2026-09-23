@@ -61,4 +61,18 @@
     <string name="container_action_report_other">Report other problem</string>
     <string name="container_action_navigate">Navigate</string>
     <string name="error_backend_not_configured">No backend configured. Add SUPABASE_URL and SUPABASE_ANON_KEY to local.properties.</string>
+
+    <!-- Bottom sheet menu (§4.1) -->
+    <string name="menu_near_you">Near you</string>
+    <string name="menu_nearest_not_full">Nearest container that’s not full</string>
+    <string name="menu_no_nearest">No free container nearby.</string>
+    <string name="menu_where_to_throw">Where can I throw this?</string>
+    <string name="menu_my_reports">My reports &amp; profile</string>
+    <string name="menu_my_reports_subtitle">Your reports and impact</string>
+    <string name="menu_city_stats">City stats</string>
+    <string name="menu_city_stats_subtitle">Municipality ranking, response times</string>
+    <string name="menu_suggestions">Suggestions</string>
+    <string name="menu_suggestions_subtitle">Suggested places, vote</string>
+    <string name="placeholder_message">This screen is coming soon.</string>
+    <string name="action_back">Back</string>
 </resources>

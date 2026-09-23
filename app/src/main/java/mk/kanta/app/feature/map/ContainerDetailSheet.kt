@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,11 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +35,6 @@ import mk.kanta.app.core.data.remote.dto.PublicReportDto
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
-import mk.kanta.app.core.designsystem.component.KantaDragHandle
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaListRowSkeleton
@@ -50,91 +47,78 @@ import mk.kanta.app.core.designsystem.tabularFigures
 import kotlin.math.roundToInt
 
 /**
- * Container detail sheet (§4.1): "type, ID, municipality, current status + how
+ * Container detail content (§4.1): "type, ID, municipality, current status + how
  * long, photo timeline of reports, buttons: Me too, still full / It's been
  * emptied / Report other problem / Navigate".
  *
- * It replaces the main menu temporarily, which is what a modal sheet is.
+ * §4.1 says this "replaces the menu temporarily", so it is plain content that the
+ * persistent sheet swaps in — not a second sheet stacked over the first. Back and
+ * a downward swipe both return to the menu, handled by the sheet's owner.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContainerDetailSheet(
+fun ColumnScope.ContainerDetailContent(
     state: ContainerDetailState,
-    onDismiss: () -> Unit,
     onMeToo: () -> Unit = {},
     onEmptied: () -> Unit = {},
     onReportOther: () -> Unit = {},
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val context = LocalContext.current
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = KantaShape.bottomSheet,
-        containerColor = MaterialTheme.colorScheme.surface,
-        dragHandle = { KantaDragHandle() },
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = Spacing.xxl),
-        ) {
-            if (state.loading) {
-                DetailSkeleton()
-                return@Column
-            }
-
-            if (state.error != null) {
-                KantaEmptyState(
-                    title = stringResource(state.error.messageRes),
-                    message = stringResource(R.string.container_detail_error_hint),
-                    icon = KantaIcons.Error,
-                )
-                return@Column
-            }
-
-            DetailHeader(state)
-
-            Spacer(Modifier.height(Spacing.l))
-
-            // §4.1 photo timeline.
-            KantaSectionHeader(stringResource(R.string.container_detail_timeline))
-            if (state.reports.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.container_detail_no_reports),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = KantaTheme.colors.onSurfaceMuted,
-                    modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
-                )
-            } else {
-                PhotoTimeline(state.reports)
-            }
-
-            Spacer(Modifier.height(Spacing.xl))
-
-            DetailActions(
-                state = state,
-                onMeToo = onMeToo,
-                onEmptied = onEmptied,
-                onReportOther = onReportOther,
-                onNavigate = {
-                    // §5.2: "Navigate (opens external maps app via geo: intent —
-                    // no API needed)". The label makes the pin show a name rather
-                    // than raw coordinates in whatever app handles it.
-                    val label = Uri.encode(state.code)
-                    val uri = "geo:${state.lat},${state.lon}?q=${state.lat},${state.lon}($label)"
-                    runCatching {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
-                    }.onFailure { error ->
-                        // A phone with no maps app is rare but real; crashing over
-                        // it would be absurd.
-                        if (error !is ActivityNotFoundException) throw error
-                    }
-                },
-            )
-        }
+    if (state.loading) {
+        DetailSkeleton()
+        return
     }
+
+    if (state.error != null) {
+        KantaEmptyState(
+            title = stringResource(state.error.messageRes),
+            message = stringResource(R.string.container_detail_error_hint),
+            icon = KantaIcons.Error,
+        )
+        return
+    }
+
+    DetailHeader(state)
+
+    Spacer(Modifier.height(Spacing.l))
+
+    // §4.1 photo timeline.
+    KantaSectionHeader(stringResource(R.string.container_detail_timeline))
+    if (state.reports.isEmpty()) {
+        Text(
+            text = stringResource(R.string.container_detail_no_reports),
+            style = MaterialTheme.typography.bodyLarge,
+            color = KantaTheme.colors.onSurfaceMuted,
+            modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
+        )
+    } else {
+        PhotoTimeline(state.reports)
+    }
+
+    Spacer(Modifier.height(Spacing.xl))
+
+    DetailActions(
+        state = state,
+        onMeToo = onMeToo,
+        onEmptied = onEmptied,
+        onReportOther = onReportOther,
+        onNavigate = {
+            // §5.2: "Navigate (opens external maps app via geo: intent — no API
+            // needed)". The label makes the pin show a name rather than raw
+            // coordinates in whatever app handles it.
+            val label = Uri.encode(state.code)
+            val uri = "geo:${state.lat},${state.lon}?q=${state.lat},${state.lon}($label)"
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
+            }.onFailure { error ->
+                // A phone with no maps app is rare but real; crashing over it
+                // would be absurd.
+                if (error !is ActivityNotFoundException) throw error
+            }
+        },
+    )
+
+    Spacer(Modifier.height(Spacing.xl))
 }
 
 @Composable

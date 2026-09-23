@@ -66,4 +66,18 @@
     <string name="container_action_report_other">Пријави друг проблем</string>
     <string name="container_action_navigate">Навигирај</string>
     <string name="error_backend_not_configured">Нема поставен сервер. Додади SUPABASE_URL и SUPABASE_ANON_KEY во local.properties.</string>
+
+    <!-- Bottom sheet menu (§4.1) -->
+    <string name="menu_near_you">Во близина</string>
+    <string name="menu_nearest_not_full">Најблизок што не е полн</string>
+    <string name="menu_no_nearest">Нема слободен контејнер во близина.</string>
+    <string name="menu_where_to_throw">Каде да фрлам?</string>
+    <string name="menu_my_reports">Мои пријави и профил</string>
+    <string name="menu_my_reports_subtitle">Твоите пријави и влијание</string>
+    <string name="menu_city_stats">Статистика за градот</string>
+    <string name="menu_city_stats_subtitle">Ранг на општини, време на решавање</string>
+    <string name="menu_suggestions">Предлози</string>
+    <string name="menu_suggestions_subtitle">Предложени места, гласај</string>
+    <string name="placeholder_message">Овој екран доаѓа наскоро.</string>
+    <string name="action_back">Назад</string>
 </resources>

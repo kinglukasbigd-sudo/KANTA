@@ -61,4 +61,18 @@
     <string name="container_action_report_other">Raporto problem tjetër</string>
     <string name="container_action_navigate">Navigo</string>
     <string name="error_backend_not_configured">Nuk ka server të konfiguruar. Shto SUPABASE_URL dhe SUPABASE_ANON_KEY në local.properties.</string>
+
+    <!-- Bottom sheet menu (§4.1) -->
+    <string name="menu_near_you">Afër teje</string>
+    <string name="menu_nearest_not_full">Kontejneri më i afërt që nuk është plot</string>
+    <string name="menu_no_nearest">Nuk ka kontejner të lirë afër.</string>
+    <string name="menu_where_to_throw">Ku mund ta hedh?</string>
+    <string name="menu_my_reports">Raportimet e mia dhe profili</string>
+    <string name="menu_my_reports_subtitle">Raportimet dhe ndikimi yt</string>
+    <string name="menu_city_stats">Statistikat e qytetit</string>
+    <string name="menu_city_stats_subtitle">Renditja e komunave, koha e zgjidhjes</string>
+    <string name="menu_suggestions">Sugjerimet</string>
+    <string name="menu_suggestions_subtitle">Vendet e sugjeruara, voto</string>
+    <string name="placeholder_message">Ky ekran po vjen së shpejti.</string>
+    <string name="action_back">Prapa</string>
 </resources>
