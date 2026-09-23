@@ -94,7 +94,7 @@ fun CameraCapture(
     val shutterLabel = stringResource(R.string.camera_shutter)
 
     LaunchedEffect(lifecycleOwner) {
-        val cameraProvider = ProcessCameraProvider.awaitInstance(context)
+        val cameraProvider = awaitCameraProvider(context)
         provider = cameraProvider
         val preview = Preview.Builder().build().also { it.setSurfaceProvider(previewView.surfaceProvider) }
         cameraProvider.unbindAll()
@@ -220,6 +220,20 @@ private fun CameraRoundButton(
         Box(contentAlignment = Alignment.Center) { content() }
     }
 }
+
+/** ProcessCameraProvider's future, awaited without pulling in the Guava coroutine adapter. */
+private suspend fun awaitCameraProvider(context: Context): ProcessCameraProvider =
+    kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+        val future = ProcessCameraProvider.getInstance(context)
+        future.addListener(
+            {
+                runCatching { future.get() }
+                    .onSuccess { continuation.resumeWith(Result.success(it)) }
+                    .onFailure { continuation.resumeWith(Result.failure(it)) }
+            },
+            ContextCompat.getMainExecutor(context),
+        )
+    }
 
 /**
  * Captures to a private cache file. The raw file still carries EXIF — orientation

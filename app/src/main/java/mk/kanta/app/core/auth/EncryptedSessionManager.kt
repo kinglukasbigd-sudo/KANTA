@@ -5,6 +5,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import io.github.jan.supabase.auth.SessionManager
+import io.github.jan.supabase.auth.exception.NoSessionFoundException
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -43,12 +44,16 @@ class EncryptedSessionManager(
         prefs.edit().putString(KEY_SESSION, encrypt(plain)).apply()
     }
 
-    override suspend fun loadSession(): UserSession? = withContext(Dispatchers.IO) {
-        val stored = prefs.getString(KEY_SESSION, null) ?: return@withContext null
+    /**
+     * supabase-kt's contract: throw [NoSessionFoundException] when there is none —
+     * its own `loadSessionOrNull()` catches exactly that and treats it as signed out.
+     */
+    override suspend fun loadSession(): UserSession = withContext(Dispatchers.IO) {
+        val stored = prefs.getString(KEY_SESSION, null) ?: throw NoSessionFoundException()
         runCatching { json.decodeFromString(UserSession.serializer(), decrypt(stored)) }
             .getOrElse {
                 prefs.edit().remove(KEY_SESSION).apply()
-                null
+                throw NoSessionFoundException()
             }
     }
 
