@@ -38,3 +38,6 @@ local.log
 
 # ---- OSM import cache (regenerable) ----
 tools/import_osm/.cache/
+
+# ---- Supabase database connection (contains the DB password) ----
+supabase/.db-url
