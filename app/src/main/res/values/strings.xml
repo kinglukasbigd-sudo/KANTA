@@ -27,4 +27,24 @@
     <string name="theme_system">Системска</string>
     <string name="theme_light">Светла</string>
     <string name="theme_dark">Темна</string>
+
+    <!-- Backend errors (supabase/README.md error codes) -->
+    <string name="error_too_far_from_container">Премногу си далеку од контејнерот. Пријди поблиску и обиди се повторно.</string>
+    <string name="error_too_far_to_add">Премногу си далеку од местото. Застани до контејнерот за да го додадеш.</string>
+    <string name="error_too_far_to_confirm">Пријди поблиску за да потврдиш дека контејнерот е тука.</string>
+    <string name="error_daily_report_limit">Достигна 10 пријави за денес. Обиди се повторно утре.</string>
+    <string name="error_add_allowance_used_up">Веќе ги додаде твоите 2 контејнери — благодариме! Ако недостасува уште еден, испрати го на проверка.</string>
+    <string name="error_daily_request_limit">Достигна 3 барања за денес. Обиди се повторно утре.</string>
+    <string name="error_duplicate_container">Веќе има таков контејнер тука. Дали е истиот?</string>
+    <string name="error_already_done">Ова веќе го направи.</string>
+    <string name="error_cannot_confirm_own">Не можеш да го потврдиш контејнерот што ти го додаде.</string>
+    <string name="error_not_signed_in">Најави се за да продолжиш.</string>
+    <string name="error_admin_only">Ова е достапно само за администратори.</string>
+    <string name="error_container_not_found">Контејнерот не постои повеќе.</string>
+    <string name="error_report_not_open">Пријавата веќе е затворена.</string>
+    <string name="error_suggestion_not_found">Предлогот не постои повеќе.</string>
+    <string name="error_request_already_reviewed">Барањето веќе е разгледано.</string>
+    <string name="error_offline">Нема интернет. Ќе се испрати кога ќе се вратиш онлајн.</string>
+    <string name="error_server_unavailable">Серверот не одговара. Обиди се повторно за момент.</string>
+    <string name="error_unknown">Нешто тргна наопаку. Обиди се повторно.</string>
 </resources>

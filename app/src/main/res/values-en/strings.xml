@@ -22,4 +22,24 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+
+    <!-- Backend errors (supabase/README.md error codes) -->
+    <string name="error_too_far_from_container">You are too far from the container. Move closer and try again.</string>
+    <string name="error_too_far_to_add">You are too far from the spot. Stand next to the container to add it.</string>
+    <string name="error_too_far_to_confirm">Move closer to confirm this container is here.</string>
+    <string name="error_daily_report_limit">You have reached 10 reports for today. Try again tomorrow.</string>
+    <string name="error_add_allowance_used_up">You have already added your 2 containers — thank you! If another one is missing, send it for review.</string>
+    <string name="error_daily_request_limit">You have reached 3 requests for today. Try again tomorrow.</string>
+    <string name="error_duplicate_container">There is already a container like this here. Is it this one?</string>
+    <string name="error_already_done">You have already done this.</string>
+    <string name="error_cannot_confirm_own">You cannot confirm a container you added yourself.</string>
+    <string name="error_not_signed_in">Sign in to continue.</string>
+    <string name="error_admin_only">This is for administrators only.</string>
+    <string name="error_container_not_found">This container no longer exists.</string>
+    <string name="error_report_not_open">This report is already closed.</string>
+    <string name="error_suggestion_not_found">This suggestion no longer exists.</string>
+    <string name="error_request_already_reviewed">This request has already been reviewed.</string>
+    <string name="error_offline">No connection. It will be sent when you are back online.</string>
+    <string name="error_server_unavailable">The server is not responding. Try again in a moment.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
 </resources>

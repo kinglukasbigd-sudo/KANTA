@@ -22,4 +22,24 @@
     <string name="theme_system">Sistemi</string>
     <string name="theme_light">E ndritshme</string>
     <string name="theme_dark">E errët</string>
+
+    <!-- Backend errors (supabase/README.md error codes) -->
+    <string name="error_too_far_from_container">Je shumë larg nga kontejneri. Afrohu dhe provo përsëri.</string>
+    <string name="error_too_far_to_add">Je shumë larg nga vendi. Qëndro pranë kontejnerit për ta shtuar.</string>
+    <string name="error_too_far_to_confirm">Afrohu për të konfirmuar se kontejneri është këtu.</string>
+    <string name="error_daily_report_limit">Ke arritur 10 raportime për sot. Provo përsëri nesër.</string>
+    <string name="error_add_allowance_used_up">I ke shtuar tashmë 2 kontejnerët e tu — faleminderit! Nëse mungon edhe një, dërgoje për shqyrtim.</string>
+    <string name="error_daily_request_limit">Ke arritur 3 kërkesa për sot. Provo përsëri nesër.</string>
+    <string name="error_duplicate_container">Këtu ka tashmë një kontejner të tillë. A është ky?</string>
+    <string name="error_already_done">Këtë e ke bërë tashmë.</string>
+    <string name="error_cannot_confirm_own">Nuk mund të konfirmosh një kontejner që e ke shtuar vetë.</string>
+    <string name="error_not_signed_in">Hyr për të vazhduar.</string>
+    <string name="error_admin_only">Kjo është vetëm për administratorët.</string>
+    <string name="error_container_not_found">Ky kontejner nuk ekziston më.</string>
+    <string name="error_report_not_open">Ky raportim është mbyllur tashmë.</string>
+    <string name="error_suggestion_not_found">Ky sugjerim nuk ekziston më.</string>
+    <string name="error_request_already_reviewed">Kjo kërkesë është shqyrtuar tashmë.</string>
+    <string name="error_offline">Pa lidhje. Do të dërgohet kur të rikthehesh online.</string>
+    <string name="error_server_unavailable">Serveri nuk po përgjigjet. Provo përsëri pas pak.</string>
+    <string name="error_unknown">Diçka shkoi keq. Provo përsëri.</string>
 </resources>
