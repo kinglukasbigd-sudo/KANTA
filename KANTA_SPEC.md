@@ -128,15 +128,62 @@ Tapping a container marker opens a **container detail sheet** (replaces the menu
 
 ### 4.3 Report flow — camera first, 3 taps
 1. Tap **Full** or **Report** → in-app camera opens instantly (CameraX, big shutter, torch toggle).
-2. After shot: sheet with photo thumbnail, auto-detected nearest container ("Container SK-00412 · 12 m", tap to change on a mini map, or "Container not on map — add it"), and for **Report** the status chips: Damaged · Destroyed · Burning · Missing · Trash dumped around. For **Full** the status is already set.
+2. After shot: sheet with photo thumbnail, auto-detected nearest container ("Container SK-00412 · 12 m", tap to change on a mini map, or "Container not on map — add it" → opens the **Add container flow** from 4.6, including its 30 m GPS rule, duplicate check and the 2-container lifetime limit), and for **Report** the status chips: Damaged · Destroyed · Burning · Missing · Trash dumped around. For **Full** the status is already set.
 3. Optional note (max 280 chars) → **Send**. Success animation, then:
    - for **Full**: immediately show **"Nearest containers with space"** (see 5.2).
    - for others: "Thanks — X neighbours reported this too."
 
-Rules: GPS must be within 60 m of the container (else show friendly error + "Move closer" or "Add a new container here"). If an open report of the same kind already exists on that container → becomes a "me too" confirmation automatically (tell the user). Offline → queue in Room, upload with WorkManager, show "Will send when online".
+Rules: GPS must be within 60 m of the container (else show friendly error + "Move closer" or "Add a new container here" → also the Add container flow from 4.6, subject to the same 2-container limit). If an open report of the same kind already exists on that container → becomes a "me too" confirmation automatically (tell the user). Offline → queue in Room, upload with WorkManager, show "Will send when online".
 
 ### 4.4 Suggest flow
 Tap **Suggest** → map in pick mode with a centre crosshair → confirm spot → reason chips: No container nearby · Existing ones always full · New building/neighbourhood · People dump trash here → optional photo + note → Send. If an open suggestion exists within 50 m, offer "Vote for this one instead" (one tap).
+
+### 4.6 "Map your street" — help complete the map (added later, part of v1)
+
+**Goal:** every logged-in user helps check that the containers and cans near them are on the map. This spreads the work of mapping all of Skopje across many people instead of only the admin (Ivan).
+
+**When it appears**
+- Right after the user's first login (after choosing a display name), and again later only if the user hasn't done a check in 30 days AND is in an area with no recent check (see "area checks"). Never more than once per app session. Always skippable ("Later").
+- Also permanently available in the bottom sheet under "My reports & profile" → "Map your street".
+
+**The check flow**
+1. Card/sheet: "Are all containers near you on the map?" with a small map of a **150 m radius** around the user, showing existing markers clearly (rectangles + triangles), and a short hint: "Look around. Big containers = rectangles, small cans = triangles."
+2. Three answers:
+   - **"Yes, everything is there"** → saves an area check (confirms coverage). Thank-you micro-animation.
+   - **"One is missing"** → Add container flow (below).
+   - **"One on the map is not here"** → user taps that marker → creates a `missing` report for it (normal report flow, photo required).
+3. Unverified user-added containers inside the radius are shown with a dashed outline and a button **"Yes, it's here"** so the user can confirm them in one tap (must be within 50 m of it).
+
+**Add container flow (the same flow is used everywhere a container is added, including "Container not on map — add it" in the report flow 4.3)**
+- Photo required (camera only, same privacy processing), GPS must be within **30 m** of the pin, user drags the pin to the exact spot.
+- Choose type: Big container (rectangle) or Small can (triangle); for big: category General / Glass / Paper / Plastic.
+- Duplicate check: if a container of the same kind already exists within **10 m** (big) or **5 m** (small) → "Is it this one?" with the existing marker; user must confirm it's different to continue.
+- **Limit: each normal account can add at most 2 containers in total (lifetime).** Show remaining count before adding: "You can add 2 containers" / "You can add 1 more container". The limit is enforced on the server, never only in the app.
+- When the limit is reached: explain kindly "You've already added your 2 containers — thank you! If another one is missing, send it for review." → the user can send a **container request** (photo + pin + type) that does NOT appear on the map; it goes into the admin review queue. Max 3 requests per user per day.
+- New user-added containers start as `verified = false`: drawn with a **dashed outline** in the normal type/status colour. They become verified when **2 other users** tap "Yes, it's here", or an admin verifies them. Unverified containers can be reported like any other.
+- If 2 users report an unverified container as `missing`, it is removed from the map (soft delete) and the adder's trust_score goes down by 1. When a user's added container gets verified, their trust_score goes up by 1.
+
+**Admin (Ivan)**
+- `profiles.role` = 'user' | 'admin'. Set admin manually in Supabase for Ivan's account.
+- Admins have **no add limit**, their containers are verified immediately, and they see a hidden **Admin** row in the bottom sheet with: review queue of container requests (approve → becomes a verified container / reject), list of unverified containers (verify / delete), and a **coverage map** layer showing where area checks happened (green = checked in last 90 days, empty = never checked) so Ivan knows which parts of Skopje still need mapping.
+
+**Data model additions (section 6)**
+```
+profiles: + role text check in ('user','admin') default 'user'
+          + containers_added int default 0
+          + last_area_check_at timestamptz null
+containers: + deleted_at timestamptz null   -- soft delete; all queries ignore deleted rows
+container_confirmations(container_id uuid fk, user_id uuid fk, kind text check in ('exists'), created_at timestamptz,
+  primary key(container_id, user_id))
+container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text, category text, photo_path text not null,
+  note text, state text check in ('pending','approved','rejected') default 'pending',
+  created_container_id uuid null, created_at timestamptz, reviewed_at timestamptz null)
+area_checks(id uuid pk, user_id uuid fk, geom geography(point), radius_m int default 150,
+  result text check in ('all_present','added','reported_missing'), created_at timestamptz)
+```
+**RPC additions:** `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` (enforces 30 m, duplicate radius, the 2-container limit unless admin, updates containers_added), `my_add_allowance()` → remaining adds, `confirm_container_exists(container_id, lon, lat)` (50 m, not the adder, verifies at 2), `submit_container_request(...)` (3/day), `submit_area_check(lon, lat, result)`, `should_prompt_area_check(lon, lat)` → bool, admin-only: `admin_review_request(id, approve bool)`, `admin_verify_container(id)`, `admin_delete_container(id)`, `admin_coverage(days int)` → GeoJSON of checks. RLS: container_requests readable only by their author and admins; admin RPCs check role = 'admin'.
+
+**Map marker addition (section 3.4):** unverified containers = same shape and colour but dashed 1.5dp outline and 85% opacity.
 
 ### 4.5 Screens list
 1. Splash (brand mark, < 1 s)
@@ -153,6 +200,8 @@ Tap **Suggest** → map in pick mode with a centre crosshair → confirm spot �
 12. City stats (ranking + detail per municipality)
 13. Settings (language, theme, notifications, privacy policy link, delete account)
 14. Empty / error / offline states for every list and the map
+15. Map your street (area check) + Add container flow
+16. Admin: review queue, unverified list, coverage map (admins only)
 
 ---
 
@@ -196,7 +245,8 @@ containers(id uuid pk, code text unique  -- e.g. SK-00412,
   geom geography(point) not null, municipality_id smallint fk,
   status text default 'ok', status_since timestamptz,
   source text check in ('osm','user','city'), osm_id bigint null,
-  added_by uuid null, verified bool default false, created_at timestamptz)
+  added_by uuid null, verified bool default false, created_at timestamptz,
+  deleted_at timestamptz null)   -- soft delete (4.6); every query and RPC ignores deleted rows
 reports(id uuid pk, container_id uuid fk, user_id uuid fk,
   kind text check in ('full','damaged','destroyed','burning','missing','dumped_around'),
   photo_path text not null, note text check (char_length(note) <= 280),
@@ -210,13 +260,25 @@ suggestions(id uuid pk, user_id uuid fk, geom geography(point), reason text, not
   placed_container_id uuid null, municipality_id smallint, created_at timestamptz)
 suggestion_votes(suggestion_id uuid fk, user_id uuid fk, created_at timestamptz, primary key(suggestion_id, user_id))
 profiles(id uuid pk references auth.users, display_name text, municipality_id smallint null,
-  lang text, trust_score int default 0, created_at timestamptz)
+  lang text, trust_score int default 0, created_at timestamptz,
+  role text check in ('user','admin') default 'user',        -- 4.6; set manually in Supabase for Ivan
+  containers_added int default 0,                            -- 4.6; lifetime count, drives the 2-add limit
+  last_area_check_at timestamptz null)                       -- 4.6; drives the 30-day re-prompt
+
+-- 4.6 "Map your street"
+container_confirmations(container_id uuid fk, user_id uuid fk, kind text check in ('exists'), created_at timestamptz,
+  primary key(container_id, user_id))
+container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text, category text, photo_path text not null,
+  note text, state text check in ('pending','approved','rejected') default 'pending',
+  created_container_id uuid null, created_at timestamptz, reviewed_at timestamptz null)
+area_checks(id uuid pk, user_id uuid fk, geom geography(point), radius_m int default 150,
+  result text check in ('all_present','added','reported_missing'), created_at timestamptz)
 ```
 
-Indexes: GIST on every `geom`; btree on `reports(container_id, state)`, `reports(user_id)`.
+Indexes: GIST on every `geom`; btree on `reports(container_id, state)`, `reports(user_id)`, `container_requests(state)`, `area_checks(created_at)`; partial index on `containers(deleted_at)` so the map query skips soft-deleted rows cheaply.
 
 RPC functions (SQL, `security definer` where needed):
-- `containers_in_bbox(min_lon, min_lat, max_lon, max_lat)` → lightweight rows for the map (id, kind, category, status, lon, lat)
+- `containers_in_bbox(min_lon, min_lat, max_lon, max_lat)` → lightweight rows for the map (id, kind, category, status, lon, lat, verified) — excludes rows with `deleted_at` not null; `verified` drives the dashed unverified marker (3.4)
 - `nearest_containers(lon, lat, category, limit, max_m)` → uses `<->` KNN + `ST_DWithin`
 - `nearest_container_to(lon, lat)` → for snapping a new report
 - `submit_report(container_id, kind, photo_path, note, lon, lat)` → validates distance ≤ 60 m, rate limit (≤ 10 reports/user/day), dedupe into me-too, recomputes status
@@ -226,11 +288,21 @@ RPC functions (SQL, `security definer` where needed):
 - `my_impact()` → counts for impact counter
 - `municipality_stats(days int default 30)` → ranking rows
 - `my_resolved_since(ts)` → for the Fixed! notification worker
+
+4.6 "Map your street" RPCs:
+- `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` → enforces the 30 m device-to-pin rule, the duplicate radius (10 m big / 5 m small, same kind), and the 2-container lifetime limit unless `role = 'admin'`; increments `profiles.containers_added`; inserts `verified = false` (admins: `verified = true`)
+- `my_add_allowance()` → remaining adds for the current user
+- `confirm_container_exists(container_id, lon, lat)` → 50 m rule, rejects the container's own adder, sets `verified = true` at 2 confirmations and gives the adder trust_score +1
+- `submit_container_request(lon, lat, kind, category, photo_path, note)` → max 3 per user per day; never appears on the map
+- `submit_area_check(lon, lat, result)` → writes `area_checks`, updates `profiles.last_area_check_at`
+- `should_prompt_area_check(lon, lat)` → bool; true only if the user has no check in 30 days AND the area has no recent check
+- Admin-only (all check `role = 'admin'`): `admin_review_request(id, approve bool)` (approve → creates a verified container and links `created_container_id`), `admin_verify_container(id)`, `admin_delete_container(id)` (soft delete), `admin_coverage(days int)` → GeoJSON of area checks
+- Trigger: 2 `missing` reports on an unverified container soft-delete it (`deleted_at = now()`) and give the adder trust_score −1
 - Triggers keep `containers.status` / `status_since` and `suggestions.votes` correct. A scheduled function (pg_cron) expires old reports every hour.
 
-Row Level Security: everyone (anon) can SELECT containers, open/resolved reports (without user_id exposed — use a view), suggestions, municipalities. Only authenticated users can INSERT via RPCs; users can UPDATE/DELETE only their own profile. No direct client INSERT on reports/confirmations (RPC only).
+Row Level Security: everyone (anon) can SELECT containers (soft-deleted rows excluded), open/resolved reports (without user_id exposed — use a view), suggestions, municipalities. Only authenticated users can INSERT via RPCs; users can UPDATE/DELETE only their own profile. No direct client INSERT on reports/confirmations/containers/container_confirmations/container_requests/area_checks (RPC only). `container_requests` is readable only by its author and by admins. `profiles.role`, `containers_added` and `last_area_check_at` are never client-writable — only the RPCs above and manual admin action in Supabase may change them.
 
-Storage: bucket `photos` (public read, authenticated write, path `reports/{user_id}/{uuid}.jpg`, max 1 MB, image/jpeg only).
+Storage: bucket `photos` (public read, authenticated write, max 1 MB, image/jpeg only). Paths: `reports/{user_id}/{uuid}.jpg`, and for 4.6 `containers/{user_id}/{uuid}.jpg` and `container_requests/{user_id}/{uuid}.jpg`.
 
 ---
 
