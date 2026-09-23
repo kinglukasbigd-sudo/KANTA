@@ -47,4 +47,23 @@
     <string name="error_offline">Нема интернет. Ќе се испрати кога ќе се вратиш онлајн.</string>
     <string name="error_server_unavailable">Серверот не одговара. Обиди се повторно за момент.</string>
     <string name="error_unknown">Нешто тргна наопаку. Обиди се повторно.</string>
+
+    <!-- Map screen (§4.1, §7 attribution) -->
+    <string name="map_profile">Профил</string>
+    <string name="map_my_location">Мојата локација</string>
+    <string name="map_toggle_suggestions">Прикажи предлози</string>
+    <string name="map_attribution">© OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="action_dismiss">Затвори</string>
+    <string name="container_kind_big">Голем контејнер</string>
+    <string name="container_kind_small">Мала корпа</string>
+    <string name="container_detail_timeline">Пријави</string>
+    <string name="container_detail_no_reports">Нема пријави за овој контејнер.</string>
+    <string name="container_detail_unconfirmed_full">1 лице вели дека е полн — потребна е уште една потврда.</string>
+    <string name="container_detail_unverified">Додаден од корисник — сè уште непотврден.</string>
+    <string name="container_detail_error_hint">Обиди се повторно подоцна.</string>
+    <string name="container_action_me_too">Јас исто — сè уште е полн</string>
+    <string name="container_action_emptied">Испразнет е</string>
+    <string name="container_action_report_other">Пријави друг проблем</string>
+    <string name="container_action_navigate">Навигирај</string>
+    <string name="error_backend_not_configured">Нема поставен сервер. Додади SUPABASE_URL и SUPABASE_ANON_KEY во local.properties.</string>
 </resources>

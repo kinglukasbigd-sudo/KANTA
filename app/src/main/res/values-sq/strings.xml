@@ -42,4 +42,23 @@
     <string name="error_offline">Pa lidhje. Do të dërgohet kur të rikthehesh online.</string>
     <string name="error_server_unavailable">Serveri nuk po përgjigjet. Provo përsëri pas pak.</string>
     <string name="error_unknown">Diçka shkoi keq. Provo përsëri.</string>
+
+    <!-- Map screen (§4.1, §7 attribution) -->
+    <string name="map_profile">Profili</string>
+    <string name="map_my_location">Vendndodhja ime</string>
+    <string name="map_toggle_suggestions">Shfaq sugjerimet</string>
+    <string name="map_attribution">© OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="action_dismiss">Mbyll</string>
+    <string name="container_kind_big">Kontejner i madh</string>
+    <string name="container_kind_small">Kosh i vogël</string>
+    <string name="container_detail_timeline">Raportimet</string>
+    <string name="container_detail_no_reports">Nuk ka raportime për këtë kontejner.</string>
+    <string name="container_detail_unconfirmed_full">1 person thotë se është plot — duhet edhe një konfirmim.</string>
+    <string name="container_detail_unverified">Shtuar nga një fqinj — ende i pakonfirmuar.</string>
+    <string name="container_detail_error_hint">Provo përsëri pas pak.</string>
+    <string name="container_action_me_too">Edhe unë — ende plot</string>
+    <string name="container_action_emptied">Është zbrazur</string>
+    <string name="container_action_report_other">Raporto problem tjetër</string>
+    <string name="container_action_navigate">Navigo</string>
+    <string name="error_backend_not_configured">Nuk ka server të konfiguruar. Shto SUPABASE_URL dhe SUPABASE_ANON_KEY në local.properties.</string>
 </resources>

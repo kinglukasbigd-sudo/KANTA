@@ -42,4 +42,23 @@
     <string name="error_offline">No connection. It will be sent when you are back online.</string>
     <string name="error_server_unavailable">The server is not responding. Try again in a moment.</string>
     <string name="error_unknown">Something went wrong. Please try again.</string>
+
+    <!-- Map screen (§4.1, §7 attribution) -->
+    <string name="map_profile">Profile</string>
+    <string name="map_my_location">My location</string>
+    <string name="map_toggle_suggestions">Show suggestions</string>
+    <string name="map_attribution">© OpenStreetMap contributors · OpenFreeMap</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="container_kind_big">Big container</string>
+    <string name="container_kind_small">Small can</string>
+    <string name="container_detail_timeline">Reports</string>
+    <string name="container_detail_no_reports">No reports for this container.</string>
+    <string name="container_detail_unconfirmed_full">1 person says it’s full — one more confirmation needed.</string>
+    <string name="container_detail_unverified">Added by a neighbour — not yet confirmed.</string>
+    <string name="container_detail_error_hint">Try again in a moment.</string>
+    <string name="container_action_me_too">Me too — still full</string>
+    <string name="container_action_emptied">It’s been emptied</string>
+    <string name="container_action_report_other">Report other problem</string>
+    <string name="container_action_navigate">Navigate</string>
+    <string name="error_backend_not_configured">No backend configured. Add SUPABASE_URL and SUPABASE_ANON_KEY to local.properties.</string>
 </resources>

@@ -24,6 +24,16 @@ import mk.kanta.app.core.designsystem.MarkerColors
  *
  * Sizes are given in dp at zoom 16 (the spec's reference zoom); MapLibre scales them per zoom.
  */
+/** One entry in the marker image registry. */
+data class MarkerVariant(
+    val kind: ContainerKind,
+    val status: ContainerStatus,
+    val category: ContainerCategory,
+    val selected: Boolean,
+    val unverified: Boolean,
+    val badge: Boolean,
+)
+
 class MarkerBitmapFactory(private val density: Float) {
 
     private fun dp(value: Float): Float = value * density
@@ -68,45 +78,63 @@ class MarkerBitmapFactory(private val density: Float) {
      * a destroyed glass container reads as destroyed first — so the product stays small.
      */
     fun buildAll(darkTheme: Boolean): Map<String, Bitmap> = buildMap {
+        for (variant in variants()) {
+            put(
+                idFor(
+                    variant.kind, variant.status, variant.category,
+                    variant.selected, variant.unverified, variant.badge,
+                ),
+                marker(
+                    variant.kind, variant.status, variant.category, darkTheme,
+                    variant.selected, variant.unverified, variant.badge,
+                ),
+            )
+        }
+        put(SUGGESTION_ID, suggestionMarker(darkTheme))
+        put(SUGGESTION_ID + "-selected", suggestionMarker(darkTheme, selected = true))
+    }
+
+    /**
+     * Every (kind, status, category, selected, unverified, badge) combination the
+     * map can ask for.
+     *
+     * This is the single definition shared by [buildAll], which registers the
+     * bitmaps, and the map's feature builder, which names them. If the two ever
+     * disagreed, MapLibre would silently drop the marker rather than complain —
+     * so they read from the same list.
+     */
+    fun variants(): List<MarkerVariant> = buildList {
         for (kind in ContainerKind.entries) {
             for (status in ContainerStatus.entries) {
                 for (selected in listOf(false, true)) {
-                    put(
-                        idFor(kind, status, ContainerCategory.GENERAL, selected),
-                        marker(kind, status, ContainerCategory.GENERAL, darkTheme, selected),
-                    )
+                    // The recycling dot (§3.4) is only meaningful on a big
+                    // container that is otherwise fine — a broken glass container
+                    // must read as broken first.
+                    val categories = if (kind == ContainerKind.BIG && status == ContainerStatus.OK) {
+                        ContainerCategory.entries
+                    } else {
+                        listOf(ContainerCategory.GENERAL)
+                    }
 
-                    // §4.6: user-added containers awaiting confirmation. Two variants per
-                    // status because the "?" badge only appears at zoom >= 16. MISSING is
-                    // skipped: a missing container is hollow, and hollow already means gone.
-                    if (status != ContainerStatus.MISSING) {
-                        for (badge in listOf(false, true)) {
-                            put(
-                                idFor(
-                                    kind, status, ContainerCategory.GENERAL,
-                                    selected, unverified = true, badge = badge,
-                                ),
-                                marker(
-                                    kind, status, ContainerCategory.GENERAL, darkTheme,
-                                    selected, unverified = true, badge = badge,
-                                ),
-                            )
+                    for (category in categories) {
+                        // MISSING is hollow, and hollow already means gone, so it
+                        // never also takes the unverified treatment (§3.4).
+                        val unverifiedOptions = if (status == ContainerStatus.MISSING) {
+                            listOf(false)
+                        } else {
+                            listOf(false, true)
+                        }
+
+                        for (unverified in unverifiedOptions) {
+                            val badges = if (unverified) listOf(false, true) else listOf(false)
+                            for (badge in badges) {
+                                add(MarkerVariant(kind, status, category, selected, unverified, badge))
+                            }
                         }
                     }
                 }
             }
         }
-        // Recycling variants: big + OK only.
-        for (category in ContainerCategory.entries.filter { it.isRecycling }) {
-            for (selected in listOf(false, true)) {
-                put(
-                    idFor(ContainerKind.BIG, ContainerStatus.OK, category, selected),
-                    marker(ContainerKind.BIG, ContainerStatus.OK, category, darkTheme, selected),
-                )
-            }
-        }
-        put(SUGGESTION_ID, suggestionMarker(darkTheme))
-        put(SUGGESTION_ID + "-selected", suggestionMarker(darkTheme, selected = true))
     }
 
     /**

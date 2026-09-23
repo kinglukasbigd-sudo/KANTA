@@ -122,6 +122,15 @@ sealed interface KantaError {
     }
 
     /**
+     * local.properties has no Supabase credentials, so there is no backend to
+     * talk to. A developer-setup problem rather than a user one, but it has to
+     * surface somewhere rather than crashing the screen.
+     */
+    data object BackendNotConfigured : KantaError {
+        override val messageRes = R.string.error_backend_not_configured
+    }
+
+    /**
      * Anything we did not anticipate. [technical] is kept for logs and bug reports
      * and is never shown to the user.
      */

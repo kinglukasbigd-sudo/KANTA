@@ -1,7 +1,9 @@
 package mk.kanta.app.core.data.remote
 
 import io.github.jan.supabase.SupabaseClient
+import mk.kanta.app.core.network.SupabaseClientHolder
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,7 @@ import mk.kanta.app.core.data.remote.dto.MunicipalityStatsDto
 import mk.kanta.app.core.data.remote.dto.MyReportDto
 import mk.kanta.app.core.data.remote.dto.NearbyContainerDto
 import mk.kanta.app.core.data.remote.dto.PendingRequestDto
+import mk.kanta.app.core.data.remote.dto.PublicReportDto
 import mk.kanta.app.core.data.remote.dto.ResolvedReportDto
 import mk.kanta.app.core.data.remote.dto.ReviewRequestResultDto
 import mk.kanta.app.core.data.remote.dto.SubmitReportResultDto
@@ -52,9 +55,12 @@ import javax.inject.Singleton
  */
 @Singleton
 class KantaRepository @Inject constructor(
-    private val client: SupabaseClient,
+    private val supabase: SupabaseClientHolder,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) {
+
+    /** Resolved per call, so an unconfigured build fails as an error, not a crash. */
+    private val client: SupabaseClient get() = supabase.client
 
     // =========================================================================================
     // Map (anon-readable — §2: browsing needs no account)
@@ -145,6 +151,23 @@ class KantaRepository @Inject constructor(
         put("p_kind", kind)
         put("p_photo_path", photoPath ?: "")
     }
+
+    /**
+     * The photo timeline on the container detail sheet (§4.1).
+     *
+     * `reports_public` is a view, not an RPC, so this is a plain select — the
+     * view is what strips user_id (§6), and anon may read it.
+     */
+    fun reportsForContainer(containerId: String): Flow<KantaResult<List<PublicReportDto>>> =
+        resultFlow {
+            client.postgrest.from("reports_public")
+                .select {
+                    filter { eq("container_id", containerId) }
+                    order("created_at", Order.DESCENDING)
+                    limit(50)
+                }
+                .decodeList<PublicReportDto>()
+        }
 
     /** `my_reports` — the profile list (§4.5 screen 11). */
     fun myReports(limit: Int = 100): Flow<KantaResult<List<MyReportDto>>> =
@@ -375,6 +398,10 @@ class KantaRepository @Inject constructor(
         crossinline block: suspend () -> T,
     ): Flow<KantaResult<T>> = flow {
         emit(KantaResult.Loading)
+        if (!supabase.isConfigured) {
+            emit(KantaResult.Failure(KantaError.BackendNotConfigured))
+            return@flow
+        }
         emit(KantaResult.Success(block()))
     }.catch { throwable ->
         emit(KantaResult.Failure(throwable.toKantaError()))
