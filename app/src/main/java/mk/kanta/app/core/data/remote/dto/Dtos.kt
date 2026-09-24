@@ -137,12 +137,16 @@ data class PublicReportDto(
     @SerialName("age_hours") val ageHours: Double,
 )
 
-/** `my_reports` (§4.5 screen 11). */
+/** `my_reports` (§4.5 screen 11; widened in 0017). */
 @Serializable
 data class MyReportDto(
     @SerialName("report_id") val reportId: String,
     @SerialName("container_id") val containerId: String,
     @SerialName("container_code") val containerCode: String,
+    @SerialName("container_kind") val containerKind: String = "big",
+    @SerialName("container_lon") val containerLon: Double? = null,
+    @SerialName("container_lat") val containerLat: Double? = null,
+    @SerialName("municipality_id") val municipalityId: Int? = null,
     val kind: String,
     val state: String,
     @SerialName("photo_path") val photoPath: String,
@@ -150,6 +154,22 @@ data class MyReportDto(
     @SerialName("created_at") val createdAt: String,
     @SerialName("resolved_at") val resolvedAt: String? = null,
     @SerialName("me_too_count") val meTooCount: Long,
+    /** §5.4 before/after: the photo that came with the resolving confirmation. */
+    @SerialName("resolved_photo_path") val resolvedPhotoPath: String? = null,
+)
+
+/** `my_suggestions` (0017): made or voted for by the user. */
+@Serializable
+data class MySuggestionDto(
+    val id: String,
+    val lon: Double,
+    val lat: Double,
+    val reason: String,
+    val votes: Int,
+    val state: String,
+    @SerialName("municipality_id") val municipalityId: Int? = null,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("i_authored") val iAuthored: Boolean,
 )
 
 /** `my_resolved_since` — drives the "Fixed!" notification worker (§5.4). */

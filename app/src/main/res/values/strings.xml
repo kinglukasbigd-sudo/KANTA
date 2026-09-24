@@ -103,7 +103,7 @@
     <string name="error_code_expired">Кодот истече. Побарај нов.</string>
     <string name="error_too_many_codes">Побаравте премногу кодови. Почекај минута и обиди се повторно.</string>
     <string name="error_invalid_email">Оваа е-пошта не изгледа точно.</string>
-    <string name="profile_title">Профил</string>
+    <string name="profile_title">Поставки</string>
     <string name="profile_signed_out_title">Не си најавен</string>
     <string name="profile_signed_out_message">Најави се за да ги видиш твоите пријави и да го смениш името.</string>
     <string name="profile_sign_in">Најави се</string>
@@ -314,4 +314,64 @@
     <string name="map_compass">Врати ја мапата кон север</string>
     <string name="map_follow_heading">Следи во која насока гледам</string>
     <string name="map_stop_following">Престани со следење</string>
+
+    <!-- Durations -->
+    <string name="duration_under_hour">&lt;1 ч</string>
+    <string name="duration_hours">%1$d ч</string>
+    <string name="duration_days">%1$d д</string>
+
+    <!-- §4.5 screen 11 My reports & profile, §5.4 impact -->
+    <string name="me_settings">Поставки</string>
+    <string name="me_settings_subtitle">Име, општина, профил</string>
+    <string name="me_signed_out_message">Најави се за да ги видиш твоите пријави и што постигнаа.</string>
+    <string name="me_name_fallback">Сосед</string>
+    <string name="me_member_since">член од %1$s</string>
+    <string name="me_impact_lead">Твоите пријави помогнаа да се</string>
+    <string name="me_impact_none">Се брои кога градот ќе реагира на пријава што ја направи или потврди.</string>
+    <string name="me_reports_title">Мои пријави</string>
+    <string name="me_suggestions_title">Мои предлози и гласови</string>
+    <string name="me_empty_title">Твојата прва пријава трае 20 секунди</string>
+    <string name="me_empty_message">Гледаш полн или скршен контејнер? Сликај, испрати — готово.</string>
+    <string name="me_first_report">Пријави проблем</string>
+    <string name="me_report_open">Отворена · %1$s</string>
+    <string name="me_report_open_plain">Отворена</string>
+    <string name="me_report_emptied_after">Испразнет по %1$s</string>
+    <string name="me_report_fixed_after">Поправен по %1$s</string>
+    <string name="me_report_resolved_plain">Решена</string>
+    <string name="me_report_expired">Истечена — никој не ја потврди навреме</string>
+    <string name="me_before_after">Пред / потоа</string>
+    <string name="me_hide_before_after">Скриј пред / потоа</string>
+    <string name="me_before">Пред</string>
+    <string name="me_after">Потоа</string>
+    <string name="me_no_after_photo">Решено според зборот на соседите — нема слика потоа.</string>
+    <string name="me_suggestion_mine">Твој предлог</string>
+    <string name="me_suggestion_voted">Гласаше</string>
+    <plurals name="me_impact_emptied">
+        <item quantity="one">испразни %d контејнер</item>
+        <item quantity="other">испразнат %d контејнери</item>
+    </plurals>
+    <plurals name="me_impact_repaired">
+        <item quantity="one">%d поправен</item>
+        <item quantity="other">%d поправени</item>
+    </plurals>
+    <plurals name="me_impact_placed">
+        <item quantity="one">%d нов поставен контејнер</item>
+        <item quantity="other">%d нови поставени контејнери</item>
+    </plurals>
+    <plurals name="me_impact_emptied_label">
+        <item quantity="one">испразнет контејнер</item>
+        <item quantity="other">испразнети контејнери</item>
+    </plurals>
+    <plurals name="me_impact_repaired_label">
+        <item quantity="one">поправен</item>
+        <item quantity="other">поправени</item>
+    </plurals>
+    <plurals name="me_impact_placed_label">
+        <item quantity="one">нов контејнер</item>
+        <item quantity="other">нови контејнери</item>
+    </plurals>
+    <plurals name="me_report_me_too">
+        <item quantity="one">+%d сосед</item>
+        <item quantity="other">+%d соседи</item>
+    </plurals>
 </resources>

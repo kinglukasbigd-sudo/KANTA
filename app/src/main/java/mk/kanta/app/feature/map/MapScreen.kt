@@ -246,6 +246,14 @@ fun MapScreen(
         }
     }
 
+    // A suggestion row tapped on the profile: open its sheet here (§4.5 screen 11).
+    LaunchedEffect(state.requestedSuggestionId) {
+        val id = state.requestedSuggestionId ?: return@LaunchedEffect
+        viewModel.dismissDetail()
+        suggestionViewModel.open(id)
+        viewModel.consumeRequestedSuggestion()
+    }
+
     // Marker taps, read through the latest state: the map's click listener is
     // registered once per style, long before the check or Admin opens.
     val onMarkerTap by rememberUpdatedState { containerId: String ->

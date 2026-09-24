@@ -98,7 +98,7 @@
     <string name="error_code_expired">Kodi ka skaduar. Kërko një të ri.</string>
     <string name="error_too_many_codes">Janë kërkuar shumë kode. Prit një minutë dhe provo përsëri.</string>
     <string name="error_invalid_email">Ky email nuk duket i saktë.</string>
-    <string name="profile_title">Profili</string>
+    <string name="profile_title">Cilësimet</string>
     <string name="profile_signed_out_title">Nuk je i kyçur</string>
     <string name="profile_signed_out_message">Hyr për të parë raportimet e tua dhe për të ndryshuar emrin.</string>
     <string name="profile_sign_in">Hyr</string>
@@ -309,4 +309,64 @@
     <string name="map_compass">Ktheje hartën drejt veriut</string>
     <string name="map_follow_heading">Ndiq drejtimin nga shikoj</string>
     <string name="map_stop_following">Ndalo ndjekjen</string>
+
+    <!-- Durations -->
+    <string name="duration_under_hour">&lt;1 orë</string>
+    <string name="duration_hours">%1$d orë</string>
+    <string name="duration_days">%1$d ditë</string>
+
+    <!-- §4.5 screen 11 My reports & profile, §5.4 impact -->
+    <string name="me_settings">Cilësimet</string>
+    <string name="me_settings_subtitle">Emri, komuna, llogaria</string>
+    <string name="me_signed_out_message">Hyr për të parë raportimet e tua dhe çfarë arritën.</string>
+    <string name="me_name_fallback">Fqinj</string>
+    <string name="me_member_since">anëtar që nga %1$s</string>
+    <string name="me_impact_lead">Raportimet e tua ndihmuan që</string>
+    <string name="me_impact_none">Numërohet kur qyteti vepron për një raportim që bëre ose konfirmove.</string>
+    <string name="me_reports_title">Raportimet e mia</string>
+    <string name="me_suggestions_title">Sugjerimet dhe votat e mia</string>
+    <string name="me_empty_title">Raportimi yt i parë zgjat 20 sekonda</string>
+    <string name="me_empty_message">Sheh një kontejner plot ose të prishur? Fotografo, dërgo — gati.</string>
+    <string name="me_first_report">Raporto një problem</string>
+    <string name="me_report_open">E hapur · %1$s</string>
+    <string name="me_report_open_plain">E hapur</string>
+    <string name="me_report_emptied_after">U zbraz pas %1$s</string>
+    <string name="me_report_fixed_after">U rregullua pas %1$s</string>
+    <string name="me_report_resolved_plain">E zgjidhur</string>
+    <string name="me_report_expired">Skadoi — askush s\'e konfirmoi në kohë</string>
+    <string name="me_before_after">Para / pas</string>
+    <string name="me_hide_before_after">Fshih para / pas</string>
+    <string name="me_before">Para</string>
+    <string name="me_after">Pas</string>
+    <string name="me_no_after_photo">U zgjidh sipas fjalës së fqinjëve — pa foto pas.</string>
+    <string name="me_suggestion_mine">Sugjerimi yt</string>
+    <string name="me_suggestion_voted">Votove</string>
+    <plurals name="me_impact_emptied">
+        <item quantity="one">të zbrazet %d kontejner</item>
+        <item quantity="other">të zbrazen %d kontejnerë</item>
+    </plurals>
+    <plurals name="me_impact_repaired">
+        <item quantity="one">%d i rregulluar</item>
+        <item quantity="other">%d të rregulluar</item>
+    </plurals>
+    <plurals name="me_impact_placed">
+        <item quantity="one">%d kontejner i ri i vendosur</item>
+        <item quantity="other">%d kontejnerë të rinj të vendosur</item>
+    </plurals>
+    <plurals name="me_impact_emptied_label">
+        <item quantity="one">kontejner i zbrazur</item>
+        <item quantity="other">kontejnerë të zbrazur</item>
+    </plurals>
+    <plurals name="me_impact_repaired_label">
+        <item quantity="one">i rregulluar</item>
+        <item quantity="other">të rregulluar</item>
+    </plurals>
+    <plurals name="me_impact_placed_label">
+        <item quantity="one">kontejner i ri</item>
+        <item quantity="other">kontejnerë të rinj</item>
+    </plurals>
+    <plurals name="me_report_me_too">
+        <item quantity="one">+%d fqinj</item>
+        <item quantity="other">+%d fqinj</item>
+    </plurals>
 </resources>

@@ -98,7 +98,7 @@
     <string name="error_code_expired">That code has expired. Ask for a new one.</string>
     <string name="error_too_many_codes">Too many codes requested. Wait a minute and try again.</string>
     <string name="error_invalid_email">That email address doesn’t look right.</string>
-    <string name="profile_title">Profile</string>
+    <string name="profile_title">Settings</string>
     <string name="profile_signed_out_title">You’re not signed in</string>
     <string name="profile_signed_out_message">Sign in to see your reports and change your name.</string>
     <string name="profile_sign_in">Sign in</string>
@@ -309,4 +309,64 @@
     <string name="map_compass">Reset map to north</string>
     <string name="map_follow_heading">Follow the direction I\'m facing</string>
     <string name="map_stop_following">Stop following</string>
+
+    <!-- Durations -->
+    <string name="duration_under_hour">&lt;1 h</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="duration_days">%1$d d</string>
+
+    <!-- §4.5 screen 11 My reports & profile, §5.4 impact -->
+    <string name="me_settings">Settings</string>
+    <string name="me_settings_subtitle">Name, municipality, account</string>
+    <string name="me_signed_out_message">Sign in to see your reports and what they got done.</string>
+    <string name="me_name_fallback">Neighbour</string>
+    <string name="me_member_since">member since %1$s</string>
+    <string name="me_impact_lead">Your reports helped get</string>
+    <string name="me_impact_none">It counts once the city acts on a report you made or confirmed.</string>
+    <string name="me_reports_title">My reports</string>
+    <string name="me_suggestions_title">My suggestions &amp; votes</string>
+    <string name="me_empty_title">Your first report takes 20 seconds</string>
+    <string name="me_empty_message">See a full or broken container? Take a photo, send — done.</string>
+    <string name="me_first_report">Report a problem</string>
+    <string name="me_report_open">Open · %1$s</string>
+    <string name="me_report_open_plain">Open</string>
+    <string name="me_report_emptied_after">Emptied after %1$s</string>
+    <string name="me_report_fixed_after">Fixed after %1$s</string>
+    <string name="me_report_resolved_plain">Resolved</string>
+    <string name="me_report_expired">Expired — nobody confirmed it in time</string>
+    <string name="me_before_after">Before / after</string>
+    <string name="me_hide_before_after">Hide before / after</string>
+    <string name="me_before">Before</string>
+    <string name="me_after">After</string>
+    <string name="me_no_after_photo">Resolved on neighbours\' word — no after photo.</string>
+    <string name="me_suggestion_mine">Your suggestion</string>
+    <string name="me_suggestion_voted">You voted</string>
+    <plurals name="me_impact_emptied">
+        <item quantity="one">%d container emptied</item>
+        <item quantity="other">%d containers emptied</item>
+    </plurals>
+    <plurals name="me_impact_repaired">
+        <item quantity="one">%d repaired</item>
+        <item quantity="other">%d repaired</item>
+    </plurals>
+    <plurals name="me_impact_placed">
+        <item quantity="one">%d new container placed</item>
+        <item quantity="other">%d new containers placed</item>
+    </plurals>
+    <plurals name="me_impact_emptied_label">
+        <item quantity="one">container emptied</item>
+        <item quantity="other">containers emptied</item>
+    </plurals>
+    <plurals name="me_impact_repaired_label">
+        <item quantity="one">repaired</item>
+        <item quantity="other">repaired</item>
+    </plurals>
+    <plurals name="me_impact_placed_label">
+        <item quantity="one">new container placed</item>
+        <item quantity="other">new containers placed</item>
+    </plurals>
+    <plurals name="me_report_me_too">
+        <item quantity="one">+%d neighbour</item>
+        <item quantity="other">+%d neighbours</item>
+    </plurals>
 </resources>

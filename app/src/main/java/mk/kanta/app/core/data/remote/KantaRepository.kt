@@ -28,6 +28,7 @@ import mk.kanta.app.core.data.remote.dto.ContainerRequestResultDto
 import mk.kanta.app.core.data.remote.dto.ImpactDto
 import mk.kanta.app.core.data.remote.dto.MunicipalityStatsDto
 import mk.kanta.app.core.data.remote.dto.MyReportDto
+import mk.kanta.app.core.data.remote.dto.MySuggestionDto
 import mk.kanta.app.core.data.remote.dto.NearbySuggestionDto
 import mk.kanta.app.core.data.remote.dto.NearbyContainerDto
 import mk.kanta.app.core.data.remote.dto.PendingRequestDto
@@ -185,6 +186,10 @@ class KantaRepository @Inject constructor(
     /** `my_reports` — the profile list (§4.5 screen 11). */
     fun myReports(limit: Int = 100): Flow<KantaResult<List<MyReportDto>>> =
         rpcList("my_reports") { put("p_limit", limit) }
+
+    /** `my_suggestions` — the profile's "my suggestions and votes" (0017). */
+    fun mySuggestions(limit: Int = 100): Flow<KantaResult<List<MySuggestionDto>>> =
+        rpcList("my_suggestions") { put("p_limit", limit) }
 
     /** `my_resolved_since` — drives the "Fixed!" notification worker (§5.4). */
     fun myResolvedSince(sinceIso: String): Flow<KantaResult<List<ResolvedReportDto>>> =

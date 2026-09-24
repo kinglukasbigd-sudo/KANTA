@@ -41,6 +41,7 @@ import mk.kanta.app.core.designsystem.component.KantaStatusBadge
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
 import mk.kanta.app.core.designsystem.tabularFigures
 import mk.kanta.app.core.network.publicPhotoUrl
+import mk.kanta.app.core.util.compactDuration
 import kotlin.math.roundToInt
 
 /**
@@ -151,7 +152,7 @@ private fun DetailHeader(state: ContainerDetailState) {
             val hours = state.statusSinceHours
             if (hours != null && state.status != ContainerStatus.OK) {
                 Text(
-                    text = formatDuration(hours),
+                    text = compactDuration(hours),
                     style = MaterialTheme.typography.bodySmall.tabularFigures(),
                     color = KantaTheme.colors.onSurfaceMuted,
                 )
@@ -207,7 +208,7 @@ private fun PhotoTimeline(reports: List<PublicReportDto>) {
                 )
                 Spacer(Modifier.height(Spacing.s))
                 Text(
-                    text = formatDuration(report.ageHours),
+                    text = compactDuration(report.ageHours),
                     style = MaterialTheme.typography.labelSmall.tabularFigures(),
                     color = KantaTheme.colors.onSurfaceMuted,
                 )
@@ -309,14 +310,4 @@ private fun DetailSkeleton() {
         Box(Modifier.height(Spacing.l))
         KantaListRowSkeleton()
     }
-}
-
-/**
- * "31 h", "3 d", "just now". Deliberately coarse: §4.1 wants a sense of how long
- * a problem has been ignored, not a stopwatch.
- */
-private fun formatDuration(hours: Double): String = when {
-    hours < 1.0 -> "<1 h"
-    hours < 48.0 -> "${hours.roundToInt()} h"
-    else -> "${(hours / 24).roundToInt()} d"
 }

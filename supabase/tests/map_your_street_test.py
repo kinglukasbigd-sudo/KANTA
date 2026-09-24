@@ -227,6 +227,30 @@ def run(db: Db) -> None:
     v = db.one("select * from vote_suggestion(%s)", (s[0],))
     check("vote_suggestion counts the vote", v[1] == 2, str(v))
 
+    print("\n§5.4 my reports, impact, before/after (0017)")
+    db.as_user(u3)
+    r = db.one("select * from confirm_report(%s,'resolved','reports/test/after.jpg')", (full[0],))
+    check("a resolved confirmation WITH a photo closes the report (§5.1)", r[1] == "resolved", str(r))
+    db.as_user(u2)
+    mine = db.one(
+        "select container_code, container_kind, kind, state, resolved_photo_path, resolved_at is not null "
+        "from my_reports(100) where report_id=%s", (full[0],))
+    check("my_reports: resolved, with the after photo for before/after",
+          mine is not None and mine[3] == "resolved" and mine[4] == "reports/test/after.jpg" and mine[5], str(mine))
+    pos = db.one("select container_lon, container_lat from my_reports(100) where report_id=%s", (full[0],))
+    check("my_reports: container position for 'tap → container on the map'",
+          abs(pos[0] - at(0, 0)[0]) < 1e-6 and abs(pos[1] - at(0, 0)[1]) < 1e-6, str(pos))
+    ids = [row[0] for row in db.cur.execute("select report_id from my_reports(100)").fetchall()]
+    db.as_postgres()  # the raw table is not readable by users (0013), which is the point
+    others = db.one("select count(*) from reports where id = any(%s::uuid[]) and user_id <> %s", (ids, u2))[0]
+    check("my_reports: only the caller's own reports", others == 0 and len(ids) >= 2, f"{others} foreign of {len(ids)}")
+    db.as_user(u2)
+    imp = db.one("select * from my_impact()")
+    check("my_impact: the reporter's emptied container counts", imp[0] == 1, str(imp))
+    db.as_user(u3)
+    imp = db.one("select * from my_impact()")
+    check("my_impact: so does the neighbour who said 'me too'", imp[0] == 1, str(imp))
+
     print("\n§4.4 / §5.3 suggestions — merge radius, one vote per person (0016)")
     db.as_user(u3)  # has not voted on it (u2 did, above)
     near = db.one("select id, i_voted, round(distance_m) from open_suggestion_near(%s,%s)", at(620, 0))
@@ -254,6 +278,16 @@ def run(db: Db) -> None:
               "select * from vote_suggestion(%s)", (other[0],))
     gone = db.one("select count(*) from open_suggestion_near(%s,%s)", at(900, 0))[0]
     check("…and is not offered as 'vote for this one instead'", gone == 0)
+
+    db.as_user(u1)
+    ms = db.cur.execute("select id, i_authored from my_suggestions(100)").fetchall()
+    check("my_suggestions: the author sees their own, marked as theirs", (s[0], True) in ms, str(ms))
+    db.as_user(u2)
+    ms = dict(db.cur.execute("select id, i_authored from my_suggestions(100)").fetchall())
+    check("my_suggestions: a voter sees it too, not as the author", ms.get(s[0]) is False, str(ms))
+    check("my_suggestions: and their own", ms.get(other[0]) is True, str(ms))
+    db.as_user(None)
+    db.expect("my_suggestions needs an account", "42501", "select * from my_suggestions(100)")
 
     print("\n§4.6 admin — review queue, verify, delete, unlimited adds")
     db.as_user(admin)

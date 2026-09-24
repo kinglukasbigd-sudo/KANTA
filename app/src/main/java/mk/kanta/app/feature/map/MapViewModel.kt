@@ -96,6 +96,8 @@ data class MapUiState(
     val nearestLoading: Boolean = false,
     /** A one-line success message (string resource), e.g. after "Me too". */
     val notice: Int? = null,
+    /** A suggestion another screen asked the map to open (profile row). */
+    val requestedSuggestionId: String? = null,
 )
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -106,6 +108,7 @@ class MapViewModel @Inject constructor(
     private val locationProvider: LocationProvider,
     private val authGate: AuthGate,
     private val suggestionVoting: SuggestionVoting,
+    private val mapRequests: MapRequests,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MapUiState())
@@ -124,6 +127,30 @@ class MapViewModel @Inject constructor(
         resolveInitialCamera()
         runConfirmationsWhenReady()
         followSuggestions()
+        followRequests()
+    }
+
+    /** "Show this on the map" from the profile (§4.5 screen 11). */
+    private fun followRequests() {
+        mapRequests.container
+            .onEach { if (it != null) mapRequests.takeContainer()?.let(::showRequested) }
+            .launchIn(viewModelScope)
+        mapRequests.suggestion
+            .onEach {
+                val target = if (it != null) mapRequests.takeSuggestion() else null
+                if (target != null) {
+                    // The layer on, the camera there, and the screen opens the sheet.
+                    _state.value = _state.value.copy(showSuggestions = true, requestedSuggestionId = target.id)
+                    loadSuggestions()
+                    target.at?.let { at -> _cameraTarget.value = at }
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun showRequested(target: MapRequests.Target) {
+        onContainerSelected(target.id)
+        target.at?.let { _cameraTarget.value = it }
     }
 
     /**
@@ -200,6 +227,10 @@ class MapViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun consumeRequestedSuggestion() {
+        _state.value = _state.value.copy(requestedSuggestionId = null)
     }
 
     fun dismissNotice() {

@@ -164,6 +164,9 @@ as $$
 $$;
 
 -- The list behind "My reports & profile" (§4.5 screen 11).
+-- 0017 widens this function's result; dropping first keeps this file re-runnable.
+drop function if exists my_reports(int);
+
 create or replace function my_reports(p_limit int default 100)
 returns table (
     report_id      uuid,

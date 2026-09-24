@@ -74,6 +74,7 @@ class SuggestionDetailViewModel @Inject constructor(
     private val voting: SuggestionVoting,
 ) : ViewModel() {
 
+
     private val base = MutableStateFlow(SuggestionDetailState())
 
     val state: StateFlow<SuggestionDetailState> = combine(base, voting.overlays) { s, overlays ->

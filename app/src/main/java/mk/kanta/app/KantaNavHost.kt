@@ -18,6 +18,7 @@ import mk.kanta.app.feature.PlaceholderScreen
 import mk.kanta.app.feature.auth.AuthViewModel
 import mk.kanta.app.feature.auth.LoginSheetHost
 import mk.kanta.app.feature.map.MapScreen
+import mk.kanta.app.feature.me.MyProfileScreen
 import mk.kanta.app.feature.profile.ProfileScreen
 import mk.kanta.app.feature.report.ReportScreen
 import mk.kanta.app.feature.suggest.SuggestScreen
@@ -91,7 +92,8 @@ fun KantaNavHost(
         NavHost(navController = navController, startDestination = MapRoute) {
             composable<MapRoute> {
                 MapScreen(
-                    onProfileClick = { navController.navigate(ProfileRoute) },
+                    // §4.1 top-right avatar: "My reports & profile"; Settings is one tap further.
+                    onProfileClick = { navController.navigate(MyReportsRoute) },
                     onFull = { authViewModel.request(PendingAction.OpenReport(presetFull = true)) },
                     onReport = { authViewModel.request(PendingAction.OpenReport(presetFull = false)) },
                     onSuggest = { authViewModel.request(PendingAction.OpenSuggest) },
@@ -117,7 +119,13 @@ fun KantaNavHost(
                 )
             }
             composable<MyReportsRoute> {
-                PlaceholderScreen(stringResource(R.string.menu_my_reports), navController::popBackStack)
+                MyProfileScreen(
+                    onBack = navController::popBackStack,
+                    onSettings = { navController.navigate(ProfileRoute) },
+                    onFirstReport = { authViewModel.request(PendingAction.OpenReport(presetFull = false)) },
+                    // The row's container or suggestion is waiting for the map.
+                    onShowOnMap = { navController.popBackStack(MapRoute, inclusive = false) },
+                )
             }
             composable<CityStatsRoute> {
                 PlaceholderScreen(stringResource(R.string.menu_city_stats), navController::popBackStack)
