@@ -18,7 +18,6 @@ import mk.kanta.app.core.auth.AuthRepository
 import mk.kanta.app.core.auth.CurrentProfile
 import mk.kanta.app.core.auth.PendingAction
 import mk.kanta.app.core.data.remote.KantaError
-import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.feature.street.AreaCheckPrompter
 import javax.inject.Inject
@@ -55,7 +54,6 @@ class AuthViewModel @Inject constructor(
     private val savedState: SavedStateHandle,
     private val auth: AuthRepository,
     private val gate: AuthGate,
-    private val kanta: KantaRepository,
     private val areaCheckPrompter: AreaCheckPrompter,
     private val currentProfile: CurrentProfile,
 ) : ViewModel() {
@@ -73,9 +71,6 @@ class AuthViewModel @Inject constructor(
 
     private var countdown: Job? = null
 
-    /** Snackbar-style one-line results for actions the NavHost executes (Vote). */
-    private val _message = MutableStateFlow<KantaError?>(null)
-    val message: StateFlow<KantaError?> = _message.asStateFlow()
 
     init {
         // Any screen asks the gate; the gate asks us to show the sheet.
@@ -275,23 +270,6 @@ class AuthViewModel @Inject constructor(
     fun request(action: PendingAction) = gate.request(action)
 
     fun consume(action: PendingAction) = gate.consume(action)
-
-    // -----------------------------------------------------------------------------------------
-    // Actions the NavHost runs after sign-in that have no screen of their own yet
-    // -----------------------------------------------------------------------------------------
-
-    /** §5.3: one vote per user. Surfaced through [message]. */
-    fun vote(suggestionId: String) {
-        viewModelScope.launch {
-            kanta.voteSuggestion(suggestionId).collect { result ->
-                if (result is KantaResult.Failure) _message.value = result.error
-            }
-        }
-    }
-
-    fun clearMessage() {
-        _message.value = null
-    }
 
     private companion object {
         const val RESEND_AFTER_SECONDS = 30L

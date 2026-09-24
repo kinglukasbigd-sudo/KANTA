@@ -31,6 +31,7 @@ import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.core.data.remote.dto.PublicReportDto
+import mk.kanta.app.core.data.suggest.SuggestionVoting
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
 import mk.kanta.app.feature.map.sheet.NearestContainerUi
@@ -104,6 +105,7 @@ class MapViewModel @Inject constructor(
     private val containerDao: ContainerDao,
     private val locationProvider: LocationProvider,
     private val authGate: AuthGate,
+    private val suggestionVoting: SuggestionVoting,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(MapUiState())
@@ -121,6 +123,25 @@ class MapViewModel @Inject constructor(
         refreshOnIdle()
         resolveInitialCamera()
         runConfirmationsWhenReady()
+        followSuggestions()
+    }
+
+    /**
+     * Suggestions changed somewhere (sent, merged, voted): re-read them if the
+     * layer is in use. A suggestion just sent turns the layer on and flies there,
+     * so the user sees their pin land.
+     */
+    private fun followSuggestions() {
+        suggestionVoting.changes
+            .onEach { if (_state.value.showSuggestions) loadSuggestions() }
+            .launchIn(viewModelScope)
+        suggestionVoting.suggestedAt
+            .onEach { at ->
+                _state.value = _state.value.copy(showSuggestions = true)
+                loadSuggestions()
+                _cameraTarget.value = at
+            }
+            .launchIn(viewModelScope)
     }
 
     // -----------------------------------------------------------------------------------------

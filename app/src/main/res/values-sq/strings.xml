@@ -259,4 +259,49 @@
     <string name="alternatives_location_title">Ku je?</string>
     <string name="alternatives_location_needed">Ndiz vendndodhjen për të parë kontejnerët me vend pranë teje.</string>
     <string name="category_mixed_recycling">Riciklim</string>
+
+    <!-- §4.4 Suggest, §5.3 Suggestions -->
+    <string name="suggest_reason_no_container">Nuk ka kontejner afër</string>
+    <string name="suggest_reason_always_full">Ekzistuesit janë gjithmonë plot</string>
+    <string name="suggest_reason_new_building">Ndërtesë / lagje e re</string>
+    <string name="suggest_reason_dumping">Njerëzit hedhin mbeturina këtu</string>
+    <string name="suggest_map_description">Harta. Lëvize që kryqi të jetë mbi vend.</string>
+    <string name="suggest_pick_title">Ku duhet të ketë kontejner?</string>
+    <string name="suggest_pick_hint">Lëviz hartën që kryqi të jetë mbi vend.</string>
+    <string name="suggest_place_here">Vendos këtu</string>
+    <string name="suggest_checking">Po kontrollojmë…</string>
+    <string name="suggest_nearby_title">Dikush e ka sugjeruar tashmë këtë vend</string>
+    <string name="suggest_nearby_distance">%1$d m larg</string>
+    <string name="suggest_vote_instead">Voto për këtë në vend të kësaj</string>
+    <string name="suggest_already_voted">Ke votuar tashmë për të — gati</string>
+    <string name="suggest_pick_another">Zgjidh një vend tjetër</string>
+    <string name="suggest_details_title">Pse këtu?</string>
+    <string name="suggest_reason_caption">Arsyeja</string>
+    <string name="suggest_photo_caption">Foto (opsionale)</string>
+    <string name="suggest_add_photo">Shto një foto</string>
+    <string name="suggest_remove_photo">Hiq</string>
+    <string name="suggest_note_hint">Diçka që qyteti duhet ta dijë?</string>
+    <string name="suggest_done_sent">Sugjerimi u dërgua — fqinjët tani mund të votojnë për të.</string>
+    <string name="suggest_done_already">Është sugjeruar tashmë, me votën tënde. Faleminderit!</string>
+    <string name="suggestions_empty_title">Ende nuk ka sugjerime</string>
+    <string name="suggestions_empty_message">Mendon se diku mungon një kontejner? Bëhu i pari që e sugjeron.</string>
+    <string name="suggestions_filter_all">Të gjitha</string>
+    <string name="suggestions_vote">Voto</string>
+    <string name="suggestions_voted">Votove</string>
+    <string name="suggestion_state_open">E hapur</string>
+    <string name="suggestion_state_sent">Dërguar qytetit</string>
+    <string name="suggestion_state_placed">U vendos</string>
+    <string name="suggestion_state_rejected">Nuk u vendos</string>
+    <plurals name="suggest_votes">
+        <item quantity="one">%d votë</item>
+        <item quantity="other">%d vota</item>
+    </plurals>
+    <plurals name="suggest_done_merged">
+        <item quantity="one">Dikush e sugjeroi këtë vend sapo — vota jote u shtua. %d votë.</item>
+        <item quantity="other">Dikush e sugjeroi këtë vend sapo — vota jote u shtua. %d vota.</item>
+    </plurals>
+    <plurals name="suggest_done_voted">
+        <item quantity="one">Vota jote u shtua — tani %d votë.</item>
+        <item quantity="other">Vota jote u shtua — tani %d vota.</item>
+    </plurals>
 </resources>

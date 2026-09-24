@@ -325,7 +325,7 @@ RPC functions (SQL, `security definer` where needed):
 
 Row Level Security: everyone (anon) can SELECT containers (soft-deleted rows excluded), open/resolved reports (without user_id exposed — use a view), suggestions, municipalities. Only authenticated users can INSERT via RPCs; users can UPDATE/DELETE only their own profile. No direct client INSERT on reports/confirmations/containers/container_confirmations/container_requests/area_checks (RPC only). `container_requests` is readable only by its author and by admins. `profiles.role`, `containers_added` and `last_area_check_at` are never client-writable — only the RPCs above and manual admin action in Supabase may change them.
 
-Storage: bucket `photos` (public read, authenticated write, max 1 MB, image/jpeg only). Paths: `reports/{user_id}/{uuid}.jpg`, and for 4.6 `containers/{user_id}/{uuid}.jpg` and `container_requests/{user_id}/{uuid}.jpg`.
+Storage: bucket `photos` (public read, authenticated write, max 1 MB, image/jpeg only). Paths: `reports/{user_id}/{uuid}.jpg`, for 4.6 `containers/{user_id}/{uuid}.jpg` and `container_requests/{user_id}/{uuid}.jpg`, and for 4.4 `suggestions/{user_id}/{uuid}.jpg` (optional suggestion photo, same privacy processing).
 
 ---
 

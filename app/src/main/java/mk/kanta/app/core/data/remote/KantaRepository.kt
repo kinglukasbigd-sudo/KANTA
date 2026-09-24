@@ -28,6 +28,7 @@ import mk.kanta.app.core.data.remote.dto.ContainerRequestResultDto
 import mk.kanta.app.core.data.remote.dto.ImpactDto
 import mk.kanta.app.core.data.remote.dto.MunicipalityStatsDto
 import mk.kanta.app.core.data.remote.dto.MyReportDto
+import mk.kanta.app.core.data.remote.dto.NearbySuggestionDto
 import mk.kanta.app.core.data.remote.dto.NearbyContainerDto
 import mk.kanta.app.core.data.remote.dto.PendingRequestDto
 import mk.kanta.app.core.data.remote.dto.PublicReportDto
@@ -207,6 +208,17 @@ class KantaRepository @Inject constructor(
         put("p_note", note ?: "")
         put("p_photo_path", photoPath ?: "")
     }
+
+    /** `open_suggestion_near` — what a suggestion at this spot would merge into (§4.4). */
+    fun openSuggestionNear(lon: Double, lat: Double): Flow<KantaResult<NearbySuggestionDto?>> =
+        rpcFirstOrNull("open_suggestion_near") {
+            put("p_lon", lon)
+            put("p_lat", lat)
+        }
+
+    /** `suggestion_detail` — one suggestion, for the map's detail sheet. */
+    fun suggestionDetail(suggestionId: String): Flow<KantaResult<SuggestionDto?>> =
+        rpcFirstOrNull("suggestion_detail") { put("p_suggestion_id", suggestionId) }
 
     /** `vote_suggestion` — one vote per user (§5.3). */
     fun voteSuggestion(suggestionId: String): Flow<KantaResult<VoteSuggestionResultDto>> =

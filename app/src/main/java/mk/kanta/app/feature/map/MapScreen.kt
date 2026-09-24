@@ -87,6 +87,8 @@ import mk.kanta.app.feature.map.sheet.MapMenuBody
 import mk.kanta.app.feature.map.sheet.MapMenuHeader
 import mk.kanta.app.feature.map.sheet.rememberKantaSheetState
 import mk.kanta.app.feature.street.AreaCheckContent
+import mk.kanta.app.feature.suggest.SuggestionDetailContent
+import mk.kanta.app.feature.suggest.SuggestionDetailViewModel
 import mk.kanta.app.feature.street.AreaCheckEvent
 import mk.kanta.app.feature.street.AreaCheckPhase
 import mk.kanta.app.feature.street.AreaCheckViewModel
@@ -120,12 +122,14 @@ fun MapScreen(
     areaCheckViewModel: AreaCheckViewModel = hiltViewModel(),
     adminViewModel: AdminViewModel = hiltViewModel(),
     alternativesViewModel: AlternativesViewModel = hiltViewModel(),
+    suggestionViewModel: SuggestionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val areaCheck by areaCheckViewModel.state.collectAsStateWithLifecycle()
     val admin by adminViewModel.state.collectAsStateWithLifecycle()
     val isAdmin by adminViewModel.isAdmin.collectAsStateWithLifecycle()
     val alternatives by alternativesViewModel.state.collectAsStateWithLifecycle()
+    val suggestion by suggestionViewModel.state.collectAsStateWithLifecycle()
     val cameraTarget by viewModel.cameraTarget.collectAsStateWithLifecycle()
     val darkTheme = KantaTheme.colors.isDark
     val context = LocalContext.current
@@ -155,6 +159,7 @@ fun MapScreen(
     val mode = when {
         areaCheck.active -> SheetMode.AreaCheck
         alternatives.open -> SheetMode.Alternatives
+        suggestion.open -> SheetMode.Suggestion
         state.detail != null -> SheetMode.Detail
         admin.open -> SheetMode.Admin
         else -> SheetMode.Menu
@@ -176,6 +181,7 @@ fun MapScreen(
                 SheetMode.Detail -> viewModel.dismissDetail()
                 SheetMode.AreaCheck -> areaCheckViewModel.later()
                 SheetMode.Alternatives -> alternativesViewModel.close()
+                SheetMode.Suggestion -> suggestionViewModel.close()
                 SheetMode.Admin -> adminViewModel.close()
                 SheetMode.Menu -> Unit
             }
@@ -193,6 +199,7 @@ fun MapScreen(
                 }
             SheetMode.Detail -> viewModel.dismissDetail()
             SheetMode.Alternatives -> alternativesViewModel.close()
+            SheetMode.Suggestion -> suggestionViewModel.close()
             SheetMode.Admin -> adminViewModel.close()
             SheetMode.Menu -> sheetState.collapse()
         }
@@ -218,6 +225,14 @@ fun MapScreen(
             when (event) {
                 AdminEvent.RefreshMap -> viewModel.refreshNow()
             }
+        }
+    }
+
+    val onSuggestionTap by rememberUpdatedState { suggestionId: String ->
+        if (!areaCheck.active && !alternatives.open) {
+            // The suggestion replaces a container detail rather than sitting on it.
+            viewModel.dismissDetail()
+            suggestionViewModel.open(suggestionId)
         }
     }
 
@@ -288,6 +303,10 @@ fun MapScreen(
                         }
                     }
                 }
+                SheetMode.Suggestion -> SuggestionDetailContent(
+                    state = suggestion,
+                    onVote = suggestionViewModel::vote,
+                )
                 SheetMode.Alternatives -> AlternativesContent(
                     state = alternatives,
                     onRowClick = alternativesViewModel::focus,
@@ -369,6 +388,14 @@ fun MapScreen(
                     if (containerId != null) {
                         haptics.tick()
                         onMarkerTap(containerId)
+                        return@addOnMapClickListener true
+                    }
+
+                    // §5.3: a suggestion marker opens its small sheet with a vote button.
+                    val suggestionId = MapLayers.suggestionAt(map, screenPoint, slop)
+                    if (suggestionId != null) {
+                        haptics.tick()
+                        onSuggestionTap(suggestionId)
                         return@addOnMapClickListener true
                     }
 
@@ -507,13 +534,14 @@ fun MapScreen(
         // Admin review: ring the request or container being looked at, and go there.
         val alternativeFocus = alternatives.items.firstOrNull { it.id == alternatives.focusedId }?.position
         // One ring on the map at most: the alternative or the admin item being looked at.
-        LaunchedEffect(styleRef, mode, alternativeFocus, admin.focus) {
+        LaunchedEffect(styleRef, mode, alternativeFocus, admin.focus, suggestion.suggestion?.position) {
             val style = styleRef ?: return@LaunchedEffect
             MapLayers.setFocus(
                 style,
                 when (mode) {
                     SheetMode.Alternatives -> alternativeFocus
                     SheetMode.Admin -> admin.focus
+                    SheetMode.Suggestion -> suggestion.suggestion?.position
                     else -> null
                 },
             )
@@ -654,7 +682,7 @@ private const val FOCUS_RADIUS_M = 60.0
 private const val MIN_FRAME_RADIUS_M = 200.0
 
 /** What the one sheet is showing (§4.1: it is the only menu). */
-private enum class SheetMode { Menu, Detail, AreaCheck, Alternatives, Admin }
+private enum class SheetMode { Menu, Detail, AreaCheck, Alternatives, Suggestion, Admin }
 
 /**
  * A camera that fits a circle of [radiusMetres] around [centre] into the map

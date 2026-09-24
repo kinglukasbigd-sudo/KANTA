@@ -200,6 +200,23 @@ data class SuggestionDto(
     @SerialName("i_voted") val iVoted: Boolean,
 )
 
+/**
+ * `open_suggestion_near` (0016): the open suggestion within the 50 m merge radius
+ * that a new one would join — §4.4 "Vote for this one instead".
+ */
+@Serializable
+data class NearbySuggestionDto(
+    val id: String,
+    val lon: Double,
+    val lat: Double,
+    val reason: String,
+    val note: String? = null,
+    val votes: Int,
+    @SerialName("distance_m") val distanceM: Double,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("i_voted") val iVoted: Boolean,
+)
+
 // -------------------------------------------------------------------------------------------
 // Stats
 // -------------------------------------------------------------------------------------------

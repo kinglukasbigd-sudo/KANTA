@@ -591,4 +591,16 @@ object MapLayers {
         val hits = map.queryRenderedFeatures(box, *containerLayers.toTypedArray())
         return hits.firstOrNull { it.hasProperty(PROP_ID) }?.getStringProperty(PROP_ID)
     }
+
+    /** Which suggestion was tapped, if any (§5.3: the marker opens its sheet). */
+    fun suggestionAt(map: MapLibreMap, point: PointF, touchSlopPx: Float): String? {
+        val box = android.graphics.RectF(
+            point.x - touchSlopPx,
+            point.y - touchSlopPx,
+            point.x + touchSlopPx,
+            point.y + touchSlopPx,
+        )
+        val hits = map.queryRenderedFeatures(box, LAYER_SUGGESTIONS)
+        return hits.firstOrNull { it.hasProperty(PROP_ID) }?.getStringProperty(PROP_ID)
+    }
 }

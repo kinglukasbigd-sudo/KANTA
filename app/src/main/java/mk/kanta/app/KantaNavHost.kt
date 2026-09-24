@@ -20,6 +20,8 @@ import mk.kanta.app.feature.auth.LoginSheetHost
 import mk.kanta.app.feature.map.MapScreen
 import mk.kanta.app.feature.profile.ProfileScreen
 import mk.kanta.app.feature.report.ReportScreen
+import mk.kanta.app.feature.suggest.SuggestScreen
+import mk.kanta.app.feature.suggest.SuggestionsScreen
 
 /** Type-safe navigation routes (spec §4.5). */
 @Serializable object MapRoute
@@ -79,12 +81,9 @@ fun KantaNavHost(
                 authViewModel.consume(PendingAction.OpenSuggest)
                 navController.navigate(SuggestRoute)
             }
-            is PendingAction.Vote -> {
-                authViewModel.consume(action)
-                authViewModel.vote(action.suggestionId)
-            }
-            // The map consumes these: it owns the detail it refreshes and the check it opens.
-            is PendingAction.ConfirmReport, PendingAction.OpenAreaCheck, null -> Unit
+            // Consumed elsewhere: the map owns the detail it refreshes and the check it
+            // opens; votes run in SuggestionVoting wherever the user is by then.
+            is PendingAction.ConfirmReport, PendingAction.OpenAreaCheck, is PendingAction.Vote, null -> Unit
         }
     }
 
@@ -124,7 +123,10 @@ fun KantaNavHost(
                 PlaceholderScreen(stringResource(R.string.menu_city_stats), navController::popBackStack)
             }
             composable<SuggestionsRoute> {
-                PlaceholderScreen(stringResource(R.string.menu_suggestions), navController::popBackStack)
+                SuggestionsScreen(
+                    onBack = navController::popBackStack,
+                    onSuggest = { authViewModel.request(PendingAction.OpenSuggest) },
+                )
             }
             composable<ReportRoute> {
                 ReportScreen(
@@ -135,7 +137,7 @@ fun KantaNavHost(
                 )
             }
             composable<SuggestRoute> {
-                PlaceholderScreen(stringResource(R.string.action_suggest), navController::popBackStack)
+                SuggestScreen(onClose = navController::popBackStack)
             }
         }
 

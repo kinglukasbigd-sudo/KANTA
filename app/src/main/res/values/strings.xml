@@ -264,4 +264,49 @@
     <string name="alternatives_location_title">Каде си?</string>
     <string name="alternatives_location_needed">Вклучи локација за да ги видиш контејнерите со место околу тебе.</string>
     <string name="category_mixed_recycling">Рециклирање</string>
+
+    <!-- §4.4 Suggest, §5.3 Suggestions -->
+    <string name="suggest_reason_no_container">Нема контејнер во близина</string>
+    <string name="suggest_reason_always_full">Постојните се секогаш полни</string>
+    <string name="suggest_reason_new_building">Нова зграда / населба</string>
+    <string name="suggest_reason_dumping">Луѓето фрлаат ѓубре тука</string>
+    <string name="suggest_map_description">Мапа. Помести ја за крстот да биде на местото.</string>
+    <string name="suggest_pick_title">Каде треба да има контејнер?</string>
+    <string name="suggest_pick_hint">Помести ја мапата за крстот да биде на местото.</string>
+    <string name="suggest_place_here">Постави тука</string>
+    <string name="suggest_checking">Проверуваме…</string>
+    <string name="suggest_nearby_title">Некој веќе го предложил ова место</string>
+    <string name="suggest_nearby_distance">на %1$d м</string>
+    <string name="suggest_vote_instead">Гласај за овој наместо тоа</string>
+    <string name="suggest_already_voted">Веќе гласаше за него — готово</string>
+    <string name="suggest_pick_another">Избери друго место</string>
+    <string name="suggest_details_title">Зошто тука?</string>
+    <string name="suggest_reason_caption">Причина</string>
+    <string name="suggest_photo_caption">Слика (по избор)</string>
+    <string name="suggest_add_photo">Додај слика</string>
+    <string name="suggest_remove_photo">Отстрани</string>
+    <string name="suggest_note_hint">Нешто што градот треба да знае?</string>
+    <string name="suggest_done_sent">Предлогот е испратен — соседите сега можат да гласаат за него.</string>
+    <string name="suggest_done_already">Веќе е предложено, со твојот глас. Благодариме!</string>
+    <string name="suggestions_empty_title">Сè уште нема предлози</string>
+    <string name="suggestions_empty_message">Мислиш дека некаде недостасува контејнер? Биди прв што ќе предложи.</string>
+    <string name="suggestions_filter_all">Сите</string>
+    <string name="suggestions_vote">Гласај</string>
+    <string name="suggestions_voted">Гласаше</string>
+    <string name="suggestion_state_open">Отворен</string>
+    <string name="suggestion_state_sent">Испратен до градот</string>
+    <string name="suggestion_state_placed">Поставен</string>
+    <string name="suggestion_state_rejected">Не е поставен</string>
+    <plurals name="suggest_votes">
+        <item quantity="one">%d глас</item>
+        <item quantity="other">%d гласа</item>
+    </plurals>
+    <plurals name="suggest_done_merged">
+        <item quantity="one">Некој штотуку го предложи ова место — твојот глас е додаден. %d глас.</item>
+        <item quantity="other">Некој штотуку го предложи ова место — твојот глас е додаден. %d гласа.</item>
+    </plurals>
+    <plurals name="suggest_done_voted">
+        <item quantity="one">Твојот глас е додаден — сега %d глас.</item>
+        <item quantity="other">Твојот глас е додаден — сега %d гласа.</item>
+    </plurals>
 </resources>

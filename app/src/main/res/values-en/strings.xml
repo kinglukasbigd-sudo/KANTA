@@ -259,4 +259,49 @@
     <string name="alternatives_location_title">Where are you?</string>
     <string name="alternatives_location_needed">Turn on location to see the containers with space near you.</string>
     <string name="category_mixed_recycling">Recycling</string>
+
+    <!-- §4.4 Suggest, §5.3 Suggestions -->
+    <string name="suggest_reason_no_container">No container nearby</string>
+    <string name="suggest_reason_always_full">Existing ones always full</string>
+    <string name="suggest_reason_new_building">New building / neighbourhood</string>
+    <string name="suggest_reason_dumping">People dump trash here</string>
+    <string name="suggest_map_description">Map. Move it so the crosshair is on the spot.</string>
+    <string name="suggest_pick_title">Where should a container be?</string>
+    <string name="suggest_pick_hint">Move the map so the crosshair sits on the spot.</string>
+    <string name="suggest_place_here">Place here</string>
+    <string name="suggest_checking">Checking…</string>
+    <string name="suggest_nearby_title">Someone already suggested this spot</string>
+    <string name="suggest_nearby_distance">%1$d m away</string>
+    <string name="suggest_vote_instead">Vote for this one instead</string>
+    <string name="suggest_already_voted">You already voted for it — done</string>
+    <string name="suggest_pick_another">Choose another spot</string>
+    <string name="suggest_details_title">Why here?</string>
+    <string name="suggest_reason_caption">Reason</string>
+    <string name="suggest_photo_caption">Photo (optional)</string>
+    <string name="suggest_add_photo">Add a photo</string>
+    <string name="suggest_remove_photo">Remove</string>
+    <string name="suggest_note_hint">Anything the city should know?</string>
+    <string name="suggest_done_sent">Suggestion sent — neighbours can vote for it now.</string>
+    <string name="suggest_done_already">It\'s already suggested, with your vote. Thank you!</string>
+    <string name="suggestions_empty_title">No suggestions yet</string>
+    <string name="suggestions_empty_message">Think a container is missing somewhere? Be the first to suggest it.</string>
+    <string name="suggestions_filter_all">All</string>
+    <string name="suggestions_vote">Vote</string>
+    <string name="suggestions_voted">Voted</string>
+    <string name="suggestion_state_open">Open</string>
+    <string name="suggestion_state_sent">Sent to the city</string>
+    <string name="suggestion_state_placed">Placed</string>
+    <string name="suggestion_state_rejected">Not placed</string>
+    <plurals name="suggest_votes">
+        <item quantity="one">%d vote</item>
+        <item quantity="other">%d votes</item>
+    </plurals>
+    <plurals name="suggest_done_merged">
+        <item quantity="one">Someone suggested this spot just now — your vote was added. %d vote.</item>
+        <item quantity="other">Someone suggested this spot just now — your vote was added. %d votes.</item>
+    </plurals>
+    <plurals name="suggest_done_voted">
+        <item quantity="one">Your vote was added — %d vote now.</item>
+        <item quantity="other">Your vote was added — %d votes now.</item>
+    </plurals>
 </resources>

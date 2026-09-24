@@ -6,14 +6,8 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.storage.storage
-import io.ktor.http.ContentType
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withContext
-import mk.kanta.app.core.data.di.IoDispatcher
 import mk.kanta.app.core.data.local.ContainerDao
 import mk.kanta.app.core.data.local.PendingReportDao
 import mk.kanta.app.core.data.local.PendingReportEntity
@@ -27,11 +21,9 @@ import mk.kanta.app.core.data.remote.dto.AddAllowanceDto
 import mk.kanta.app.core.data.remote.dto.AddContainerResultDto
 import mk.kanta.app.core.data.remote.dto.ContainerRequestResultDto
 import mk.kanta.app.core.data.remote.dto.SubmitReportResultDto
-import mk.kanta.app.core.data.remote.toKantaError
 import mk.kanta.app.core.location.GeoMath
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
-import mk.kanta.app.core.network.SupabaseClientHolder
 import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -40,12 +32,11 @@ import javax.inject.Singleton
 @Singleton
 class DefaultReportGateway @Inject constructor(
     private val repository: KantaRepository,
-    private val supabase: SupabaseClientHolder,
+    private val uploader: PhotoUploader,
     private val location: LocationProvider,
     private val containerDao: ContainerDao,
     private val pendingDao: PendingReportDao,
     private val workManager: WorkManager,
-    @IoDispatcher private val io: CoroutineDispatcher,
 ) : ReportGateway {
 
     /** Fresh GPS: the server measures this against the container (§4.3 / §4.6). */
@@ -181,37 +172,15 @@ class DefaultReportGateway @Inject constructor(
 
     // -----------------------------------------------------------------------------------------
 
-    /**
-     * Uploads to `{folder}/{uid}/{id}.jpg` (§6 storage paths: reports/,
-     * containers/, container_requests/) with upsert, so the same photo sent twice
-     * — a retry — lands on the same object rather than a second copy.
-     */
-    private suspend fun uploadPhoto(folder: String, id: String, file: File): KantaResult<String> {
-        if (!supabase.isConfigured) return KantaResult.Failure(KantaError.BackendNotConfigured)
-        return withContext(io) {
-            try {
-                val uid = supabase.client.auth.currentUserOrNull()?.id
-                    ?: return@withContext KantaResult.Failure(KantaError.NotSignedIn)
-                val path = "$folder/$uid/$id.jpg"
-                supabase.client.storage.from("photos").upload(path, file.readBytes()) {
-                    upsert = true
-                    contentType = ContentType.Image.JPEG
-                }
-                KantaResult.Success(path)
-            } catch (cancel: kotlinx.coroutines.CancellationException) {
-                throw cancel
-            } catch (t: Throwable) {
-                KantaResult.Failure(t.toKantaError())
-            }
-        }
-    }
+    private suspend fun uploadPhoto(folder: String, id: String, file: File): KantaResult<String> =
+        uploader.upload(folder, id, file)
 
     companion object {
         const val UPLOAD_WORK = "kanta-report-upload"
 
-        private const val FOLDER_REPORTS = "reports"
-        private const val FOLDER_CONTAINERS = "containers"
-        private const val FOLDER_REQUESTS = "container_requests"
+        private const val FOLDER_REPORTS = PhotoUploader.REPORTS
+        private const val FOLDER_CONTAINERS = PhotoUploader.CONTAINERS
+        private const val FOLDER_REQUESTS = PhotoUploader.REQUESTS
 
         /**
          * One unique chain, run when there is a network. APPEND_OR_REPLACE so a

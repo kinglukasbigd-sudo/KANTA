@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import mk.kanta.app.core.data.report.ContainerCandidate
+import mk.kanta.app.core.data.suggest.SuggestionPin
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.marker.MarkerBitmapFactory
 import mk.kanta.app.core.location.LatLon
@@ -59,6 +60,11 @@ fun PinPickerMap(
     onPinMoved: (LatLon) -> Unit,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    /** §4.4 pick mode: a crosshair instead of a pin — the spot, not a thing on it. */
+    crosshair: Boolean = false,
+    /** Open suggestions, so the user sees what is already asked for. */
+    suggestions: List<SuggestionPin> = emptyList(),
+    startZoom: Double = 18.0,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current.density
@@ -72,26 +78,46 @@ fun PinPickerMap(
     Box(modifier.semantics { this.contentDescription = contentDescription }) {
         AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
 
-        // The pin: a brand dot on a short stem whose tip is the exact map centre.
-        Canvas(
-            Modifier
-                .align(Alignment.Center)
-                .size(width = 28.dp, height = 40.dp)
-                // Lift by half the height so the stem's tip, not the box centre,
-                // sits on the point that is sent.
-                .offset(y = (-20).dp),
-        ) {
-            val head = 9.dp.toPx()
-            val centre = Offset(size.width / 2f, head + 2.dp.toPx())
-            drawLine(
-                color = brand,
-                start = centre,
-                end = Offset(size.width / 2f, size.height),
-                strokeWidth = 2.5.dp.toPx(),
-                cap = StrokeCap.Round,
-            )
-            drawCircle(color = Color.White, radius = head + 2.dp.toPx(), center = centre)
-            drawCircle(color = brand, radius = head, center = centre)
+        if (crosshair) {
+            // A thin cross with a gap in the middle, so the exact spot stays visible.
+            Canvas(Modifier.align(Alignment.Center).size(44.dp)) {
+                val c = Offset(size.width / 2f, size.height / 2f)
+                val gap = 5.dp.toPx()
+                val arm = size.minDimension / 2f
+                val stroke = 2.dp.toPx()
+                listOf(
+                    Offset(0f, -1f), Offset(0f, 1f), Offset(-1f, 0f), Offset(1f, 0f),
+                ).forEach { d ->
+                    val start = Offset(c.x + d.x * gap, c.y + d.y * gap)
+                    val end = Offset(c.x + d.x * arm, c.y + d.y * arm)
+                    // A dark underlay keeps the cross readable on light and dark maps.
+                    drawLine(Color.Black.copy(alpha = 0.35f), start, end, stroke * 2.2f, StrokeCap.Round)
+                    drawLine(brand, start, end, stroke, StrokeCap.Round)
+                }
+                drawCircle(brand, radius = 2.dp.toPx(), center = c)
+            }
+        } else {
+            // The pin: a brand dot on a short stem whose tip is the exact map centre.
+            Canvas(
+                Modifier
+                    .align(Alignment.Center)
+                    .size(width = 28.dp, height = 40.dp)
+                    // Lift by half the height so the stem's tip, not the box centre,
+                    // sits on the point that is sent.
+                    .offset(y = (-20).dp),
+            ) {
+                val head = 9.dp.toPx()
+                val centre = Offset(size.width / 2f, head + 2.dp.toPx())
+                drawLine(
+                    color = brand,
+                    start = centre,
+                    end = Offset(size.width / 2f, size.height),
+                    strokeWidth = 2.5.dp.toPx(),
+                    cap = StrokeCap.Round,
+                )
+                drawCircle(color = Color.White, radius = head + 2.dp.toPx(), center = centre)
+                drawCircle(color = brand, radius = head, center = centre)
+            }
         }
     }
 
@@ -106,7 +132,7 @@ fun PinPickerMap(
             }
             map.cameraPosition = CameraPosition.Builder()
                 .target(LatLng(start.lat, start.lon))
-                .zoom(18.0)
+                .zoom(startZoom)
                 .build()
             map.setStyle(Style.Builder().fromJson(KantaMapStyle.load(context, dark))) { loaded ->
                 MapLayers.install(loaded, factory, dark)
@@ -148,6 +174,16 @@ fun PinPickerMap(
                 },
                 factory,
                 selectedId = null,
+            ),
+        )
+    }
+
+    LaunchedEffect(style, suggestions) {
+        val loaded = style ?: return@LaunchedEffect
+        MapLayers.updateSuggestions(
+            loaded,
+            MapLayers.suggestionsToFeatureCollection(
+                suggestions.map { Triple(it.id, it.position.lon, it.position.lat) },
             ),
         )
     }

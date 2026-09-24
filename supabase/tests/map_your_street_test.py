@@ -227,6 +227,34 @@ def run(db: Db) -> None:
     v = db.one("select * from vote_suggestion(%s)", (s[0],))
     check("vote_suggestion counts the vote", v[1] == 2, str(v))
 
+    print("\n§4.4 / §5.3 suggestions — merge radius, one vote per person (0016)")
+    db.as_user(u3)  # has not voted on it (u2 did, above)
+    near = db.one("select id, i_voted, round(distance_m) from open_suggestion_near(%s,%s)", at(620, 0))
+    check("open_suggestion_near finds the one 20 m away", near is not None and near[0] == s[0], str(near))
+    check("…and says the neighbour hasn't voted yet", near[1] is False)
+    db.as_user(u1)
+    mine = db.one("select i_voted from open_suggestion_near(%s,%s)", at(620, 0))
+    check("…while its author has (the author's vote is automatic)", mine == (True,), str(mine))
+    far = db.one("select count(*) from open_suggestion_near(%s,%s)", at(700, 0))[0]
+    check("nothing within 50 m of a spot 100 m away", far == 0, f"got {far}")
+    db.as_user(u2)
+    db.expect("voting twice is refused (KA008)", "KA008", "select * from vote_suggestion(%s)", (s[0],))
+    db.as_user(u3)
+    merged = db.one("select * from submit_suggestion(%s,%s,'always_full','','')", at(610, 0))
+    check("a new suggestion 10 m away merges into it, as a vote", merged[0] == s[0] and merged[1] is True and merged[2] == 3, str(merged))
+    db.as_user(None)
+    d = db.one("select votes, state, i_voted from suggestion_detail(%s)", (s[0],))
+    check("suggestion_detail works without an account", d == (3, "open", False), str(d))
+    db.as_user(u2)
+    other = db.one("select * from submit_suggestion(%s,%s,'dumping_spot','','')", at(900, 0))
+    db.as_postgres()
+    db.cur.execute("update suggestions set state='sent' where id=%s", (other[0],))
+    db.as_user(u1)
+    db.expect("a suggestion already sent to the city takes no more votes (KA014)", "KA014",
+              "select * from vote_suggestion(%s)", (other[0],))
+    gone = db.one("select count(*) from open_suggestion_near(%s,%s)", at(900, 0))[0]
+    check("…and is not offered as 'vote for this one instead'", gone == 0)
+
     print("\n§4.6 admin — review queue, verify, delete, unlimited adds")
     db.as_user(admin)
     db.expect("a normal account cannot open the queue (KA007)", "KA007",
