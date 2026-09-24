@@ -5,6 +5,17 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntOffset
+import mk.kanta.app.feature.map.sheet.KantaSheetState
+import kotlin.math.roundToInt
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -226,7 +237,8 @@ fun MapScreen(
         },
         body = {
             when (mode) {
-                SheetMode.Menu -> MapMenuBody(
+                SheetMode.Menu -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    MapMenuBody(
                     nearest = state.nearest,
                     nearestLoading = state.nearestLoading,
                     onWhereToThrow = onSuggestionsList,
@@ -237,15 +249,21 @@ fun MapScreen(
                     onMapYourStreet = areaCheckViewModel::requestFromMenu,
                     showAdmin = isAdmin,
                     onAdmin = adminViewModel::open,
-                )
-                SheetMode.Detail -> state.detail?.let { detail ->
-                    ContainerDetailContent(
-                        state = detail,
-                        onMeToo = viewModel::onMeToo,
-                        onEmptied = viewModel::onEmptied,
-                        onReportOther = onReport,
-                        onConfirmExists = viewModel::onConfirmExists,
                     )
+                }
+                SheetMode.Detail -> state.detail?.let { detail ->
+                    // Keyed per container, so opening another one starts at the top.
+                    key(state.selectedId) {
+                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            ContainerDetailContent(
+                                state = detail,
+                                onMeToo = viewModel::onMeToo,
+                                onEmptied = viewModel::onEmptied,
+                                onReportOther = onReport,
+                                onConfirmExists = viewModel::onConfirmExists,
+                            )
+                        }
+                    }
                 }
                 SheetMode.AreaCheck -> AreaCheckContent(
                     state = areaCheck,
@@ -325,18 +343,6 @@ fun MapScreen(
                         return@addOnMapClickListener true
                     }
 
-                    // Tapping a cluster zooms into it rather than doing nothing.
-                    val cluster = MapLayers.clusterAt(map, screenPoint, slop)
-                    if (cluster != null) {
-                        haptics.tick()
-                        map.animateCamera(
-                            CameraUpdateFactory.newLatLngZoom(
-                                LatLng(cluster.latitude(), cluster.longitude()),
-                                (map.cameraPosition.zoom + 2.0).coerceAtMost(18.0),
-                            ),
-                        )
-                        return@addOnMapClickListener true
-                    }
                     false
                 }
             }
@@ -445,7 +451,9 @@ fun MapScreen(
                 CameraUpdateFactory.newCameraPosition(
                     CameraPosition.Builder()
                         .target(LatLng(target.lat, target.lon))
-                        .zoom(DEFAULT_ZOOM)
+                        // Near the user: close enough for real shapes (§3.4). No fix:
+                        // the city overview §4.1 asks for.
+                        .zoom(if (target == LatLon.SKOPJE_CENTRE) CITY_OVERVIEW_ZOOM else USER_ZOOM)
                         .build(),
                 ),
             )
@@ -456,6 +464,7 @@ fun MapScreen(
         // Overlays (§4.1)
         // ---------------------------------------------------------------------------------
         MapOverlays(
+            sheetState = sheetState,
             showSuggestions = state.showSuggestions,
             onProfileClick = onProfileClick,
             onMyLocationClick = {
@@ -534,7 +543,11 @@ fun MapScreen(
     }
 }
 
-private const val DEFAULT_ZOOM = 15.0
+/** Around the user: shapes, not dots (§3.4 switches at 15.5). */
+private const val USER_ZOOM = 16.0
+
+/** §4.1 fallback: Skopje centre at zoom 14. */
+private const val CITY_OVERVIEW_ZOOM = 14.0
 private const val CITY_ZOOM = 11.4
 private const val CAMERA_MS = 600
 
@@ -579,6 +592,7 @@ private fun framedAboveSheet(
 
 @Composable
 private fun MapOverlays(
+    sheetState: KantaSheetState,
     showSuggestions: Boolean,
     onProfileClick: () -> Unit,
     onMyLocationClick: () -> Unit,
@@ -615,17 +629,29 @@ private fun MapOverlays(
                 .padding(end = Spacing.l, top = Spacing.m),
         )
 
-        // Right side: suggestions toggle and my-location (§4.1).
+        // §4.1 map buttons and §7 attribution ride on the sheet's top edge: 16 dp
+        // above it while it moves, fading out as it rises past half height, when
+        // the map they act on is mostly covered anyway.
+        val hidden by remember { derivedStateOf { sheetState.expansionAboveHalf > 0.5f } }
+        var buttonsHeight by remember { mutableIntStateOf(0) }
+        var attributionHeight by remember { mutableIntStateOf(0) }
+
         Column(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = Spacing.l),
+                .align(Alignment.TopEnd)
+                .padding(end = Spacing.l)
+                .onSizeChanged { buttonsHeight = it.height }
+                .offset {
+                    IntOffset(0, (sheetState.offset.value - Spacing.l.toPx() - buttonsHeight).roundToInt())
+                }
+                .graphicsLayer { alpha = 1f - sheetState.expansionAboveHalf },
             verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             MapCircleButton(
                 icon = KantaIcons.Suggest,
                 contentDescription = stringResource(R.string.map_toggle_suggestions),
                 onClick = onToggleSuggestions,
+                enabled = !hidden,
                 tint = if (showSuggestions) {
                     KantaTheme.colors.brand
                 } else {
@@ -636,6 +662,7 @@ private fun MapOverlays(
                 icon = KantaIcons.MyLocation,
                 contentDescription = stringResource(R.string.map_my_location),
                 onClick = onMyLocationClick,
+                enabled = !hidden,
             )
         }
 
@@ -643,8 +670,13 @@ private fun MapOverlays(
         // must stay legible — hence the surface behind it.
         Surface(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = Spacing.s, bottom = Spacing.s),
+                .align(Alignment.TopStart)
+                .padding(start = Spacing.s)
+                .onSizeChanged { attributionHeight = it.height }
+                .offset {
+                    IntOffset(0, (sheetState.offset.value - Spacing.s.toPx() - attributionHeight).roundToInt())
+                }
+                .graphicsLayer { alpha = 1f - sheetState.expansionAboveHalf },
             shape = KantaShape.chip,
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
         ) {
@@ -665,6 +697,7 @@ private fun MapCircleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = KantaTheme.colors.onSurfaceMuted,
+    enabled: Boolean = true,
 ) {
     val haptics = rememberKantaHaptics()
     Surface(
@@ -672,6 +705,7 @@ private fun MapCircleButton(
             haptics.tick()
             onClick()
         },
+        enabled = enabled,
         modifier = modifier
             .size(Spacing.minTouchTarget)
             .kantaSoftShadow(CircleShape),

@@ -10,16 +10,50 @@ plugins {
 
 /**
  * Secrets (spec §9.2): Supabase URL + anon key come from local.properties, which is git-ignored.
- * They are never hard-coded and never committed. Missing values fall back to "" so a fresh
- * clone still configures and builds — the app then fails loudly at runtime instead of silently
- * pointing at the wrong backend.
+ * They are never hard-coded and never committed.
+ *
+ * Read through `providers.fileContents`, so Gradle (with the configuration cache on) tracks the
+ * file: edit local.properties and the next build regenerates BuildConfig — a filled-in file can
+ * never leave a stale, empty value in the app. Environment variables of the same name are the
+ * fallback, for CI.
+ *
+ * Missing values: a debug build still configures (a fresh clone must build) and says so loudly;
+ * a release build refuses to build — the "No backend configured" banner is for developers only.
  */
 val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
+    providers.fileContents(rootProject.layout.projectDirectory.file("local.properties"))
+        .asText.orNull
+        ?.let { load(it.reader()) }
 }
 
-fun secret(key: String): String = localProperties.getProperty(key)?.trim().orEmpty()
+fun secret(key: String): String =
+    (localProperties.getProperty(key) ?: providers.environmentVariable(key).orNull)
+        ?.trim()
+        // Tolerate SUPABASE_URL="https://…" — quotes would otherwise end up in the URL.
+        ?.removeSurrounding("\"")
+        .orEmpty()
+
+val supabaseConfigured = secret("SUPABASE_URL").isNotBlank() && secret("SUPABASE_ANON_KEY").isNotBlank()
+
+if (!supabaseConfigured) {
+    logger.warn(
+        "Kanta: SUPABASE_URL / SUPABASE_ANON_KEY are empty in local.properties — debug builds " +
+            "will show 'No backend configured'; release builds will fail.",
+    )
+}
+
+val checkSupabaseConfig = tasks.register("checkSupabaseConfig") {
+    val configured = supabaseConfigured
+    doLast {
+        if (!configured) {
+            throw GradleException(
+                "Release build without Supabase credentials. Fill SUPABASE_URL and " +
+                    "SUPABASE_ANON_KEY in local.properties (see local.properties.example).",
+            )
+        }
+    }
+}
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(checkSupabaseConfig) }
 
 android {
     namespace = "mk.kanta.app"

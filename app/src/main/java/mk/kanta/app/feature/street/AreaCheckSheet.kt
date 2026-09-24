@@ -62,8 +62,7 @@ fun ColumnScope.AreaCheckContent(
     onConfirmExists: (String) -> Unit,
     onLater: () -> Unit,
 ) {
-    // Fills the sheet so the content scrolls when the sheet sits at half height;
-    // the bottom spacer keeps the last button clear of the expanded sheet's edge.
+    // Fills the sheet's body and scrolls when the content is taller than it.
     Column(
         Modifier
             .fillMaxWidth()
@@ -88,7 +87,7 @@ fun ColumnScope.AreaCheckContent(
                 Screen.Thanks -> Thanks()
             }
         }
-        Spacer(Modifier.height(96.dp))
+        Spacer(Modifier.height(Spacing.xl))
     }
 }
 

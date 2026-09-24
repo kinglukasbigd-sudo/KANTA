@@ -135,8 +135,8 @@ private fun AdminTab.label() = when (this) {
     AdminTab.Coverage -> R.string.admin_tab_coverage
 }
 
-/** Room at the bottom so the last item clears the expanded sheet's edge and the nav bar. */
-private val ListBottomPadding = 120.dp
+/** Breathing room under the last item; the sheet itself already clears the nav bar. */
+private val ListBottomPadding = Spacing.xl
 
 // -------------------------------------------------------------------------------------------
 // Review queue

@@ -95,7 +95,14 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 - **Small can** (`amenity=waste_basket`, street bins): **small rounded triangle**, 10dp at zoom 16.
 - Fill colour = status colour from 3.1. OK big = green, OK small = yellow.
 - Recycling containers optionally show a 3dp inner dot in their material colour (glass green, paper blue, plastic yellow) — only at zoom ≥ 17.
-- Clustering below zoom 14: soft circle with count; cluster colour = worst status inside (red > orange > green).
+- **No numbers on the map — no clustering, at any zoom.** Every container is always drawn; its size follows the zoom:
+  - zoom < 14: a tiny **4dp dot** in its status colour (green = big OK, yellow = small OK, orange = full, red = broken, grey = destroyed/missing). No border, no shape.
+  - zoom 14–15.5: the dot grows slightly, to **6dp**.
+  - zoom ≥ 15.5: the real shapes — rectangles for big containers, triangles for small cans — scaling up smoothly as you zoom in.
+  - Dots and shapes **cross-fade** (≈ 15.2–15.8); nothing pops. The shape variants (badge at 16, recycling dot at 17) cross-fade the same way.
+- **Draw order:** problem markers (red, orange) always draw on top of OK ones; the selected marker on top of all.
+- Markers never cover the chrome: the Kanta label, profile button and map buttons always sit above the map.
+- **Calm basemap.** Roads are three quiet tones, never white or bright in dark mode — dark: minor `#1E2521`, main `#26302A`, motorway/trunk `#2C3630`; light: minor `#FFFFFF` on the `#F3F5F2` ground, main `#E6EAE5`, motorway/trunk `#DDE3DC`. Casings take the road's own colour; motorway/trunk are only slightly wider than main roads. **No road shields, highway refs or any icon behind text.** Every street and place name is plain text with no box: dark `#8A958E` with a 1px `#0F1411` halo, light `#6B766F` with a `#F3F5F2` halo; neighbourhood names stay small uppercase. `tools/map_style/build_styles.py` enforces this and refuses to write a style with an off-palette colour, an icon, or (dark) anything brighter than the label text.
 - Selected marker: scales 1.4× with a soft halo in brand colour.
 - A report < 1h old: one-time gentle pulse ring.
 - **Verified vs unverified (4.6).** Governing principle: **filled = it exists, hollow = it's gone.** The two dashed
@@ -114,10 +121,17 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 
 ### 4.1 Main screen = the map
 - Full-screen map, centred on the user (fallback: Skopje centre 41.9965, 21.4314, zoom 14).
-- Minimal overlay: top-left small "Kanta" wordmark; top-right round profile/avatar button; right side: "my location" button.
+- Minimal overlay: top-left small "Kanta" wordmark; top-right round profile/avatar button; map buttons bottom-right above the sheet (below).
 - **Bottom sheet** (the only menu), always present:
 
-**Collapsed state (peek ~140dp):** a drag handle and a row of **three big action choices**:
+**Three snap states**, smooth spring between them (§3.3), no jumping:
+- **Collapsed** — exactly the drag handle and the Full / Report / Suggest row, above the navigation bar.
+- **Half** — halfway between collapsed and expanded.
+- **Expanded** — the sheet's top stops **below** the Kanta label and profile button (top of sheet = status bar + top overlay height + 8dp), and the sheet reaches the very bottom of the screen with no gap, drawn behind the navigation bar with correct insets. At every position the sheet's bottom edge is at or below the screen's, so the map never shows underneath it. Content taller than the sheet scrolls inside it.
+
+**Map buttons** (suggestions toggle, my location): bottom right, stacked vertically, 16dp above the sheet's top edge and 16dp from the right edge. They move with the sheet while it is dragged and fade out as it rises past half. The map attribution rides the sheet's top edge on the left the same way.
+
+**Collapsed state:** a drag handle and a row of **three big action choices**:
 1. **Full** — "This container is full" (fastest path, orange icon)
 2. **Report** — damaged / destroyed / burning / missing / trash dumped around it (red icon)
 3. **Suggest** — "A container should be here" (green + icon)

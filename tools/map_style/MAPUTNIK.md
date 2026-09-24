@@ -57,14 +57,19 @@ sync by the generator purely so the file still previews correctly in Maputnik.
 | `water`, `waterway`, `waterLabel` | The Vardar and its labels |
 | `park`, `wood` | Green space — very pale by design (§3.4 brief) |
 | `residential`, `building`, `buildingOutline` | Built-up areas |
-| `roadMinor`, `roadMajor*`, `roadMotorway*`, `path`, `pier` | The street hierarchy |
+| `roadMinor`, `roadMain`, `roadMotorway`, `path`, `pier` | The street hierarchy: minor, primary/secondary/tertiary, motorway + trunk |
 | `railway`, `railwayDash` | Rail |
 | `boundary` | Municipality and country lines |
-| `labelText`, `labelTextStrong`, `labelHalo`, `roadLabel` | All map text |
+| `labelText`, `labelHalo` | Every street and place name (one colour, thin halo) |
 | `aeroway` | The airport |
 
 Keep them quiet. §3 spends colour on container markers and one primary action —
 if the basemap competes with an orange "full" marker, the map has failed.
+
+The generator enforces the §3.4 "calm basemap" rules and refuses to write a style
+that breaks them: every colour must come from the palette, no layer may draw an
+icon (road shields, place dots), and in the dark style nothing may be brighter
+than the label text.
 
 ---
 

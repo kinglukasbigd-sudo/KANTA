@@ -30,22 +30,27 @@ import org.maplibre.geojson.Point
  * marker bitmap is registered once as a style image; after that, panning costs
  * nothing but GPU work.
  *
- * The zoom-dependent parts of §3.4 — the "?" badge at z ≥ 16, the recycling dot
- * at z ≥ 17 — are baked into separate bitmaps rather than drawn at runtime, so
- * they are selected by swapping which symbol layer is visible at which zoom.
- * Three bands, three layers:
+ * There is no clustering and no number anywhere on the map (§3.4). Instead every
+ * container is always drawn, and its size follows the zoom:
  *
- *   z < 16   plain marker
- *   16 ≤ z < 17   + "?" badge on unverified containers
- *   z ≥ 17   + recycling material dot
+ *   z < 14        a 4 dp dot in its status colour (circle layer)
+ *   14 – 15.5     the dot grows to 6 dp
+ *   15.2 – 15.8   dots fade out while the real shapes fade in — no popping
+ *   z ≥ 15.5      rectangles and triangles, growing smoothly with the zoom
+ *
+ * The shape band is three symbol layers, each baked with its zoom-dependent
+ * details — the "?" badge at z ≥ 16, the recycling dot at z ≥ 17 — and they too
+ * cross-fade over a short overlap rather than switch.
+ *
+ * Draw order: features are written OK first, problems last, and the symbol layers
+ * sort by the same rank, so a red or orange marker is never hidden under a green one.
  */
 object MapLayers {
 
     const val CONTAINER_SOURCE = "kanta-containers"
     const val SUGGESTION_SOURCE = "kanta-suggestions"
 
-    const val LAYER_CLUSTERS = "kanta-clusters"
-    const val LAYER_CLUSTER_COUNT = "kanta-cluster-count"
+    const val LAYER_DOTS = "kanta-container-dots"
     const val LAYER_CONTAINERS_FAR = "kanta-containers-far"
     const val LAYER_CONTAINERS_MID = "kanta-containers-mid"
     const val LAYER_CONTAINERS_NEAR = "kanta-containers-near"
@@ -81,17 +86,23 @@ object MapLayers {
     const val PROP_KIND = "kind"
     const val PROP_STATUS = "status"
     const val PROP_RANK = "rank"
+    private const val PROP_COLOR = "color"
+    private const val PROP_OPACITY = "opacity"
     private const val PROP_ICON_FAR = "iconFar"
     private const val PROP_ICON_MID = "iconMid"
     private const val PROP_ICON_NEAR = "iconNear"
 
-    /** §3.4: clustering below zoom 14. */
-    private const val CLUSTER_MAX_ZOOM = 13
+    /** §3.4: dots below this band, shapes above it; the two cross-fade inside it. */
+    private const val SHAPES_FADE_IN_START = 15.2f
+    private const val SHAPES_FADE_IN_END = 15.8f
     private const val BADGE_ZOOM = 16f
     private const val DOT_ZOOM = 17f
 
-    /** All layers Kanta owns, for hit-testing and teardown. */
-    val containerLayers = listOf(LAYER_CONTAINERS_NEAR, LAYER_CONTAINERS_MID, LAYER_CONTAINERS_FAR)
+    /** Half-width of the overlap in which two shape bands cross-fade. */
+    private const val BAND_FADE = 0.1f
+
+    /** All layers Kanta owns, for hit-testing. Dots too: at city zoom they are the markers. */
+    val containerLayers = listOf(LAYER_CONTAINERS_NEAR, LAYER_CONTAINERS_MID, LAYER_CONTAINERS_FAR, LAYER_DOTS)
 
     // -----------------------------------------------------------------------------------------
     // Features
@@ -119,7 +130,10 @@ object MapLayers {
         factory: MarkerBitmapFactory,
         selectedId: String?,
     ): FeatureCollection {
-        val features = containers.map { container ->
+        // §3.4: problems draw on top. Within a tile MapLibre draws features in
+        // source order, so sorting here is what puts red and orange above green.
+        val ordered = containers.sortedBy { drawRank(it, selectedId) }
+        val features = ordered.map { container ->
             val selected = container.id == selectedId
             val unverified = !container.verified
 
@@ -128,9 +142,11 @@ object MapLayers {
                 addStringProperty(PROP_CODE, container.code)
                 addStringProperty(PROP_KIND, container.kind.name)
                 addStringProperty(PROP_STATUS, container.status.name)
-                // §3.4: a cluster takes the worst status inside it, so each point
-                // carries its severity and the cluster aggregates the max.
-                addNumberProperty(PROP_RANK, container.status.ordinal)
+                addNumberProperty(PROP_RANK, drawRank(container, selectedId))
+                // The dot band (z < 15.5) has no shapes, only colour.
+                addStringProperty(PROP_COLOR, dotColor(container))
+                // §3.4: unverified containers read at 85% opacity, dots included.
+                addNumberProperty(PROP_OPACITY, if (unverified && container.status != ContainerStatus.MISSING) 0.85 else 1.0)
 
                 addStringProperty(
                     PROP_ICON_FAR,
@@ -167,6 +183,34 @@ object MapLayers {
         return FeatureCollection.fromFeatures(features)
     }
 
+    /**
+     * Higher draws later, i.e. on top: OK < gone (destroyed, missing) < full <
+     * broken — the red and orange problems §3.4 wants visible first — and the
+     * selected marker above everything.
+     */
+    private fun drawRank(container: ContainerFeature, selectedId: String?): Int = when {
+        container.id == selectedId -> 10
+        else -> when (container.status) {
+            ContainerStatus.OK -> 0
+            ContainerStatus.DESTROYED, ContainerStatus.MISSING -> 1
+            ContainerStatus.FULL -> 2
+            ContainerStatus.BROKEN -> 3
+        }
+    }
+
+    /** §3.4 dot colours: the same status rules as the shapes. */
+    private fun dotColor(container: ContainerFeature): String {
+        val color = when (container.status) {
+            ContainerStatus.OK ->
+                if (container.kind == ContainerKind.BIG) MarkerColors.BigOk else MarkerColors.SmallOk
+            ContainerStatus.FULL -> MarkerColors.Full
+            ContainerStatus.BROKEN -> MarkerColors.Broken
+            ContainerStatus.DESTROYED -> MarkerColors.Destroyed
+            ContainerStatus.MISSING -> MarkerColors.Missing
+        }
+        return String.format("#%06X", color.toArgb() and 0xFFFFFF)
+    }
+
     fun suggestionsToFeatureCollection(
         suggestions: List<Triple<String, Double, Double>>,
     ): FeatureCollection = FeatureCollection.fromFeatures(
@@ -185,21 +229,12 @@ object MapLayers {
     fun install(style: Style, factory: MarkerBitmapFactory, darkTheme: Boolean) {
         factory.buildAll(darkTheme).forEach { (id, bitmap) -> style.addImage(id, bitmap) }
 
+        // §3.4: no clustering — every container is always its own marker.
         style.addSource(
             GeoJsonSource(
                 CONTAINER_SOURCE,
                 FeatureCollection.fromFeatures(emptyList()),
-                GeoJsonOptions()
-                    .withCluster(true)
-                    .withClusterMaxZoom(CLUSTER_MAX_ZOOM)
-                    .withClusterRadius(56)
-                    // §3.4: cluster colour = worst status inside. The accumulator
-                    // form is what MapLibre expects: max(accumulated, each point).
-                    .withClusterProperty(
-                        "worst",
-                        Expression.max(Expression.accumulated(), Expression.get("worst")),
-                        Expression.get(PROP_RANK),
-                    ),
+                GeoJsonOptions().withBuffer(64),
             ),
         )
         style.addSource(GeoJsonSource(SUGGESTION_SOURCE, FeatureCollection.fromFeatures(emptyList())))
@@ -210,7 +245,7 @@ object MapLayers {
         // Area shading sits under every marker; the focus ring sits on top.
         addCoverageLayer(style, darkTheme)
         addRingLayer(style, darkTheme)
-        addClusterLayers(style)
+        addDotLayer(style)
         addContainerLayers(style)
         addSuggestionLayer(style)
         addFocusLayer(style, darkTheme)
@@ -340,101 +375,112 @@ object MapLayers {
         )
     }
 
-    private fun addClusterLayers(style: Style) {
-        val worst = Expression.toNumber(Expression.get("worst"))
-
+    /**
+     * §3.4 city zoom: every container a small dot in its status colour — no border,
+     * no shape — 4 dp below zoom 14, 6 dp by 15.5, then fading out as the shapes
+     * fade in.
+     */
+    private fun addDotLayer(style: Style) {
         style.addLayer(
-            CircleLayer(LAYER_CLUSTERS, CONTAINER_SOURCE).apply {
-                setFilter(Expression.has("point_count"))
+            CircleLayer(LAYER_DOTS, CONTAINER_SOURCE).apply {
+                maxZoom = SHAPES_FADE_IN_END + 0.01f
                 withProperties(
-                    PropertyFactory.circleColor(
-                        // §5.1 ordinals: destroyed 4 > missing 3 > broken 2 > full 1 > ok 0.
-                        Expression.step(
-                            worst,
-                            Expression.color(MarkerColors.BigOk.toArgb()),
-                            Expression.stop(1, Expression.color(MarkerColors.Full.toArgb())),
-                            Expression.stop(2, Expression.color(MarkerColors.Broken.toArgb())),
-                            Expression.stop(3, Expression.color(MarkerColors.Destroyed.toArgb())),
-                        ),
-                    ),
-                    // Bigger cluster, bigger circle — but gently (§3 restraint).
+                    PropertyFactory.circleColor(Expression.get(PROP_COLOR)),
                     PropertyFactory.circleRadius(
                         Expression.interpolate(
                             Expression.linear(),
-                            Expression.toNumber(Expression.get("point_count")),
-                            Expression.stop(2, 14f),
-                            Expression.stop(25, 20f),
-                            Expression.stop(200, 28f),
+                            Expression.zoom(),
+                            Expression.stop(13.5, 2f),
+                            Expression.stop(14.5, 3f),
+                            Expression.stop(SHAPES_FADE_IN_END, 3.4f),
                         ),
                     ),
-                    PropertyFactory.circleOpacity(0.92f),
-                    PropertyFactory.circleStrokeWidth(2f),
-                    PropertyFactory.circleStrokeColor(
-                        Expression.color(MarkerColors.fullBorder(false).toArgb()),
+                    PropertyFactory.circleOpacity(
+                        Expression.interpolate(
+                            Expression.linear(),
+                            Expression.zoom(),
+                            Expression.stop(SHAPES_FADE_IN_START, Expression.toNumber(Expression.get(PROP_OPACITY))),
+                            Expression.stop(SHAPES_FADE_IN_END, 0f),
+                        ),
                     ),
-                )
-            },
-        )
-
-        style.addLayer(
-            SymbolLayer(LAYER_CLUSTER_COUNT, CONTAINER_SOURCE).apply {
-                setFilter(Expression.has("point_count"))
-                withProperties(
-                    PropertyFactory.textField(Expression.toString(Expression.get("point_count"))),
-                    PropertyFactory.textSize(12f),
-                    PropertyFactory.textFont(arrayOf("Noto Sans Bold")),
-                    PropertyFactory.textColor(android.graphics.Color.WHITE),
-                    PropertyFactory.textAllowOverlap(true),
-                    PropertyFactory.textIgnorePlacement(true),
+                    PropertyFactory.circleStrokeWidth(0f),
+                    PropertyFactory.circlePitchAlignment("map"),
                 )
             },
         )
     }
 
     private fun addContainerLayers(style: Style) {
-        val notCluster = Expression.not(Expression.has("point_count"))
-
         // Order matters: the near layer is added last so it draws on top when
-        // zoom ranges touch.
+        // zoom ranges overlap during a cross-fade.
         style.addLayer(
-            symbolLayer(LAYER_CONTAINERS_FAR, PROP_ICON_FAR, notCluster).apply {
-                maxZoom = BADGE_ZOOM
-            },
+            symbolLayer(
+                LAYER_CONTAINERS_FAR, PROP_ICON_FAR,
+                fadeIn = SHAPES_FADE_IN_START to SHAPES_FADE_IN_END,
+                fadeOut = BADGE_ZOOM - BAND_FADE to BADGE_ZOOM + BAND_FADE,
+            ),
         )
         style.addLayer(
-            symbolLayer(LAYER_CONTAINERS_MID, PROP_ICON_MID, notCluster).apply {
-                minZoom = BADGE_ZOOM
-                maxZoom = DOT_ZOOM
-            },
+            symbolLayer(
+                LAYER_CONTAINERS_MID, PROP_ICON_MID,
+                fadeIn = BADGE_ZOOM - BAND_FADE to BADGE_ZOOM + BAND_FADE,
+                fadeOut = DOT_ZOOM - BAND_FADE to DOT_ZOOM + BAND_FADE,
+            ),
         )
         style.addLayer(
-            symbolLayer(LAYER_CONTAINERS_NEAR, PROP_ICON_NEAR, notCluster).apply {
-                minZoom = DOT_ZOOM
-            },
+            symbolLayer(
+                LAYER_CONTAINERS_NEAR, PROP_ICON_NEAR,
+                fadeIn = DOT_ZOOM - BAND_FADE to DOT_ZOOM + BAND_FADE,
+                fadeOut = null,
+            ),
         )
     }
 
-    private fun symbolLayer(id: String, iconProperty: String, filter: Expression) =
-        SymbolLayer(id, CONTAINER_SOURCE).apply {
-            setFilter(filter)
-            withProperties(
-                PropertyFactory.iconImage(Expression.get(iconProperty)),
-                // Markers must never be dropped for overlap: a hidden container is
-                // one the user cannot report.
-                PropertyFactory.iconAllowOverlap(true),
-                PropertyFactory.iconIgnorePlacement(true),
-                // §3.4: "scales with zoom" — modest growth, the shape stays small.
-                PropertyFactory.iconSize(
-                    Expression.interpolate(
-                        Expression.linear(),
-                        Expression.zoom(),
-                        Expression.stop(13, 0.7f),
-                        Expression.stop(16, 1.0f),
-                        Expression.stop(19, 1.25f),
-                    ),
-                ),
-            )
+    /**
+     * One shape band. Visible only between [fadeIn] start and [fadeOut] end, with
+     * its opacity ramping across both, so neighbouring bands cross-fade.
+     */
+    private fun symbolLayer(
+        id: String,
+        iconProperty: String,
+        fadeIn: Pair<Float, Float>,
+        fadeOut: Pair<Float, Float>?,
+    ) = SymbolLayer(id, CONTAINER_SOURCE).apply {
+        minZoom = fadeIn.first
+        if (fadeOut != null) maxZoom = fadeOut.second
+
+        val opacityStops = buildList {
+            add(Expression.stop(fadeIn.first, 0f))
+            add(Expression.stop(fadeIn.second, 1f))
+            if (fadeOut != null) {
+                add(Expression.stop(fadeOut.first, 1f))
+                add(Expression.stop(fadeOut.second, 0f))
+            }
         }
+
+        withProperties(
+            PropertyFactory.iconImage(Expression.get(iconProperty)),
+            // Markers must never be dropped for overlap: a hidden container is
+            // one the user cannot report.
+            PropertyFactory.iconAllowOverlap(true),
+            PropertyFactory.iconIgnorePlacement(true),
+            // §3.4: problems on top of OK ones.
+            PropertyFactory.symbolSortKey(Expression.toNumber(Expression.get(PROP_RANK))),
+            PropertyFactory.iconOpacity(
+                Expression.interpolate(Expression.linear(), Expression.zoom(), *opacityStops.toTypedArray()),
+            ),
+            // §3.4: shapes grow smoothly with the zoom; 1.0 is the drawn size (14×10 dp at z16).
+            PropertyFactory.iconSize(
+                Expression.interpolate(
+                    Expression.linear(),
+                    Expression.zoom(),
+                    Expression.stop(SHAPES_FADE_IN_START, 0.6f),
+                    Expression.stop(BADGE_ZOOM, 1.0f),
+                    Expression.stop(19, 1.35f),
+                ),
+            ),
+        )
+    }
 
     private fun addSuggestionLayer(style: Style) {
         style.addLayer(
@@ -490,17 +536,5 @@ object MapLayers {
         )
         val hits = map.queryRenderedFeatures(box, *containerLayers.toTypedArray())
         return hits.firstOrNull { it.hasProperty(PROP_ID) }?.getStringProperty(PROP_ID)
-    }
-
-    /** A cluster tapped at [point], returning the zoom to fly to, or null. */
-    fun clusterAt(map: MapLibreMap, point: PointF, touchSlopPx: Float): Point? {
-        val box = android.graphics.RectF(
-            point.x - touchSlopPx,
-            point.y - touchSlopPx,
-            point.x + touchSlopPx,
-            point.y + touchSlopPx,
-        )
-        val hits = map.queryRenderedFeatures(box, LAYER_CLUSTERS)
-        return hits.firstOrNull()?.geometry() as? Point
     }
 }
