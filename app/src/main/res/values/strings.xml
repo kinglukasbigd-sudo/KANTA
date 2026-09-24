@@ -309,4 +309,9 @@
         <item quantity="one">Твојот глас е додаден — сега %d глас.</item>
         <item quantity="other">Твојот глас е додаден — сега %d гласа.</item>
     </plurals>
+
+    <!-- §4.1 rotation, compass, follow mode -->
+    <string name="map_compass">Врати ја мапата кон север</string>
+    <string name="map_follow_heading">Следи во која насока гледам</string>
+    <string name="map_stop_following">Престани со следење</string>
 </resources>

@@ -304,4 +304,9 @@
         <item quantity="one">Your vote was added — %d vote now.</item>
         <item quantity="other">Your vote was added — %d votes now.</item>
     </plurals>
+
+    <!-- §4.1 rotation, compass, follow mode -->
+    <string name="map_compass">Reset map to north</string>
+    <string name="map_follow_heading">Follow the direction I\'m facing</string>
+    <string name="map_stop_following">Stop following</string>
 </resources>

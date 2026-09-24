@@ -14,6 +14,8 @@ import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Explore
+import androidx.compose.material.icons.rounded.LocationSearching
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Navigation
 import androidx.compose.material.icons.rounded.Person
@@ -42,6 +44,10 @@ object KantaIcons {
 
     // --- Map & navigation ---
     val MyLocation: ImageVector = Icons.Rounded.MyLocation
+    /** §4.1 my-location button, not centred on the user. */
+    val MyLocationIdle: ImageVector = Icons.Rounded.LocationSearching
+    /** §4.1 follow mode: the map turns with the phone. */
+    val FollowHeading: ImageVector = Icons.Rounded.Explore
     val Place: ImageVector = Icons.Rounded.Place
     val Navigate: ImageVector = Icons.Rounded.Navigation
 

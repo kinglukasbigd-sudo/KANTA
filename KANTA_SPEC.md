@@ -131,6 +131,11 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 
 **Map buttons** (suggestions toggle, my location): bottom right, stacked vertically, 16dp above the sheet's top edge and 16dp from the right edge. They move with the sheet while it is dragged and fade out as it rises past half. The map attribution rides the sheet's top edge on the left the same way.
 
+**Rotation and tilt** (like Google Maps): a two-finger twist rotates the map freely; a two-finger drag up/down tilts it, at most 45°. Pinch-zoom and pan work exactly as before — rotation needs a deliberate twist (threshold ~20°, raised further while pinching) so zooming never turns the map by accident.
+- **Compass button:** in the same stack, above my-location, shown only while the map is rotated or tilted. A small north arrow turns with the map. Tap → smoothly back to north and flat (300 ms); it fades out once the map faces north again. TalkBack: "Reset map to north".
+- **My-location button, two modes**, its icon shows which is on: 1st tap centres on me; 2nd tap = **follow mode** — the map turns with the direction the phone is facing (compass heading) and the location dot shows a small heading cone. Any pan, or a tap on the compass, exits follow mode; a tap while following stops it and faces north.
+- **Markers stay upright:** rectangles, triangles, dots and suggestion pins never rotate or lean with the map — they always face the screen. Street names follow their streets as MapLibre does by default.
+
 **Collapsed state:** a drag handle and a row of **three big action choices**:
 1. **Full** — "This container is full" (fastest path, orange icon)
 2. **Report** — damaged / destroyed / burning / missing / trash dumped around it (red icon)

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  §4.1 follow mode: the soft cone that shows which way the phone is facing.
+  MapLibre centres this image on the location dot and turns it with the compass,
+  so the wedge fans out upward from the exact centre of the canvas. Tinted to the
+  brand colour at runtime (LocationComponentOptions.bearingTintColor).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="72dp"
+    android:viewportWidth="72"
+    android:viewportHeight="72">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.32"
+        android:pathData="M36,36 L22,6 A32,32 0 0,1 50,6 Z" />
+</vector>

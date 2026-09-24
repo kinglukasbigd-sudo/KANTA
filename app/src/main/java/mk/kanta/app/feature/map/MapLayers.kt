@@ -397,7 +397,8 @@ object MapLayers {
                     ),
                     PropertyFactory.circleOpacity(dotOpacity(highlight = null)),
                     PropertyFactory.circleStrokeWidth(0f),
-                    PropertyFactory.circlePitchAlignment("map"),
+                    // §4.1: dots stay round on screen when the map is tilted.
+                    PropertyFactory.circlePitchAlignment("viewport"),
                 )
             },
         )
@@ -450,6 +451,10 @@ object MapLayers {
             // one the user cannot report.
             PropertyFactory.iconAllowOverlap(true),
             PropertyFactory.iconIgnorePlacement(true),
+            // §4.1: shapes stay upright and face the screen when the map rotates
+            // or tilts — a rectangle must still read as a rectangle.
+            PropertyFactory.iconRotationAlignment("viewport"),
+            PropertyFactory.iconPitchAlignment("viewport"),
             // §3.4: problems on top of OK ones.
             PropertyFactory.symbolSortKey(Expression.toNumber(Expression.get(PROP_RANK))),
             PropertyFactory.iconOpacity(bandOpacity(fadeIn, fadeOut, highlight = null)),
@@ -471,6 +476,8 @@ object MapLayers {
             SymbolLayer(LAYER_SUGGESTIONS, SUGGESTION_SOURCE).apply {
                 withProperties(
                     PropertyFactory.iconImage(MarkerBitmapFactory.SUGGESTION_ID),
+                    PropertyFactory.iconRotationAlignment("viewport"),
+                    PropertyFactory.iconPitchAlignment("viewport"),
                     PropertyFactory.iconAllowOverlap(true),
                     PropertyFactory.iconIgnorePlacement(true),
                     PropertyFactory.iconSize(

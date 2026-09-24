@@ -304,4 +304,9 @@
         <item quantity="one">Vota jote u shtua — tani %d votë.</item>
         <item quantity="other">Vota jote u shtua — tani %d vota.</item>
     </plurals>
+
+    <!-- §4.1 rotation, compass, follow mode -->
+    <string name="map_compass">Ktheje hartën drejt veriut</string>
+    <string name="map_follow_heading">Ndiq drejtimin nga shikoj</string>
+    <string name="map_stop_following">Ndalo ndjekjen</string>
 </resources>

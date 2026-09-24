@@ -5,6 +5,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import mk.kanta.app.core.designsystem.Motion
+import org.maplibre.android.location.OnCameraTrackingChangedListener
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.offset
@@ -141,6 +146,11 @@ fun MapScreen(
     }
 
     val markerFactory = remember(density) { MarkerBitmapFactory(density) }
+
+    // §4.1 rotation: what the compass shows, and which my-location mode is on.
+    var bearing by remember { mutableFloatStateOf(0f) }
+    var offNorth by remember { mutableStateOf(false) }
+    var locationMode by remember { mutableStateOf(LocationMode.Off) }
     var mapRef by remember { mutableStateOf<MapLibreMap?>(null) }
     var styleRef by remember { mutableStateOf<Style?>(null) }
 
@@ -352,15 +362,81 @@ fun MapScreen(
         // Style load. Keyed on the theme so flipping dark mode rebuilds the map
         // with the other palette and a fresh set of marker bitmaps (§3.4 border
         // colour differs per theme).
+        // One instance: re-activating the location dot after a theme change must
+        // not stack a second listener.
+        val trackingListener = remember {
+            object : OnCameraTrackingChangedListener {
+                // §4.1: a pan while following ends follow mode.
+                override fun onCameraTrackingDismissed() {
+                    mapRef?.let(MapNavigation::stopFollowing)
+                    locationMode = LocationMode.Off
+                }
+
+                override fun onCameraTrackingChanged(currentMode: Int) = Unit
+            }
+        }
+
         DisposableEffect(mapView, darkTheme) {
+            var registered: MapLibreMap? = null
+            val onIdle = MapLibreMap.OnCameraIdleListener {
+                val map = registered ?: return@OnCameraIdleListener
+                val bounds = map.projection.visibleRegion.latLngBounds
+                viewModel.onCameraIdle(
+                    Bbox(
+                        minLon = bounds.longitudeWest,
+                        minLat = bounds.latitudeSouth,
+                        maxLon = bounds.longitudeEast,
+                        maxLat = bounds.latitudeNorth,
+                    ),
+                )
+            }
+            // §4.1: the compass needle turns with the map and appears once it is
+            // rotated or tilted.
+            val onMove = MapLibreMap.OnCameraMoveListener {
+                val camera = registered?.cameraPosition ?: return@OnCameraMoveListener
+                bearing = camera.bearing.toFloat()
+                offNorth = MapNavigation.isOffNorth(camera.bearing, camera.tilt)
+            }
+            // A pan by the user ends "centred on me" (§4.1); follow mode is ended by
+            // MapLibre's own tracking, through [trackingListener].
+            val onMoveStarted = MapLibreMap.OnCameraMoveStartedListener { reason ->
+                if (reason == MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE &&
+                    locationMode == LocationMode.Centered
+                ) {
+                    locationMode = LocationMode.Off
+                }
+            }
+            val onClick = MapLibreMap.OnMapClickListener { latLng ->
+                val map = registered ?: return@OnMapClickListener false
+                val screenPoint = map.projection.toScreenLocation(latLng)
+                val slop = context.markerTouchSlopPx()
+
+                val containerId = MapLayers.containerAt(map, screenPoint, slop)
+                if (containerId != null) {
+                    haptics.tick()
+                    onMarkerTap(containerId)
+                    return@OnMapClickListener true
+                }
+
+                // §5.3: a suggestion marker opens its small sheet with a vote button.
+                val suggestionId = MapLayers.suggestionAt(map, screenPoint, slop)
+                if (suggestionId != null) {
+                    haptics.tick()
+                    onSuggestionTap(suggestionId)
+                    return@OnMapClickListener true
+                }
+
+                false
+            }
+
             mapView.getMapAsync { map ->
+                registered = map
                 mapRef = map
-                map.uiSettings.isRotateGesturesEnabled = false
-                map.uiSettings.isTiltGesturesEnabled = false
+                // §4.1: twist to rotate, two-finger drag to tilt (max 45°).
+                MapNavigation.configureGestures(map)
                 // MapLibre's own attribution and logo are replaced by ours (§7).
                 map.uiSettings.isAttributionEnabled = false
                 map.uiSettings.isLogoEnabled = false
-                map.uiSettings.isCompassEnabled = false
 
                 val styleJson = KantaMapStyle.load(context, darkTheme)
                 map.setStyle(Style.Builder().fromJson(styleJson)) { style ->
@@ -368,41 +444,36 @@ fun MapScreen(
                     MapLayers.install(style, markerFactory, darkTheme)
                 }
 
-                map.addOnCameraIdleListener {
-                    val bounds = map.projection.visibleRegion.latLngBounds
-                    viewModel.onCameraIdle(
-                        Bbox(
-                            minLon = bounds.longitudeWest,
-                            minLat = bounds.latitudeSouth,
-                            maxLon = bounds.longitudeEast,
-                            maxLat = bounds.latitudeNorth,
-                        ),
-                    )
-                }
-
-                map.addOnMapClickListener { latLng ->
-                    val screenPoint = map.projection.toScreenLocation(latLng)
-                    val slop = context.markerTouchSlopPx()
-
-                    val containerId = MapLayers.containerAt(map, screenPoint, slop)
-                    if (containerId != null) {
-                        haptics.tick()
-                        onMarkerTap(containerId)
-                        return@addOnMapClickListener true
-                    }
-
-                    // §5.3: a suggestion marker opens its small sheet with a vote button.
-                    val suggestionId = MapLayers.suggestionAt(map, screenPoint, slop)
-                    if (suggestionId != null) {
-                        haptics.tick()
-                        onSuggestionTap(suggestionId)
-                        return@addOnMapClickListener true
-                    }
-
-                    false
-                }
+                map.addOnCameraIdleListener(onIdle)
+                map.addOnCameraMoveListener(onMove)
+                map.addOnCameraMoveStartedListener(onMoveStarted)
+                map.addOnMapClickListener(onClick)
             }
-            onDispose { mapRef = null; styleRef = null }
+            onDispose {
+                registered?.let { map ->
+                    map.removeOnCameraIdleListener(onIdle)
+                    map.removeOnCameraMoveListener(onMove)
+                    map.removeOnCameraMoveStartedListener(onMoveStarted)
+                    map.removeOnMapClickListener(onClick)
+                }
+                mapRef = null
+                styleRef = null
+            }
+        }
+
+        // §4.1: the location dot (and follow mode's heading cone), once there is a
+        // style and permission — including permission granted later.
+        LaunchedEffect(styleRef, state.hasLocationPermission) {
+            val style = styleRef ?: return@LaunchedEffect
+            val map = mapRef ?: return@LaunchedEffect
+            MapNavigation.activateLocation(
+                context = context,
+                map = map,
+                style = style,
+                darkTheme = darkTheme,
+                hasPermission = state.hasLocationPermission,
+                trackingListener = trackingListener,
+            )
         }
 
         // Push markers into the GeoJSON source whenever they change.
@@ -590,10 +661,33 @@ fun MapScreen(
         MapOverlays(
             sheetState = sheetState,
             showSuggestions = state.showSuggestions,
+            bearing = bearing,
+            showCompass = offNorth,
+            locationMode = locationMode,
             onProfileClick = onProfileClick,
+            // §4.1: back to north and flat; also ends follow mode.
+            onCompassClick = {
+                mapRef?.let(MapNavigation::resetNorth)
+                if (locationMode == LocationMode.Following) locationMode = LocationMode.Off
+            },
             onMyLocationClick = {
                 if (state.hasLocationPermission) {
-                    viewModel.onMyLocationClick()
+                    // §4.1: 1st tap centres, 2nd follows the phone's heading, and a
+                    // tap while following stops and faces north again.
+                    when (locationMode) {
+                        LocationMode.Off -> {
+                            viewModel.onMyLocationClick()
+                            locationMode = LocationMode.Centered
+                        }
+                        LocationMode.Centered -> {
+                            mapRef?.let(MapNavigation::follow)
+                            locationMode = LocationMode.Following
+                        }
+                        LocationMode.Following -> {
+                            mapRef?.let(MapNavigation::resetNorth)
+                            locationMode = LocationMode.Centered
+                        }
+                    }
                 } else {
                     locationPermission.launch(
                         arrayOf(
@@ -721,7 +815,11 @@ private fun framedAboveSheet(
 private fun MapOverlays(
     sheetState: KantaSheetState,
     showSuggestions: Boolean,
+    bearing: Float,
+    showCompass: Boolean,
+    locationMode: LocationMode,
     onProfileClick: () -> Unit,
+    onCompassClick: () -> Unit,
     onMyLocationClick: () -> Unit,
     onToggleSuggestions: () -> Unit,
 ) {
@@ -785,11 +883,45 @@ private fun MapOverlays(
                     KantaTheme.colors.onSurfaceMuted
                 },
             )
+            // §4.1: only while the map is rotated or tilted; fades once facing north.
+            AnimatedVisibility(
+                visible = showCompass,
+                enter = fadeIn(Motion.tweenMedium()),
+                exit = fadeOut(Motion.tweenMedium()),
+            ) {
+                MapCircleButton(
+                    contentDescription = stringResource(R.string.map_compass),
+                    onClick = onCompassClick,
+                    enabled = !hidden,
+                ) {
+                    CompassNeedle(
+                        bearing = bearing,
+                        north = KantaTheme.colors.brand,
+                        south = KantaTheme.colors.outline,
+                    )
+                }
+            }
+            // §4.1: the icon says which mode is on.
             MapCircleButton(
-                icon = KantaIcons.MyLocation,
-                contentDescription = stringResource(R.string.map_my_location),
+                icon = when (locationMode) {
+                    LocationMode.Off -> KantaIcons.MyLocationIdle
+                    LocationMode.Centered -> KantaIcons.MyLocation
+                    LocationMode.Following -> KantaIcons.FollowHeading
+                },
+                contentDescription = stringResource(
+                    when (locationMode) {
+                        LocationMode.Off -> R.string.map_my_location
+                        LocationMode.Centered -> R.string.map_follow_heading
+                        LocationMode.Following -> R.string.map_stop_following
+                    },
+                ),
                 onClick = onMyLocationClick,
                 enabled = !hidden,
+                tint = if (locationMode == LocationMode.Off) {
+                    KantaTheme.colors.onSurfaceMuted
+                } else {
+                    KantaTheme.colors.brand
+                },
             )
         }
 
@@ -825,6 +957,22 @@ private fun MapCircleButton(
     modifier: Modifier = Modifier,
     tint: Color = KantaTheme.colors.onSurfaceMuted,
     enabled: Boolean = true,
+) = MapCircleButton(contentDescription, onClick, modifier, enabled) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier.size(22.dp),
+    )
+}
+
+@Composable
+private fun MapCircleButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
 ) {
     val haptics = rememberKantaHaptics()
     Surface(
@@ -835,18 +983,12 @@ private fun MapCircleButton(
         enabled = enabled,
         modifier = modifier
             .size(Spacing.minTouchTarget)
-            .kantaSoftShadow(CircleShape),
+            .kantaSoftShadow(CircleShape)
+            .semantics { this.contentDescription = contentDescription },
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = tint,
-                modifier = Modifier.size(22.dp),
-            )
-        }
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }
 
