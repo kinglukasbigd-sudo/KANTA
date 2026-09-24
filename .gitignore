@@ -41,3 +41,7 @@ tools/import_osm/.cache/
 
 # ---- Supabase database connection (contains the DB password) ----
 supabase/.db-url
+
+# ---- Tool caches ----
+__pycache__/
+tools/map_style/.cache/
