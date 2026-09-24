@@ -245,4 +245,18 @@
         <item quantity="one">%d area check in the last 90 days</item>
         <item quantity="other">%d area checks in the last 90 days</item>
     </plurals>
+
+    <!-- §5.2 Nearest containers with space -->
+    <string name="container_action_nearest_space">Nearest with space</string>
+    <string name="alternatives_from_container">%1$s is full — these have space</string>
+    <string name="alternatives_from_you">From where you are</string>
+    <string name="alternatives_distance">%1$d m · %2$d min walk</string>
+    <string name="alternatives_close">Close</string>
+    <string name="alternatives_empty_title">No free container within 600 m</string>
+    <string name="alternatives_empty_message">Your report helps the city see this area needs more.</string>
+    <string name="alternatives_empty_message_here">Suggesting one helps the city see this area needs more.</string>
+    <string name="alternatives_suggest_here">Suggest a container here</string>
+    <string name="alternatives_location_title">Where are you?</string>
+    <string name="alternatives_location_needed">Turn on location to see the containers with space near you.</string>
+    <string name="category_mixed_recycling">Recycling</string>
 </resources>

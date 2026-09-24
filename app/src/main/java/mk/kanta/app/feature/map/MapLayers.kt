@@ -395,14 +395,7 @@ object MapLayers {
                             Expression.stop(SHAPES_FADE_IN_END, 3.4f),
                         ),
                     ),
-                    PropertyFactory.circleOpacity(
-                        Expression.interpolate(
-                            Expression.linear(),
-                            Expression.zoom(),
-                            Expression.stop(SHAPES_FADE_IN_START, Expression.toNumber(Expression.get(PROP_OPACITY))),
-                            Expression.stop(SHAPES_FADE_IN_END, 0f),
-                        ),
-                    ),
+                    PropertyFactory.circleOpacity(dotOpacity(highlight = null)),
                     PropertyFactory.circleStrokeWidth(0f),
                     PropertyFactory.circlePitchAlignment("map"),
                 )
@@ -449,14 +442,7 @@ object MapLayers {
         minZoom = fadeIn.first
         if (fadeOut != null) maxZoom = fadeOut.second
 
-        val opacityStops = buildList {
-            add(Expression.stop(fadeIn.first, 0f))
-            add(Expression.stop(fadeIn.second, 1f))
-            if (fadeOut != null) {
-                add(Expression.stop(fadeOut.first, 1f))
-                add(Expression.stop(fadeOut.second, 0f))
-            }
-        }
+        bands[id] = fadeIn to fadeOut
 
         withProperties(
             PropertyFactory.iconImage(Expression.get(iconProperty)),
@@ -466,9 +452,7 @@ object MapLayers {
             PropertyFactory.iconIgnorePlacement(true),
             // §3.4: problems on top of OK ones.
             PropertyFactory.symbolSortKey(Expression.toNumber(Expression.get(PROP_RANK))),
-            PropertyFactory.iconOpacity(
-                Expression.interpolate(Expression.linear(), Expression.zoom(), *opacityStops.toTypedArray()),
-            ),
+            PropertyFactory.iconOpacity(bandOpacity(fadeIn, fadeOut, highlight = null)),
             // §3.4: shapes grow smoothly with the zoom; 1.0 is the drawn size (14×10 dp at z16).
             PropertyFactory.iconSize(
                 Expression.interpolate(
@@ -506,6 +490,76 @@ object MapLayers {
     // -----------------------------------------------------------------------------------------
     // Updates and hit testing
     // -----------------------------------------------------------------------------------------
+
+    // -----------------------------------------------------------------------------------------
+    // §5.2 highlight: these containers stay bright, every other one dims
+    // -----------------------------------------------------------------------------------------
+
+    /** Fade-in / fade-out zoom ranges per shape band, remembered for [setHighlight]. */
+    private val bands = mutableMapOf<String, Pair<Pair<Float, Float>, Pair<Float, Float>?>>()
+
+    /** How far the containers that are not in the highlight dim. */
+    private const val DIMMED = 0.22f
+
+    /**
+     * "Full" opacity for one feature: 1, or — while a highlight is on — 1 for the
+     * listed containers and [DIMMED] for all others. Used as the plateau value of
+     * each zoom fade, since a zoom interpolation must stay the outermost expression.
+     */
+    private fun visible(highlight: Collection<String>?): Expression =
+        if (highlight == null) {
+            Expression.literal(1f)
+        } else if (highlight.isEmpty()) {
+            Expression.literal(DIMMED)
+        } else {
+            // One plain label per id (§5.2 lists at most 10), the most portable form of match.
+            Expression.match(
+                Expression.get(PROP_ID),
+                Expression.literal(DIMMED),
+                *highlight.distinct().map { Expression.stop(it, 1f) }.toTypedArray(),
+            )
+        }
+
+    private fun bandOpacity(
+        fadeIn: Pair<Float, Float>,
+        fadeOut: Pair<Float, Float>?,
+        highlight: Collection<String>?,
+    ): Expression {
+        val full = visible(highlight)
+        val stops = buildList {
+            add(Expression.stop(fadeIn.first, 0f))
+            add(Expression.stop(fadeIn.second, full))
+            if (fadeOut != null) {
+                add(Expression.stop(fadeOut.first, full))
+                add(Expression.stop(fadeOut.second, 0f))
+            }
+        }
+        return Expression.interpolate(Expression.linear(), Expression.zoom(), *stops.toTypedArray())
+    }
+
+    private fun dotOpacity(highlight: Collection<String>?): Expression =
+        Expression.interpolate(
+            Expression.linear(),
+            Expression.zoom(),
+            Expression.stop(
+                SHAPES_FADE_IN_START,
+                Expression.product(Expression.toNumber(Expression.get(PROP_OPACITY)), visible(highlight)),
+            ),
+            Expression.stop(SHAPES_FADE_IN_END, 0f),
+        )
+
+    /**
+     * §5.2: highlight [ids] and dim every other container, or pass null to show
+     * all of them normally again.
+     */
+    fun setHighlight(style: Style, ids: Collection<String>?) {
+        style.getLayer(LAYER_DOTS)?.setProperties(PropertyFactory.circleOpacity(dotOpacity(ids)))
+        bands.forEach { (layerId, band) ->
+            style.getLayer(layerId)?.setProperties(
+                PropertyFactory.iconOpacity(bandOpacity(band.first, band.second, ids)),
+            )
+        }
+    }
 
     fun updateContainers(style: Style, collection: FeatureCollection) {
         (style.getSourceAs<GeoJsonSource>(CONTAINER_SOURCE))?.setGeoJson(collection)

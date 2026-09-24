@@ -250,4 +250,18 @@
         <item quantity="one">%d проверка на област во последните 90 дена</item>
         <item quantity="other">%d проверки на области во последните 90 дена</item>
     </plurals>
+
+    <!-- §5.2 Nearest containers with space -->
+    <string name="container_action_nearest_space">Најблиски со место</string>
+    <string name="alternatives_from_container">%1$s е полн — овие имаат место</string>
+    <string name="alternatives_from_you">Од каде што си</string>
+    <string name="alternatives_distance">%1$d м · %2$d мин пешки</string>
+    <string name="alternatives_close">Блиску</string>
+    <string name="alternatives_empty_title">Нема слободен контејнер во радиус од 600 м</string>
+    <string name="alternatives_empty_message">Твојата пријава му помага на градот да види дека на оваа област ѝ требаат повеќе.</string>
+    <string name="alternatives_empty_message_here">Предлогот му помага на градот да види дека на оваа област ѝ требаат повеќе.</string>
+    <string name="alternatives_suggest_here">Предложи контејнер тука</string>
+    <string name="alternatives_location_title">Каде си?</string>
+    <string name="alternatives_location_needed">Вклучи локација за да ги видиш контејнерите со место околу тебе.</string>
+    <string name="category_mixed_recycling">Рециклирање</string>
 </resources>

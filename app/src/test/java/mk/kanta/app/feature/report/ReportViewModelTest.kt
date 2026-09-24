@@ -25,6 +25,8 @@ import mk.kanta.app.core.image.PhotoPrivacyException
 import mk.kanta.app.core.image.PhotoProcessor
 import mk.kanta.app.core.image.ProcessedPhoto
 import mk.kanta.app.core.location.LatLon
+import mk.kanta.app.feature.alternatives.AlternativesLauncher
+import mk.kanta.app.feature.alternatives.AlternativesOrigin
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -56,8 +58,10 @@ class ReportViewModelTest {
 
     @After fun tearDown() = Dispatchers.resetMain()
 
+    private val launcher = AlternativesLauncher()
+
     private fun viewModel(full: Boolean, vararg extra: Pair<String, Any?>) =
-        ReportViewModel(SavedStateHandle(mapOf("presetFull" to full, *extra)), gateway, processor)
+        ReportViewModel(SavedStateHandle(mapOf("presetFull" to full, *extra)), gateway, processor, launcher)
 
     /** §4.6 "One is missing", opened from the area check. */
     private fun addFromCheck() = viewModel(full = false, "mode" to "add", "fromAreaCheck" to true)
@@ -161,6 +165,20 @@ class ReportViewModelTest {
         }
         assertEquals("full", gateway.submitted.single().kind)
         assertEquals(here, gateway.submitted.single().device)
+    }
+
+    @Test fun `after a Full report the map gets the container to list alternatives for`() = runTest(dispatcher) {
+        gateway.nearest = KantaResult.Success(sk412)
+        val vm = viewModel(full = true)
+        vm.onPhotoCaptured(rawFile()); advanceUntilIdle()
+        vm.send(); advanceUntilIdle()
+
+        vm.showAlternatives()
+
+        val origin = launcher.take() as AlternativesOrigin.Container
+        assertEquals("c-412", origin.id)
+        assertEquals(ContainerCategory.GENERAL, origin.category)
+        assertNull(launcher.take()) // taken once only
     }
 
     @Test fun `a merge says how many neighbours were first`() = runTest(dispatcher) {

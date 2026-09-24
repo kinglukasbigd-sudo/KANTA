@@ -245,4 +245,18 @@
         <item quantity="one">%d kontroll zone në 90 ditët e fundit</item>
         <item quantity="other">%d kontrolle zonash në 90 ditët e fundit</item>
     </plurals>
+
+    <!-- §5.2 Nearest containers with space -->
+    <string name="container_action_nearest_space">Më të afërt me vend</string>
+    <string name="alternatives_from_container">%1$s është plot — këta kanë vend</string>
+    <string name="alternatives_from_you">Nga vendi ku je</string>
+    <string name="alternatives_distance">%1$d m · %2$d min në këmbë</string>
+    <string name="alternatives_close">Afër</string>
+    <string name="alternatives_empty_title">Asnjë kontejner i lirë brenda 600 m</string>
+    <string name="alternatives_empty_message">Raportimi yt e ndihmon qytetin të shohë që kjo zonë ka nevojë për më shumë.</string>
+    <string name="alternatives_empty_message_here">Një sugjerim e ndihmon qytetin të shohë që kjo zonë ka nevojë për më shumë.</string>
+    <string name="alternatives_suggest_here">Sugjero një kontejner këtu</string>
+    <string name="alternatives_location_title">Ku je?</string>
+    <string name="alternatives_location_needed">Ndiz vendndodhjen për të parë kontejnerët me vend pranë teje.</string>
+    <string name="category_mixed_recycling">Riciklim</string>
 </resources>

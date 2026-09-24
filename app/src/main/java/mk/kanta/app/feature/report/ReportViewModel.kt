@@ -25,6 +25,8 @@ import mk.kanta.app.core.image.PhotoProcessor
 import mk.kanta.app.core.image.ProcessedPhoto
 import mk.kanta.app.core.location.GeoMath
 import mk.kanta.app.core.location.LatLon
+import mk.kanta.app.feature.alternatives.AlternativesLauncher
+import mk.kanta.app.feature.alternatives.AlternativesOrigin
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -140,6 +142,7 @@ class ReportViewModel @Inject constructor(
     savedState: SavedStateHandle,
     private val gateway: ReportGateway,
     private val processor: PhotoProcessor,
+    private val alternatives: AlternativesLauncher,
 ) : ViewModel() {
 
     private val presetFull: Boolean = savedState.get<Boolean>("presetFull") ?: false
@@ -472,6 +475,23 @@ class ReportViewModel @Inject constructor(
     }
 
     fun dismissOutcome() = _state.update { it.copy(outcome = null) }
+
+    /**
+     * §4.3: "for Full: immediately show Nearest containers with space". The list
+     * lives on the map, so the reported container is handed over and the map
+     * opens it as this screen closes.
+     */
+    fun showAlternatives() {
+        val container = _state.value.container ?: return
+        alternatives.request(
+            AlternativesOrigin.Container(
+                id = container.id,
+                code = container.code,
+                position = container.position,
+                category = container.category,
+            ),
+        )
+    }
 
     override fun onCleared() {
         // The processed photo is ours to clean up — abandoned, sent, or merged.

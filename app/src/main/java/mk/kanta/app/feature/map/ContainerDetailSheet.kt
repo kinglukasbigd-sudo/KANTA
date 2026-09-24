@@ -1,8 +1,5 @@
 package mk.kanta.app.feature.map
 
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +59,8 @@ fun ColumnScope.ContainerDetailContent(
     onEmptied: () -> Unit = {},
     onReportOther: () -> Unit = {},
     onConfirmExists: () -> Unit = {},
+    /** §5.2: from a full container, the nearest ones that still have space. */
+    onNearestWithSpace: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -104,20 +103,8 @@ fun ColumnScope.ContainerDetailContent(
         onEmptied = onEmptied,
         onReportOther = onReportOther,
         onConfirmExists = onConfirmExists,
-        onNavigate = {
-            // §5.2: "Navigate (opens external maps app via geo: intent — no API
-            // needed)". The label makes the pin show a name rather than raw
-            // coordinates in whatever app handles it.
-            val label = Uri.encode(state.code)
-            val uri = "geo:${state.lat},${state.lon}?q=${state.lat},${state.lon}($label)"
-            runCatching {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(uri)))
-            }.onFailure { error ->
-                // A phone with no maps app is rare but real; crashing over it
-                // would be absurd.
-                if (error !is ActivityNotFoundException) throw error
-            }
-        },
+        onNavigate = { context.openInMaps(state.lat, state.lon, state.code) },
+        onNearestWithSpace = onNearestWithSpace,
     )
 
     Spacer(Modifier.height(Spacing.xl))
@@ -244,6 +231,7 @@ private fun DetailActions(
     onReportOther: () -> Unit,
     onConfirmExists: () -> Unit,
     onNavigate: () -> Unit,
+    onNearestWithSpace: () -> Unit,
 ) {
     Column(
         modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
@@ -270,6 +258,13 @@ private fun DetailActions(
             KantaPrimaryButton(
                 text = stringResource(R.string.container_action_me_too),
                 onClick = onMeToo,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            // §5.2: a full container's detail leads to the ones that still have space.
+            KantaSecondaryButton(
+                text = stringResource(R.string.container_action_nearest_space),
+                onClick = onNearestWithSpace,
+                icon = KantaIcons.Place,
                 modifier = Modifier.fillMaxWidth(),
             )
             KantaSecondaryButton(

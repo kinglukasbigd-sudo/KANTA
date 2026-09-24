@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
  * The report flow (spec §4.3): camera → processing → compose → done.
  *
  * [onFullSent] fires for a successful Full report, which §4.3 sends straight on to
+ * "Nearest containers with space" — on the map, where that list lives. The caller
+ * only has to return there; the origin has already been handed over. Otherwise
  * "Nearest containers with space"; every other ending uses [onClose].
  */
 @Composable
@@ -83,6 +85,7 @@ fun ReportScreen(
     LaunchedEffect(state.goToAlternatives) {
         if (state.goToAlternatives) {
             kotlinx.coroutines.delay(SUCCESS_HOLD_MS)
+            viewModel.showAlternatives()
             onFullSent()
         }
     }

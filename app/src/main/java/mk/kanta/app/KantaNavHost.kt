@@ -49,9 +49,6 @@ data class ReportRoute(
 
 @Serializable object SuggestRoute
 
-/** §5.2 "Nearest containers with space" — the next step; a placeholder for now. */
-@Serializable object NearestAlternativesRoute
-
 /**
  * Navigation plus the one app-wide sign-in sheet.
  *
@@ -132,18 +129,10 @@ fun KantaNavHost(
             composable<ReportRoute> {
                 ReportScreen(
                     onClose = navController::popBackStack,
-                    // §4.3: a sent Full report goes straight on to the alternatives.
-                    // The report screen is removed from the stack, so Back from the
-                    // alternatives returns to the map rather than to a spent camera.
-                    onFullSent = {
-                        navController.navigate(NearestAlternativesRoute) {
-                            popUpTo<ReportRoute> { inclusive = true }
-                        }
-                    },
+                    // §4.3 → §5.2: back to the map, which opens "Nearest containers
+                    // with space" for the container just reported.
+                    onFullSent = { navController.popBackStack(MapRoute, inclusive = false) },
                 )
-            }
-            composable<NearestAlternativesRoute> {
-                PlaceholderScreen(stringResource(R.string.alternatives_title), navController::popBackStack)
             }
             composable<SuggestRoute> {
                 PlaceholderScreen(stringResource(R.string.action_suggest), navController::popBackStack)

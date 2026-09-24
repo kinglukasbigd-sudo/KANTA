@@ -74,6 +74,9 @@ import mk.kanta.app.core.designsystem.marker.MarkerBitmapFactory
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.feature.admin.AdminContent
+import mk.kanta.app.feature.alternatives.AlternativesContent
+import mk.kanta.app.feature.alternatives.AlternativesOrigin
+import mk.kanta.app.feature.alternatives.AlternativesViewModel
 import mk.kanta.app.feature.admin.AdminEvent
 import mk.kanta.app.feature.admin.AdminTab
 import mk.kanta.app.feature.admin.AdminViewModel
@@ -116,11 +119,13 @@ fun MapScreen(
     viewModel: MapViewModel = hiltViewModel(),
     areaCheckViewModel: AreaCheckViewModel = hiltViewModel(),
     adminViewModel: AdminViewModel = hiltViewModel(),
+    alternativesViewModel: AlternativesViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val areaCheck by areaCheckViewModel.state.collectAsStateWithLifecycle()
     val admin by adminViewModel.state.collectAsStateWithLifecycle()
     val isAdmin by adminViewModel.isAdmin.collectAsStateWithLifecycle()
+    val alternatives by alternativesViewModel.state.collectAsStateWithLifecycle()
     val cameraTarget by viewModel.cameraTarget.collectAsStateWithLifecycle()
     val darkTheme = KantaTheme.colors.isDark
     val context = LocalContext.current
@@ -145,8 +150,11 @@ fun MapScreen(
 
     // What the one sheet (§4.1) is showing. The check outranks everything while it
     // runs; a container detail sits on top of Admin, so closing it returns there.
+    // The alternatives sit above a detail: opened from a full container, closing
+    // them returns to that container.
     val mode = when {
         areaCheck.active -> SheetMode.AreaCheck
+        alternatives.open -> SheetMode.Alternatives
         state.detail != null -> SheetMode.Detail
         admin.open -> SheetMode.Admin
         else -> SheetMode.Menu
@@ -167,6 +175,7 @@ fun MapScreen(
             when (mode) {
                 SheetMode.Detail -> viewModel.dismissDetail()
                 SheetMode.AreaCheck -> areaCheckViewModel.later()
+                SheetMode.Alternatives -> alternativesViewModel.close()
                 SheetMode.Admin -> adminViewModel.close()
                 SheetMode.Menu -> Unit
             }
@@ -183,6 +192,7 @@ fun MapScreen(
                     areaCheckViewModel.later()
                 }
             SheetMode.Detail -> viewModel.dismissDetail()
+            SheetMode.Alternatives -> alternativesViewModel.close()
             SheetMode.Admin -> adminViewModel.close()
             SheetMode.Menu -> sheetState.collapse()
         }
@@ -241,7 +251,8 @@ fun MapScreen(
                     MapMenuBody(
                     nearest = state.nearest,
                     nearestLoading = state.nearestLoading,
-                    onWhereToThrow = onSuggestionsList,
+                    // §5.2: the same list, from where the user is.
+                    onWhereToThrow = { alternativesViewModel.open(AlternativesOrigin.MyLocation) },
                     onNearestClick = viewModel::onContainerSelected,
                     onMyReports = onMyReports,
                     onCityStats = onCityStats,
@@ -261,10 +272,28 @@ fun MapScreen(
                                 onEmptied = viewModel::onEmptied,
                                 onReportOther = onReport,
                                 onConfirmExists = viewModel::onConfirmExists,
+                                onNearestWithSpace = {
+                                    state.selectedId?.let { id ->
+                                        alternativesViewModel.open(
+                                            AlternativesOrigin.Container(
+                                                id = id,
+                                                code = detail.code,
+                                                position = LatLon(detail.lat, detail.lon),
+                                                category = detail.category,
+                                            ),
+                                        )
+                                    }
+                                },
                             )
                         }
                     }
                 }
+                SheetMode.Alternatives -> AlternativesContent(
+                    state = alternatives,
+                    onRowClick = alternativesViewModel::focus,
+                    onRetry = alternativesViewModel::retry,
+                    onSuggestHere = onSuggest,
+                )
                 SheetMode.AreaCheck -> AreaCheckContent(
                     state = areaCheck,
                     onAllPresent = areaCheckViewModel::answerAllPresent,
@@ -399,6 +428,62 @@ fun MapScreen(
             )
         }
 
+        // §5.2: the listed containers stay bright, every other one dims. The
+        // container that is full stays bright too — it is what the list is about.
+        LaunchedEffect(styleRef, alternatives.open, alternatives.loading, alternatives.items) {
+            val style = styleRef ?: return@LaunchedEffect
+            val ids = if (alternatives.open && !alternatives.loading) {
+                alternatives.items.map { it.id } +
+                    listOfNotNull((alternatives.origin as? AlternativesOrigin.Container)?.id)
+            } else {
+                null
+            }
+            MapLayers.setHighlight(style, ids)
+        }
+
+        // §5.2: once the list is in, show all of it — the origin and every result —
+        // in the map area above the sheet.
+        LaunchedEffect(mapRef, alternatives.open, alternatives.loading, alternatives.from) {
+            val map = mapRef ?: return@LaunchedEffect
+            val from = alternatives.from ?: return@LaunchedEffect
+            if (!alternatives.open || alternatives.loading) return@LaunchedEffect
+            val farthest = alternatives.items.maxOfOrNull { it.distanceMetres }?.toDouble() ?: 0.0
+            map.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    framedAboveSheet(
+                        centre = from,
+                        radiusMetres = (farthest * 1.1).coerceAtLeast(MIN_FRAME_RADIUS_M),
+                        mapWidthPx = mapView.width,
+                        mapHeightPx = mapView.height,
+                        sheetTopPx = sheetState.anchors[KantaSheetValue.Half] ?: (mapView.height * 0.55f),
+                        topInsetPx = topInsetPx,
+                        density = density,
+                    ),
+                ),
+                CAMERA_MS,
+            )
+        }
+
+        // §5.2: "tapping a row moves the camera there".
+        LaunchedEffect(mapRef, alternatives.focusedId) {
+            val map = mapRef ?: return@LaunchedEffect
+            val item = alternatives.items.firstOrNull { it.id == alternatives.focusedId } ?: return@LaunchedEffect
+            map.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    framedAboveSheet(
+                        centre = item.position,
+                        radiusMetres = FOCUS_RADIUS_M,
+                        mapWidthPx = mapView.width,
+                        mapHeightPx = mapView.height,
+                        sheetTopPx = sheetState.offset.value,
+                        topInsetPx = topInsetPx,
+                        density = density,
+                    ),
+                ),
+                CAMERA_MS,
+            )
+        }
+
         // §4.6 admin coverage: shaded only while the Coverage tab is open.
         LaunchedEffect(styleRef, admin.open, admin.tab, admin.coverage) {
             val style = styleRef ?: return@LaunchedEffect
@@ -420,10 +505,21 @@ fun MapScreen(
         }
 
         // Admin review: ring the request or container being looked at, and go there.
-        LaunchedEffect(styleRef, mapRef, admin.open, admin.focus) {
+        val alternativeFocus = alternatives.items.firstOrNull { it.id == alternatives.focusedId }?.position
+        // One ring on the map at most: the alternative or the admin item being looked at.
+        LaunchedEffect(styleRef, mode, alternativeFocus, admin.focus) {
             val style = styleRef ?: return@LaunchedEffect
+            MapLayers.setFocus(
+                style,
+                when (mode) {
+                    SheetMode.Alternatives -> alternativeFocus
+                    SheetMode.Admin -> admin.focus
+                    else -> null
+                },
+            )
+        }
+        LaunchedEffect(mapRef, admin.open, admin.focus) {
             val focus = if (admin.open) admin.focus else null
-            MapLayers.setFocus(style, focus)
             val map = mapRef ?: return@LaunchedEffect
             if (focus != null) {
                 map.animateCamera(
@@ -554,8 +650,11 @@ private const val CAMERA_MS = 600
 /** Enough map around a reviewed pin to see what else stands there. */
 private const val FOCUS_RADIUS_M = 60.0
 
+/** §5.2 framing when there is nothing (or only something very close) to show. */
+private const val MIN_FRAME_RADIUS_M = 200.0
+
 /** What the one sheet is showing (§4.1: it is the only menu). */
-private enum class SheetMode { Menu, Detail, AreaCheck, Admin }
+private enum class SheetMode { Menu, Detail, AreaCheck, Alternatives, Admin }
 
 /**
  * A camera that fits a circle of [radiusMetres] around [centre] into the map
