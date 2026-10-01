@@ -336,19 +336,25 @@ Storage: bucket `photos` (public read, authenticated write, max 1 MB, image/jpeg
 
 ## 7. Seed data
 
-Import Skopje's existing containers from OpenStreetMap via Overpass API (free, no account):
+Import Skopje's existing containers from OpenStreetMap via Overpass API (free, no account). If Overpass is unreachable, read the same OSM data from Overture Maps' monthly GeoParquet release instead (`tools/import_osm`, `--source overture`):
 
 ```
-[out:json][timeout:120];
-area["name:en"="Skopje"]["boundary"="administrative"]->.a;
+[out:json][timeout:180];
 (
-  node["amenity"="waste_disposal"](area.a);
-  node["amenity"="waste_basket"](area.a);
-  node["amenity"="recycling"]["recycling_type"="container"](area.a);
+  nw["amenity"~"^(waste_disposal|waste_basket|recycling)$"](41.85,21.05,42.20,21.85);
+  nw["bin"="yes"](41.85,21.05,42.20,21.85);
 );
-out body;
+out center;
 ```
-Map: waste_disposal → kind big / general; recycling → kind big / category from `recycling:glass|paper|plastic` tags; waste_basket → kind small / general. Keep `osm_id`, `source='osm'`. Municipality boundaries: OSM `admin_level=8` relations inside Skopje (import as GeoJSON). Assign `municipality_id` with `ST_Contains`. Generate codes `SK-00001…` in import order.
+Map:
+- waste_disposal → kind big / general. Skip `informal=yes`: it marks a dumping spot, not a container.
+- recycling → kind big. Category from the `recycling:*` tags, where glass_bottles counts as glass, plastic_bottles and plastic_packaging as plastic, and cardboard as paper. Several materials, or none, give mixed_recycling. Skip `recycling_type=centre`.
+- waste_basket → kind small / general.
+- `bin=yes` (bus stops that have a bin) → kind small / general, at the stop. Skip it if a mapped waste_basket is within 20 m or another `bin=yes` point is within 10 m.
+
+A way becomes the centre of its bounding box. Keep `osm_id` (negated for ways) and set `source='osm'`. Skip a row when a container added in the app is within the §4.6 duplicate radius (20 m for `bin=yes` points).
+
+Municipality boundaries: the OSM `admin_level=7` relations ("Општина Карпош"). Level 8 is the City of Skopje as a whole. Keep only containers inside the ten boundaries, and assign `municipality_id` with `ST_Contains`. Generate codes `SK-00001…` in import order.
 
 Attribution: show "© OpenStreetMap contributors · OpenFreeMap" small on the map (required).
 

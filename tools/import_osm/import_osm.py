@@ -10,12 +10,18 @@ Standard library only — nothing to pip install.
 
     python3 tools/import_osm/import_osm.py
 
+When Overpass is unreachable, the same OSM data can come from Overture Maps'
+monthly release instead (needs `pip install pyarrow`):
+
+    python3 tools/import_osm/import_osm.py --source overture
+
 See tools/import_osm/README.md for the full instructions.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -27,19 +33,23 @@ from pathlib import Path
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-# Exactly the query from KANTA_SPEC.md §7.
+# Wider than the original §7 query, to find every bin OSM knows about:
+#   - ways as well as nodes: some containers are mapped as small areas
+#   - recycling without recycling_type: classify() drops only the "centre" kind
+#   - bin=yes, which mappers put on bus stops that have a bin
+# The box is the same one as BOUNDARIES_QUERY. Points outside the ten
+# municipalities are dropped in Python once the boundaries are assembled.
+# `out center;` gives ways a single point: the centre of their bounding box.
 CONTAINERS_QUERY = """
-[out:json][timeout:120];
-area["name:en"="Skopje"]["boundary"="administrative"]->.a;
+[out:json][timeout:180];
 (
-  node["amenity"="waste_disposal"](area.a);
-  node["amenity"="waste_basket"](area.a);
-  node["amenity"="recycling"]["recycling_type"="container"](area.a);
+  nw["amenity"~"^(waste_disposal|waste_basket|recycling)$"](41.85,21.05,42.20,21.85);
+  nw["bin"="yes"](41.85,21.05,42.20,21.85);
 );
-out body;
+out center;
 """
 
-# §7 says "admin_level=8 relations inside Skopje". That is NOT how OSM actually
+# §7 first said "admin_level=8 relations inside Skopje". That is NOT how OSM actually
 # tags Skopje: the ten municipalities are admin_level=7 ("Општина Карпош" /
 # "Municipality of Karposh"), admin_level=8 is the City of Skopje itself, and
 # admin_level=9 holds same-named settlement relations. Querying 8 returns one
@@ -82,6 +92,17 @@ NAME_PREFIXES = (
 )
 
 OUTPUT_SQL = Path("supabase/seed/containers.sql")
+
+# A bus stop tagged bin=yes says a bin is there, not exactly where. Its point
+# is the stop's, so it is dropped if a mapped can is already this close…
+BIN_TAG_MERGE_M = 20.0
+# …or if another bin=yes point is (a stop drawn as both a node and a platform).
+BIN_TAG_SELF_M = 10.0
+
+# Against containers people added in the app, an import row is skipped inside
+# the same radius add_container() uses for duplicates (§4.6): 10 m big, 5 m
+# small. bin=yes points use BIN_TAG_MERGE_M, because their position is the stop's.
+DUPLICATE_M = {"big": 10.0, "small": 5.0}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -149,12 +170,28 @@ def overpass(query: str, cache: Path | None, label: str, url: str = OVERPASS_URL
 
 @dataclass
 class Container:
-    osm_id: int
+    osm_id: int        # nodes as-is, ways negated: the two id spaces overlap in OSM
     kind: str          # 'big' | 'small'
     category: str      # 'general' | 'glass' | 'paper' | 'plastic' | 'mixed_recycling'
     lon: float
     lat: float
+    from_bin_tag: bool = False   # a bus stop's bin=yes rather than a mapped bin
     municipality_id: int | None = None
+
+
+# OSM splits materials finely; Kanta has three. A Pakomak glass bank is usually
+# tagged recycling:glass_bottles only, and is still a glass container.
+MATERIALS = {
+    "glass": ("glass", "glass_bottles"),
+    "paper": ("paper", "cardboard", "paper_packaging", "newspaper", "magazines"),
+    "plastic": ("plastic", "plastic_bottles", "plastic_packaging"),
+}
+
+
+def is_dumping_spot(tags: dict) -> bool:
+    """amenity=waste_disposal + informal=yes marks a place where people dump
+    rubbish without a container. Not a container, so never imported."""
+    return tags.get("amenity") == "waste_disposal" and tags.get("informal") == "yes"
 
 
 def classify(tags: dict) -> tuple[str, str] | None:
@@ -162,24 +199,23 @@ def classify(tags: dict) -> tuple[str, str] | None:
     amenity = tags.get("amenity")
 
     if amenity == "waste_disposal":
+        if is_dumping_spot(tags):
+            return None
         return "big", "general"
 
     if amenity == "waste_basket":
         return "small", "general"
 
     if amenity == "recycling":
-        # §7 only wants containers, not the bring-bank "centre" type.
-        if tags.get("recycling_type") != "container":
+        # A recycling centre is a yard you drive to, not a container on the street.
+        # Untagged recycling_type is nearly always a container, so it is kept.
+        if tags.get("recycling_type") == "centre":
             return None
 
         materials = [
             name
-            for name, key in (
-                ("glass", "recycling:glass"),
-                ("paper", "recycling:paper"),
-                ("plastic", "recycling:plastic"),
-            )
-            if tags.get(key) in ("yes", "only")
+            for name, suffixes in MATERIALS.items()
+            if any(tags.get(f"recycling:{suffix}") in ("yes", "only") for suffix in suffixes)
         ]
 
         if len(materials) == 1:
@@ -187,7 +223,65 @@ def classify(tags: dict) -> tuple[str, str] | None:
         # Several materials in one unit, or none tagged: the spec's catch-all.
         return "big", "mixed_recycling"
 
+    # A bus stop (or bench, platform, …) that has a bin, per its bin=yes tag.
+    if tags.get("bin") == "yes":
+        return "small", "general"
+
     return None
+
+
+def to_container(element: dict) -> Container | None:
+    """One Overpass element (or the Overture equivalent) → Container, or None."""
+    if element.get("type") not in ("node", "way"):
+        return None
+    tags = element.get("tags", {})
+    mapping = classify(tags)
+    if mapping is None:
+        return None
+
+    # Overpass puts a way's `out center` point under "center".
+    point = element.get("center") or element
+    if "lat" not in point or "lon" not in point:
+        return None
+
+    kind, category = mapping
+    return Container(
+        osm_id=element["id"] if element["type"] == "node" else -element["id"],
+        kind=kind,
+        category=category,
+        lon=point["lon"],
+        lat=point["lat"],
+        from_bin_tag=tags.get("amenity") not in ("waste_disposal", "waste_basket", "recycling"),
+    )
+
+
+def distance_m(a: Container, b: Container) -> float:
+    """Haversine. Plenty accurate at the tens-of-metres scale it is used for."""
+    lat1, lat2 = math.radians(a.lat), math.radians(b.lat)
+    dlat = lat2 - lat1
+    dlon = math.radians(b.lon - a.lon)
+    h = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    return 2 * 6_371_000 * math.asin(math.sqrt(h))
+
+
+def drop_bin_tag_duplicates(containers: list[Container]) -> tuple[list[Container], int]:
+    """Drop bin=yes points that a mapped can, or another bin=yes point, already covers."""
+    mapped_cans = [c for c in containers if c.kind == "small" and not c.from_bin_tag]
+    kept: list[Container] = []
+    kept_bin_tags: list[Container] = []
+    dropped = 0
+
+    for container in containers:
+        if container.from_bin_tag and (
+            any(distance_m(container, can) <= BIN_TAG_MERGE_M for can in mapped_cans)
+            or any(distance_m(container, other) <= BIN_TAG_SELF_M for other in kept_bin_tags)
+        ):
+            dropped += 1
+            continue
+        kept.append(container)
+        if container.from_bin_tag:
+            kept_bin_tags.append(container)
+    return kept, dropped
 
 
 # ---------------------------------------------------------------------------------------------
@@ -383,6 +477,22 @@ def parse_boundaries(payload: dict) -> list[Boundary]:
     return boundaries
 
 
+def boundaries_from_overture(records: list[dict]) -> list[Boundary]:
+    """Overture hands back finished polygons, so only the name matching is shared."""
+    boundaries: list[Boundary] = []
+    for record in records:
+        municipality_id = match_municipality(record["tags"])
+        if municipality_id is None:
+            continue
+        boundaries.append(Boundary(
+            municipality_id=municipality_id,
+            name=record["tags"].get("name") or str(municipality_id),
+            outers=[[tuple(point) for point in ring] for ring in record["outers"]],
+            inners=[[tuple(point) for point in ring] for ring in record["inners"]],
+        ))
+    return boundaries
+
+
 # ---------------------------------------------------------------------------------------------
 # SQL generation
 # ---------------------------------------------------------------------------------------------
@@ -391,7 +501,8 @@ def sql_escape(value: str) -> str:
     return value.replace("'", "''")
 
 
-def write_sql(containers: list[Container], boundaries: list[Boundary], path: Path) -> None:
+def write_sql(containers: list[Container], boundaries: list[Boundary], path: Path,
+              source: str, regenerate: str, dumping_spots: list[int]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     out: list[str] = []
     add = out.append
@@ -400,14 +511,18 @@ def write_sql(containers: list[Container], boundaries: list[Boundary], path: Pat
     add("-- Kanta — OpenStreetMap seed (KANTA_SPEC.md §7)")
     add("--")
     add("-- GENERATED FILE — do not edit by hand.")
-    add("-- Regenerate with:  python3 tools/import_osm/import_osm.py")
+    add(f"-- Regenerate with:  {regenerate}")
     add("--")
-    add(f"-- Containers: {len(containers)}   Boundaries: {len(boundaries)}")
+    add(f"-- Source: {source}")
+    add(f"-- Containers: {len(containers)}"
+        f" ({sum(c.from_bin_tag for c in containers)} of them bus-stop bins)"
+        f"   Boundaries: {len(boundaries)}")
     add("--")
     add("-- Data © OpenStreetMap contributors, ODbL. The app credits this on the map (§7).")
     add("--")
     add("-- Safe to re-run: containers are matched on osm_id and never duplicated,")
-    add("-- and boundaries are overwritten in place.")
+    add("-- rows next to a container someone added in the app are skipped, and")
+    add("-- boundaries are overwritten in place.")
     add("-- =============================================================================")
     add("set search_path to public, extensions;")
     add("")
@@ -440,13 +555,18 @@ def write_sql(containers: list[Container], boundaries: list[Boundary], path: Pat
     add("-- -----------------------------------------------------------------------------")
     add("select sync_container_code_seq();")
     add("")
+    add("-- osm_id: nodes as-is, ways negated (OSM numbers nodes and ways separately).")
+    add("-- dedupe_m: how close a container added in the app may be before this row")
+    add("-- counts as the same one (§4.6 radii; wider for bus-stop bins, whose point")
+    add("-- is the stop's).")
     add("create temp table osm_import (")
     add("    ordinal  int,")
     add("    osm_id   bigint,")
     add("    kind     text,")
     add("    category text,")
     add("    lon      double precision,")
-    add("    lat      double precision")
+    add("    lat      double precision,")
+    add("    dedupe_m double precision")
     add(") on commit drop;")
     add("")
 
@@ -456,16 +576,18 @@ def write_sql(containers: list[Container], boundaries: list[Boundary], path: Pat
         chunk_size = 500
         for start in range(0, len(containers), chunk_size):
             chunk = containers[start:start + chunk_size]
-            add("insert into osm_import (ordinal, osm_id, kind, category, lon, lat) values")
+            add("insert into osm_import (ordinal, osm_id, kind, category, lon, lat, dedupe_m) values")
             rows = [
                 f"    ({start + offset + 1}, {c.osm_id}, '{c.kind}', '{c.category}', "
-                f"{c.lon:.7f}, {c.lat:.7f})"
+                f"{c.lon:.7f}, {c.lat:.7f}, "
+                f"{BIN_TAG_MERGE_M if c.from_bin_tag else DUPLICATE_M[c.kind]:.0f})"
                 for offset, c in enumerate(chunk)
             ]
             add(",\n".join(rows) + ";")
             add("")
 
-    add("-- Only rows we have never imported before (idempotent re-run).")
+    add("-- Only rows we have never imported before (idempotent re-run), and not where")
+    add("-- someone already added the same kind of container in the app.")
     add("insert into containers (code, kind, category, geom, source, osm_id,")
     add("                        verified, status, status_since, created_at)")
     add("select")
@@ -484,7 +606,27 @@ def write_sql(containers: list[Container], boundaries: list[Boundary], path: Pat
     add("where not exists (")
     add("    select 1 from containers c where c.osm_id = o.osm_id")
     add(")")
+    add("and not exists (")
+    add("    select 1 from containers c")
+    add("     where c.source <> 'osm'")
+    add("       and c.deleted_at is null")
+    add("       and c.kind = o.kind")
+    add("       and st_dwithin(c.geom, st_setsrid(st_makepoint(o.lon, o.lat), 4326)::geography,")
+    add("                      o.dedupe_m)")
+    add(")")
     add("order by o.ordinal;")
+    add("")
+    add("-- Dumping spots (waste_disposal + informal=yes) are not containers. Earlier")
+    add("-- imports took them in; this removes them the same way admins do (soft delete).")
+    if dumping_spots:
+        ids = ", ".join(str(i) for i in sorted(dumping_spots))
+        add("update containers")
+        add("   set deleted_at = now()")
+        add(" where source = 'osm'")
+        add("   and deleted_at is null")
+        add(f"   and osm_id in ({ids});")
+    else:
+        add("-- (none found in this run)")
     add("")
 
     # --- municipality assignment ------------------------------------------------------
@@ -576,6 +718,8 @@ def print_summary(containers: list[Container], boundaries: list[Boundary]) -> No
     print("-" * 72)
     print(f"{'TOTAL':<26}{totals['big']:>7}{totals['recycling']:>12}"
           f"{totals['small']:>13}{len(containers):>8}")
+    print(f"{sum(c.from_bin_tag for c in containers)} of the small cans are bus stops "
+          f"tagged bin=yes; the rest are mapped bins.")
     print()
     print(f"Municipality boundaries downloaded: {len(boundaries)}/10")
 
@@ -640,12 +784,17 @@ def main() -> int:
     )
     parser.add_argument("--out", type=Path, default=OUTPUT_SQL,
                         help=f"SQL file to write (default: {OUTPUT_SQL})")
+    parser.add_argument("--source", choices=("overpass", "overture"), default="overpass",
+                        help="where to read OSM data from: live Overpass (default), or "
+                             "Overture Maps' monthly copy when Overpass is unreachable")
     parser.add_argument("--cache-dir", type=Path, default=Path("tools/import_osm/.cache"),
-                        help="where to cache Overpass responses")
+                        help="where to cache downloaded responses")
     parser.add_argument("--no-cache", action="store_true",
-                        help="ignore any cached response and re-query Overpass")
+                        help="ignore any cached response and download again")
     parser.add_argument("--overpass-url", default=OVERPASS_URL,
                         help="alternative Overpass instance")
+    parser.add_argument("--overture-release", default=None,
+                        help="Overture release, e.g. 2026-09-23.1 (default: the newest)")
     parser.add_argument("--skip-boundaries", action="store_true",
                         help="containers only (boundaries are the slow half)")
     arguments = parser.parse_args()
@@ -653,66 +802,124 @@ def main() -> int:
     cache_dir = None if arguments.no_cache else arguments.cache_dir
 
     print("Kanta — OpenStreetMap import (spec §7)")
-    print(f"Overpass: {arguments.overpass_url}")
-    print()
 
-    # --- containers -------------------------------------------------------------------
-    print("1. Containers")
-    payload = overpass(
-        CONTAINERS_QUERY,
-        cache_dir / "containers.json" if cache_dir else None,
-        "containers",
-        arguments.overpass_url,
-    )
+    if arguments.source == "overpass":
+        print(f"Overpass: {arguments.overpass_url}")
+        source_note = "OpenStreetMap via the Overpass API"
+        regenerate = "python3 tools/import_osm/import_osm.py"
 
-    containers: list[Container] = []
-    skipped = 0
-    for element in payload.get("elements", []):
-        if element.get("type") != "node":
-            continue
-        mapping = classify(element.get("tags", {}))
-        if mapping is None:
-            skipped += 1
-            continue
-        kind, category = mapping
-        containers.append(Container(
-            osm_id=element["id"],
-            kind=kind,
-            category=category,
-            lon=element["lon"],
-            lat=element["lat"],
-        ))
-
-    print(f"  {len(containers)} containers mapped"
-          + (f", {skipped} nodes skipped (not a container type)" if skipped else ""))
-
-    # --- boundaries -------------------------------------------------------------------
-    boundaries: list[Boundary] = []
-    if arguments.skip_boundaries:
-        print("\n2. Boundaries — skipped (--skip-boundaries)")
-    else:
-        print("\n2. Municipality boundaries")
-        boundary_payload = overpass(
-            BOUNDARIES_QUERY,
-            cache_dir / "boundaries.json" if cache_dir else None,
-            "boundaries",
+        print("\n1. Containers")
+        # Named after the query, so a response cached for an older query is
+        # never mistaken for this one.
+        query_hash = hashlib.sha1(CONTAINERS_QUERY.encode("utf-8")).hexdigest()[:8]
+        elements = overpass(
+            CONTAINERS_QUERY,
+            cache_dir / f"containers-{query_hash}.json" if cache_dir else None,
+            "containers",
             arguments.overpass_url,
-        )
-        boundaries = parse_boundaries(boundary_payload)
+        ).get("elements", [])
+
+        boundaries: list[Boundary] = []
+        if arguments.skip_boundaries:
+            print("\n2. Boundaries — skipped (--skip-boundaries)")
+        else:
+            print("\n2. Municipality boundaries")
+            boundary_payload = overpass(
+                BOUNDARIES_QUERY,
+                cache_dir / "boundaries.json" if cache_dir else None,
+                "boundaries",
+                arguments.overpass_url,
+            )
+            boundaries = parse_boundaries(boundary_payload)
+    else:
+        import overture  # pyarrow lives behind this import; Overpass needs nothing
+
+        release = arguments.overture_release or overture.latest_release()
+        print(f"Overture Maps release {release}")
+        source_note = f"OpenStreetMap via Overture Maps release {release}"
+        regenerate = "python3 tools/import_osm/import_osm.py --source overture"
+
+        def cached(name: str, download):
+            path = cache_dir / f"overture-{release}-{name}.json" if cache_dir else None
+            if path and path.exists():
+                print(f"  using cached {name}: {path}")
+                return json.loads(path.read_text())
+            print(f"  reading {name} from Overture…")
+            data = download(release)
+            if path:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(data))
+            return data
+
+        print("\n1. Containers")
+        elements = cached("containers", overture.fetch_elements)
+
+        boundaries = []
+        if arguments.skip_boundaries:
+            print("\n2. Boundaries — skipped (--skip-boundaries)")
+        else:
+            print("\n2. Municipality boundaries")
+            boundaries = boundaries_from_overture(cached("boundaries", overture.fetch_boundaries))
+
+    if not arguments.skip_boundaries:
         print(f"  {len(boundaries)} municipalities matched and assembled")
 
-    # --- assign for the summary -------------------------------------------------------
-    # The database repeats this authoritatively with ST_Contains (§7); this pass
-    # exists so the summary below can be printed before any SQL is run.
-    if boundaries:
-        for container in containers:
-            for boundary in boundaries:
-                if boundary.contains(container.lon, container.lat):
-                    container.municipality_id = boundary.municipality_id
-                    break
+    # --- classify ---------------------------------------------------------------------
+    containers: list[Container] = []
+    dumping_spots: list[tuple[int, float, float]] = []   # (node id, lon, lat)
+    skipped = 0
+    for element in elements:
+        container = to_container(element)
+        if container is not None:
+            containers.append(container)
+        elif element.get("type") == "node" and is_dumping_spot(element.get("tags", {})):
+            dumping_spots.append((element["id"], element["lon"], element["lat"]))
+        else:
+            skipped += 1
+
+    # Stable order, so a fresh database gets the same SK- codes every run:
+    # mapped containers first, then bus-stop bins; nodes before ways; by id.
+    containers.sort(key=lambda c: (c.from_bin_tag, c.osm_id < 0, abs(c.osm_id)))
+
+    # --- keep what is inside the ten municipalities ------------------------------------
+    # The queries use a box that also covers neighbouring municipalities. The
+    # boundaries decide, here for the summary and again in the database with
+    # ST_Contains (§7).
+    for container in containers:
+        for boundary in boundaries:
+            if boundary.contains(container.lon, container.lat):
+                container.municipality_id = boundary.municipality_id
+                break
+
+    if len(boundaries) == len(MUNICIPALITIES):
+        outside = sum(c.municipality_id is None for c in containers)
+        containers = [c for c in containers if c.municipality_id is not None]
+        dumping_spots = [
+            spot for spot in dumping_spots
+            if any(b.contains(spot[1], spot[2]) for b in boundaries)
+        ]
+    else:
+        outside = 0
+        print("  WARNING: without all ten boundaries nothing can be clipped to the city;")
+        print("  everything in the search box is kept.")
+
+    containers, merged = drop_bin_tag_duplicates(containers)
+
+    print(f"\n  {len(containers)} containers"
+          f" ({sum(c.from_bin_tag for c in containers)} from bus stops tagged bin=yes)")
+    if outside:
+        print(f"  {outside} outside the ten municipalities, left out")
+    if merged:
+        print(f"  {merged} bin=yes points already covered by a mapped can, left out")
+    if dumping_spots:
+        print(f"  {len(dumping_spots)} informal dumping spots (not containers), left out"
+              " and removed if an earlier import took them in")
+    if skipped:
+        print(f"  {skipped} elements skipped (not a container type)")
 
     # --- write ------------------------------------------------------------------------
-    write_sql(containers, boundaries, arguments.out)
+    write_sql(containers, boundaries, arguments.out, source_note, regenerate,
+              [spot[0] for spot in dumping_spots])
     size_kb = arguments.out.stat().st_size / 1024
     print(f"\n3. Wrote {arguments.out} ({size_kb:.0f} KB)")
 
