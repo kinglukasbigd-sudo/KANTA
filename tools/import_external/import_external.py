@@ -17,7 +17,7 @@ Everything imported starts UNVERIFIED (dashed marker, §4.6) unless --verified i
 passed for a list you trust. Neighbours confirm it with "Yes, it's here", and
 two "missing" reports remove it, exactly like a container added in the app.
 
-Standard library only. See tools/import_external/README.md.
+Standard library only, except `mapillary`, which needs mapbox-vector-tile. See tools/import_external/README.md.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 import os
 import re
 import sys
@@ -41,7 +42,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "import_osm"))
 from import_osm import Boundary  # noqa: E402
 
 SEED_SQL = Path("supabase/seed/containers.sql")
-MAPILLARY_URL = "https://graph.mapillary.com/map_features"
+MAPILLARY_TILES = "https://tiles.mapillary.com/maps/vtp/mly_map_feature_point/2/{z}/{x}/{y}"
+MAPILLARY_ZOOM = 14
+# Two detections closer than this are taken to be the same can.
+MAPILLARY_SELF_M = 3.0
 
 # Mapillary places a detection from several photos, so it can be several metres
 # off. Inside this radius of an existing container of the same kind, it is
@@ -104,32 +108,47 @@ def assign(rows: list[Row], boundaries: list[Boundary]) -> tuple[list[Row], int]
 
 # ---------------------------------------------------------------------------------------------
 # Mapillary
+#
+# Read from Mapillary's map-feature vector tiles. Its search API (graph.mapillary.com
+# /map_features) accepts the token but returns no data for any area, so tiles are the
+# route that works. Each zoom-14 tile is about 2.4 × 1.8 km over Skopje.
 # ---------------------------------------------------------------------------------------------
 
-def mapillary_tile(token: str, box: tuple[float, float, float, float], cache: Path | None) -> list[dict]:
-    """Trash-can map features in one box (west, south, east, north)."""
-    key = "_".join(f"{v:.4f}" for v in box)
-    path = cache / f"mapillary-{key}.json" if cache else None
-    if path and path.exists():
-        return json.loads(path.read_text())
+def _tile_range(west: float, south: float, east: float, north: float, zoom: int):
+    n = 2 ** zoom
 
-    query = urllib.parse.urlencode({
-        "access_token": token,
-        "fields": "id,object_value,geometry,last_seen_at",
-        "object_values": "object--trash-can",
-        "bbox": ",".join(f"{v:.6f}" for v in box),
-        "limit": 2000,
-    })
+    def tile_x(lon: float) -> int:
+        return int((lon + 180) / 360 * n)
+
+    def tile_y(lat: float) -> int:
+        return int((1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * n)
+
+    return [
+        (x, y)
+        for x in range(tile_x(west), tile_x(east) + 1)
+        for y in range(tile_y(north), tile_y(south) + 1)
+    ]
+
+
+def mapillary_tile(token: str, x: int, y: int, cache: Path | None) -> bytes:
+    """One zoom-14 map-feature tile, as raw Mapbox Vector Tile bytes."""
+    path = cache / f"mapillary-{MAPILLARY_ZOOM}-{x}-{y}.pbf" if cache else None
+    if path and path.exists():
+        return path.read_bytes()
+
+    url = MAPILLARY_TILES.format(z=MAPILLARY_ZOOM, x=x, y=y) + "?" + urllib.parse.urlencode(
+        {"access_token": token})
     for attempt in range(1, 4):
         try:
-            with urllib.request.urlopen(f"{MAPILLARY_URL}?{query}", timeout=120) as response:
-                data = json.loads(response.read().decode("utf-8")).get("data", [])
+            with urllib.request.urlopen(url, timeout=120) as response:
+                data = response.read()
             break
         except urllib.error.HTTPError as error:
             if error.code in (401, 403):
                 raise SystemExit("Mapillary refused the token (HTTP %d). Check MAPILLARY_TOKEN." % error.code)
-            if error.code == 400:
-                raise ValueError("box too large") from error
+            if error.code == 404:  # no imagery here at all
+                data = b""
+                break
             if attempt == 3:
                 raise
             time.sleep(10 * attempt)
@@ -140,60 +159,56 @@ def mapillary_tile(token: str, box: tuple[float, float, float, float], cache: Pa
 
     if path:
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data))
+        path.write_bytes(data)
     return data
 
 
-def fetch_mapillary(token: str, boundaries: list[Boundary], cache: Path | None) -> list[Row]:
+def fetch_mapillary(token: str, boundaries: list[Boundary], cache: Path | None,
+                    seen_since: int | None = None) -> list[Row]:
+    try:
+        import mapbox_vector_tile
+    except ImportError:
+        raise SystemExit("\nThe mapillary command needs:  pip install mapbox-vector-tile\n") from None
+
     lons = [p[0] for b in boundaries for ring in b.outers for p in ring]
     lats = [p[1] for b in boundaries for ring in b.outers for p in ring]
-    west, south, east, north = min(lons), min(lats), max(lons), max(lats)
+    tiles = _tile_range(min(lons), min(lats), max(lons), max(lats), MAPILLARY_ZOOM)
+    n = 2 ** MAPILLARY_ZOOM
 
-    # Start with 0.04° tiles and split any that are refused or come back full.
-    step = 0.04
-    queue = [
-        (x, y, min(x + step, east), min(y + step, north))
-        for x in _frange(west, east, step)
-        for y in _frange(south, north, step)
-    ]
-    features: dict[str, dict] = {}
-    done = 0
-    while queue:
-        box = queue.pop()
-        try:
-            data = mapillary_tile(token, box, cache)
-        except ValueError:
-            data = None
-        if data is None or len(data) >= 2000:
-            mid_x, mid_y = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
-            queue += [
-                (box[0], box[1], mid_x, mid_y), (mid_x, box[1], box[2], mid_y),
-                (box[0], mid_y, mid_x, box[3]), (mid_x, mid_y, box[2], box[3]),
-            ]
-            continue
-        for feature in data:
-            features[str(feature["id"])] = feature
-        done += 1
-        print(f"\r  {done} tiles, {len(features)} trash cans so far", end="", flush=True)
+    features: dict[str, tuple[float, float]] = {}
+    for done, (x, y) in enumerate(tiles, start=1):
+        data = mapillary_tile(token, x, y, cache)
+        layers = mapbox_vector_tile.decode(data, default_options={"y_coord_down": True}) if data else {}
+        for layer in layers.values():
+            extent = layer.get("extent", 4096)
+            for feature in layer["features"]:
+                props = feature["properties"]
+                if props.get("value") != "object--trash-can":
+                    continue
+                # Most of Skopje's imagery is from 2019; an old sighting may be gone.
+                if seen_since and time.gmtime(props.get("last_seen_at", 0) / 1000).tm_year < seen_since:
+                    continue
+                px, py = feature["geometry"]["coordinates"]
+                lon = (x + px / extent) / n * 360 - 180
+                lat = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + py / extent) / n))))
+                features[str(props["id"])] = (lon, lat)
+        print(f"\r  {done}/{len(tiles)} tiles, {len(features)} trash cans so far", end="", flush=True)
     print()
 
-    return [
-        Row(
-            external_id=feature_id,
-            kind="small",
-            category="general",
-            lon=feature["geometry"]["coordinates"][0],
-            lat=feature["geometry"]["coordinates"][1],
-        )
-        for feature_id, feature in sorted(features.items())
-    ]
+    # One can is sometimes detected twice from different photo sequences.
+    rows: list[Row] = []
+    for feature_id, (lon, lat) in sorted(features.items()):
+        row = Row(feature_id, "small", "general", lon, lat)
+        if any(_distance_m(row, other) <= MAPILLARY_SELF_M for other in rows):
+            continue
+        rows.append(row)
+    return rows
 
 
-def _frange(start: float, stop: float, step: float):
-    value = start
-    while value < stop:
-        yield value
-        value += step
+def _distance_m(a: Row, b: Row) -> float:
+    dlat = math.radians(b.lat - a.lat)
+    dlon = math.radians(b.lon - a.lon) * math.cos(math.radians(a.lat))
+    return 6_371_000 * math.hypot(dlat, dlon)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -393,6 +408,8 @@ def main() -> int:
     mapillary.add_argument("--out", type=Path, default=Path("supabase/seed/mapillary.sql"))
     mapillary.add_argument("--cache-dir", type=Path, default=Path("tools/import_external/.cache"))
     mapillary.add_argument("--no-cache", action="store_true")
+    mapillary.add_argument("--seen-since", type=int, default=None, metavar="YEAR",
+                           help="only cans last seen in this year or later (default: all)")
 
     listing = commands.add_parser("list", help="an operator's list: .csv, .geojson or .kml")
     listing.add_argument("file", type=Path)
@@ -415,7 +432,7 @@ def main() -> int:
                              "Get one free at https://www.mapillary.com/dashboard/developers")
         print("Mapillary trash-can detections")
         cache = None if arguments.no_cache else arguments.cache_dir
-        rows = fetch_mapillary(arguments.token, boundaries, cache)
+        rows = fetch_mapillary(arguments.token, boundaries, cache, arguments.seen_since)
         rows, outside = assign(rows, boundaries)
         write_sql(rows, arguments.out, "mapillary", False,
                   "trash cans detected by Mapillary (check Mapillary's terms before release)",
