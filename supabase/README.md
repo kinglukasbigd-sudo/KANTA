@@ -182,8 +182,9 @@ these to string resources.
 
 - **Containers and boundaries** come from OpenStreetMap:
   `python3 tools/import_osm/import_osm.py`, then run the generated
-  `seed/containers.sql` here. Note that Skopje's municipalities are OSM
-  **admin_level=7**, not 8 as spec §7 says — the importer handles it. Until the
+  `seed/containers.sql` here. If Overpass is unreachable, add
+  `--source overture` (needs `pip install pyarrow`) to read the same data from
+  Overture Maps. Skopje's municipalities are OSM **admin_level=7**. Until the
   boundaries are loaded, `municipality_at()` returns NULL and city stats group
   everything as unassigned; expected, not a bug.
 - **Re-running migrations.** The files are written to be idempotent
