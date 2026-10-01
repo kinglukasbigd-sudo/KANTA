@@ -45,3 +45,4 @@ supabase/.db-url
 # ---- Tool caches ----
 __pycache__/
 tools/map_style/.cache/
+tools/import_external/.cache/

@@ -122,11 +122,12 @@ app/src/main/java/mk/kanta/app/
     admin/          review queue, unverified list, coverage
     auth/ profile/  sign-in sheet, profile
 supabase/
-  migrations/       0001–0015, run in order
+  migrations/       0001–0018, run in order
   seed/             municipalities + containers imported from OpenStreetMap
   tests/            server rule tests
 tools/
   import_osm/       fetches Skopje's containers and municipality borders from OpenStreetMap
+  import_external/  Mapillary detections and operator lists (CSV, GeoJSON, KML); see its README
   map_style/        builds the light/dark map styles; see MAPUTNIK.md to restyle the map
 ```
 
