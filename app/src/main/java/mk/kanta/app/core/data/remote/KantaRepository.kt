@@ -281,16 +281,23 @@ class KantaRepository @Inject constructor(
         put("p_confirm_different", confirmDifferent)
     }
 
-    /** `confirm_container_exists` — the one-tap "Yes, it's here". */
+    /**
+     * `confirm_container_exists` — the one-tap "Yes, it's here". With [seenKind],
+     * `confirm_container_exists_as`: "…but it's a big container". Two of those
+     * change the container's kind (0019).
+     */
     fun confirmContainerExists(
         containerId: String,
         lon: Double,
         lat: Double,
-    ): Flow<KantaResult<ConfirmContainerResultDto>> = rpcFirst("confirm_container_exists") {
-        put("p_container_id", containerId)
-        put("p_lon", lon)
-        put("p_lat", lat)
-    }
+        seenKind: ContainerKind? = null,
+    ): Flow<KantaResult<ConfirmContainerResultDto>> =
+        rpcFirst(if (seenKind == null) "confirm_container_exists" else "confirm_container_exists_as") {
+            put("p_container_id", containerId)
+            put("p_lon", lon)
+            put("p_lat", lat)
+            if (seenKind != null) put("p_kind", seenKind.wire)
+        }
 
     /** `submit_container_request` — for users who used up their 2 adds. */
     fun submitContainerRequest(
@@ -361,6 +368,13 @@ class KantaRepository @Inject constructor(
 
     fun adminDeleteContainer(containerId: String): Flow<KantaResult<Boolean>> =
         rpcScalar("admin_delete_container") { put("p_id", containerId) }
+
+    /** Big container ↔ small can, on any container (0019). */
+    fun adminSetContainerKind(containerId: String, kind: ContainerKind): Flow<KantaResult<Boolean>> =
+        rpcScalar("admin_set_container_kind") {
+            put("p_id", containerId)
+            put("p_kind", kind.wire)
+        }
 
     /** `admin_coverage` — GeoJSON of where checks happened, as a raw string. */
     fun adminCoverage(days: Int = 90): Flow<KantaResult<String>> =

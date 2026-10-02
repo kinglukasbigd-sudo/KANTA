@@ -38,6 +38,11 @@ class for all trash cans, from street bins to 1,100-litre containers. Two
 detections within 3 m count as one can, and a detection within 10 m of an
 existing small can is skipped.
 
+The big containers among them are found on the ground: next to "Yes, it's
+here", the app offers "It's here, but it's a big container", and two of those
+turn the can into a big container (migration 0019). An admin can also change
+any container's kind from its detail sheet.
+
 **Age.** Most of Skopje's imagery is from 2019. Of the 5,159 detections in the
 city (October 2026), about 3,900 were last seen in 2020 or earlier and 1,261
 since 2021. Old sightings may be gone. They start unverified, so neighbours

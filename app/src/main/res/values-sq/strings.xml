@@ -213,6 +213,11 @@
     <string name="container_detail_unverified_confirmed">Konfirmove që është këtu — pritet edhe një fqinj.</string>
     <string name="notice_confirmed">Faleminderit — konfirmimi yt u shtua.</string>
     <string name="notice_confirmed_verified">U konfirmua — tani është përfundimisht në hartë.</string>
+    <string name="container_action_exists_as_big">Është këtu, por është kontejner i madh</string>
+    <string name="container_action_exists_as_small">Është këtu, por është kosh i vogël</string>
+    <string name="notice_kind_changed_big">Faleminderit — tani në hartë është kontejner i madh.</string>
+    <string name="notice_kind_changed_small">Faleminderit — tani në hartë është kosh i vogël.</string>
+    <string name="notice_kind_vote">Faleminderit — kur edhe një fqinj thotë të njëjtën, harta ndryshon.</string>
     <string name="admin_title">Administrimi</string>
     <string name="admin_tab_requests">Kërkesat</string>
     <string name="admin_tab_unverified">Të pakonfirmuar</string>
@@ -237,6 +242,10 @@
     <string name="notice_admin_rejected">Kërkesa u refuzua.</string>
     <string name="notice_admin_verified">U konfirmua.</string>
     <string name="notice_admin_deleted">U hoq nga harta.</string>
+    <string name="admin_set_kind_big">Ndrysho në kontejner të madh</string>
+    <string name="admin_set_kind_small">Ndrysho në kosh të vogël</string>
+    <string name="notice_admin_kind_big">U ndryshua në kontejner të madh.</string>
+    <string name="notice_admin_kind_small">U ndryshua në kosh të vogël.</string>
     <plurals name="admin_confirmations">
         <item quantity="one">%d konfirmim</item>
         <item quantity="other">%d konfirmime</item>

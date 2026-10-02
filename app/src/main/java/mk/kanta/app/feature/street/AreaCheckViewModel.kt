@@ -254,7 +254,12 @@ class AreaCheckViewModel @Inject constructor(
     // "Yes, it's here" (§4.6 step 3)
     // -----------------------------------------------------------------------------------------
 
-    fun confirmExists(containerId: String) {
+    fun confirmExists(containerId: String) = confirm(containerId, seenKind = null)
+
+    /** "It's here, but it's a big container" — two of these change its kind (0019). */
+    fun confirmExistsAs(containerId: String, kind: ContainerKind) = confirm(containerId, seenKind = kind)
+
+    private fun confirm(containerId: String, seenKind: ContainerKind?) {
         if (_state.value.confirmingId != null) return
         _state.update { it.copy(confirmingId = containerId, error = null) }
         viewModelScope.launch {
@@ -263,7 +268,7 @@ class AreaCheckViewModel @Inject constructor(
                 _state.update { it.copy(confirmingId = null, error = KantaError.TooFarToConfirm(null)) }
                 return@launch
             }
-            repository.confirmContainerExists(containerId, here.lon, here.lat).collect { result ->
+            repository.confirmContainerExists(containerId, here.lon, here.lat, seenKind).collect { result ->
                 when (result) {
                     is KantaResult.Loading -> Unit
                     is KantaResult.Failure -> _state.update { it.copy(confirmingId = null, error = result.error) }

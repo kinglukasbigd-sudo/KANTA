@@ -305,6 +305,9 @@ fun MapScreen(
                                 onEmptied = viewModel::onEmptied,
                                 onReportOther = onReport,
                                 onConfirmExists = viewModel::onConfirmExists,
+                                onConfirmExistsAs = viewModel::onConfirmExistsAs,
+                                isAdmin = isAdmin,
+                                onAdminSetKind = viewModel::onAdminSetKind,
                                 onNearestWithSpace = {
                                     state.selectedId?.let { id ->
                                         alternativesViewModel.open(
@@ -339,6 +342,7 @@ fun MapScreen(
                     onCancelPicking = areaCheckViewModel::cancelPicking,
                     onConfirmExists = areaCheckViewModel::confirmExists,
                     onLater = areaCheckViewModel::later,
+                    onConfirmExistsAs = areaCheckViewModel::confirmExistsAs,
                 )
                 SheetMode.Admin -> AdminContent(
                     state = admin,

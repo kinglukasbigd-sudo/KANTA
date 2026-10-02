@@ -218,6 +218,11 @@
     <string name="container_detail_unverified_confirmed">Потврди дека е тука — се чека уште еден сосед.</string>
     <string name="notice_confirmed">Благодариме — твојата потврда е додадена.</string>
     <string name="notice_confirmed_verified">Потврдено — сега е трајно на мапата.</string>
+    <string name="container_action_exists_as_big">Тука е, но е голем контејнер</string>
+    <string name="container_action_exists_as_small">Тука е, но е мала корпа</string>
+    <string name="notice_kind_changed_big">Благодариме — сега на мапата е голем контејнер.</string>
+    <string name="notice_kind_changed_small">Благодариме — сега на мапата е мала корпа.</string>
+    <string name="notice_kind_vote">Благодариме — штом уште еден сосед го каже истото, ќе се смени на мапата.</string>
     <string name="admin_title">Администрација</string>
     <string name="admin_tab_requests">Барања</string>
     <string name="admin_tab_unverified">Непотврдени</string>
@@ -242,6 +247,10 @@
     <string name="notice_admin_rejected">Барањето е одбиено.</string>
     <string name="notice_admin_verified">Потврдено.</string>
     <string name="notice_admin_deleted">Отстрането од мапата.</string>
+    <string name="admin_set_kind_big">Промени во голем контејнер</string>
+    <string name="admin_set_kind_small">Промени во мала корпа</string>
+    <string name="notice_admin_kind_big">Сменето во голем контејнер.</string>
+    <string name="notice_admin_kind_small">Сменето во мала корпа.</string>
     <plurals name="admin_confirmations">
         <item quantity="one">%d потврда</item>
         <item quantity="other">%d потврди</item>

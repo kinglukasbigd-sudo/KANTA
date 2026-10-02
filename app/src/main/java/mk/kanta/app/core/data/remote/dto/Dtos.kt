@@ -284,12 +284,14 @@ data class AddContainerResultDto(
     val remaining: Int,
 )
 
-/** `confirm_container_exists` (§4.6). */
+/** `confirm_container_exists` / `confirm_container_exists_as` (§4.6). */
 @Serializable
 data class ConfirmContainerResultDto(
     @SerialName("container_id") val containerId: String,
     val verified: Boolean,
     @SerialName("confirmation_count") val confirmationCount: Long,
+    /** Only from `confirm_container_exists_as`: the kind after this vote. */
+    val kind: String? = null,
 )
 
 /** `submit_container_request` (§4.6). */

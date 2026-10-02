@@ -213,6 +213,11 @@
     <string name="container_detail_unverified_confirmed">You confirmed it’s here — waiting for one more neighbour.</string>
     <string name="notice_confirmed">Thanks — your confirmation was added.</string>
     <string name="notice_confirmed_verified">Confirmed — it’s on the map for good now.</string>
+    <string name="container_action_exists_as_big">It’s here, but it’s a big container</string>
+    <string name="container_action_exists_as_small">It’s here, but it’s a small can</string>
+    <string name="notice_kind_changed_big">Thanks — it’s on the map as a big container now.</string>
+    <string name="notice_kind_changed_small">Thanks — it’s on the map as a small can now.</string>
+    <string name="notice_kind_vote">Thanks — once one more neighbour says the same, the map changes.</string>
     <string name="admin_title">Admin</string>
     <string name="admin_tab_requests">Requests</string>
     <string name="admin_tab_unverified">Unverified</string>
@@ -237,6 +242,10 @@
     <string name="notice_admin_rejected">Request rejected.</string>
     <string name="notice_admin_verified">Verified.</string>
     <string name="notice_admin_deleted">Removed from the map.</string>
+    <string name="admin_set_kind_big">Change to big container</string>
+    <string name="admin_set_kind_small">Change to small can</string>
+    <string name="notice_admin_kind_big">Changed to a big container.</string>
+    <string name="notice_admin_kind_small">Changed to a small can.</string>
     <plurals name="admin_confirmations">
         <item quantity="one">%d confirmation</item>
         <item quantity="other">%d confirmations</item>

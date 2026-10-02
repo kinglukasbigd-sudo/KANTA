@@ -60,8 +60,13 @@ fun ColumnScope.ContainerDetailContent(
     onEmptied: () -> Unit = {},
     onReportOther: () -> Unit = {},
     onConfirmExists: () -> Unit = {},
+    /** "It's here, but it's a big container" (0019). */
+    onConfirmExistsAs: (ContainerKind) -> Unit = {},
     /** §5.2: from a full container, the nearest ones that still have space. */
     onNearestWithSpace: () -> Unit = {},
+    /** §4.6: admins can change a container's kind in one tap (0019). */
+    isAdmin: Boolean = false,
+    onAdminSetKind: (ContainerKind) -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -104,8 +109,11 @@ fun ColumnScope.ContainerDetailContent(
         onEmptied = onEmptied,
         onReportOther = onReportOther,
         onConfirmExists = onConfirmExists,
+        onConfirmExistsAs = onConfirmExistsAs,
         onNavigate = { context.openInMaps(state.lat, state.lon, state.code) },
         onNearestWithSpace = onNearestWithSpace,
+        isAdmin = isAdmin,
+        onAdminSetKind = onAdminSetKind,
     )
 
     Spacer(Modifier.height(Spacing.xl))
@@ -231,9 +239,15 @@ private fun DetailActions(
     onEmptied: () -> Unit,
     onReportOther: () -> Unit,
     onConfirmExists: () -> Unit,
+    onConfirmExistsAs: (ContainerKind) -> Unit,
     onNavigate: () -> Unit,
     onNearestWithSpace: () -> Unit,
+    isAdmin: Boolean,
+    onAdminSetKind: (ContainerKind) -> Unit,
 ) {
+    // A small can that is really a big container, or the other way round.
+    val otherKind = if (state.kind == ContainerKind.BIG) ContainerKind.SMALL else ContainerKind.BIG
+
     Column(
         modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
@@ -248,6 +262,20 @@ private fun DetailActions(
                 ),
                 onClick = onConfirmExists,
                 icon = KantaIcons.Success,
+                enabled = !state.confirmingExists,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            // Mapillary brings every bin in as a small can (tools/import_external),
+            // so the person standing next to it is the one who can say it's big.
+            KantaSecondaryButton(
+                text = stringResource(
+                    if (otherKind == ContainerKind.BIG) {
+                        R.string.container_action_exists_as_big
+                    } else {
+                        R.string.container_action_exists_as_small
+                    },
+                ),
+                onClick = { onConfirmExistsAs(otherKind) },
                 enabled = !state.confirmingExists,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -297,6 +325,21 @@ private fun DetailActions(
             icon = KantaIcons.Navigate,
             modifier = Modifier.fillMaxWidth(),
         )
+
+        if (isAdmin) {
+            KantaSecondaryButton(
+                text = stringResource(
+                    when {
+                        state.changingKind -> R.string.report_sending
+                        otherKind == ContainerKind.BIG -> R.string.admin_set_kind_big
+                        else -> R.string.admin_set_kind_small
+                    },
+                ),
+                onClick = { onAdminSetKind(otherKind) },
+                enabled = !state.changingKind,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

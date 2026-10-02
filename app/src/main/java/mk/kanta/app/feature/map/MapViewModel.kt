@@ -76,6 +76,8 @@ data class ContainerDetailState(
     /** The server's answer to "may this person say it exists?" (0015). */
     val canConfirmExists: Boolean = false,
     val confirmingExists: Boolean = false,
+    /** Admin "Change to big container / small can" in flight (0019). */
+    val changingKind: Boolean = false,
 )
 
 data class MapUiState(
@@ -438,7 +440,12 @@ class MapViewModel @Inject constructor(
     // §4.6 "Yes, it's here" on an unverified container
     // -----------------------------------------------------------------------------------------
 
-    fun onConfirmExists() {
+    fun onConfirmExists() = confirmExists(seenKind = null)
+
+    /** "It's here, but it's a big container" — two of these change its kind (0019). */
+    fun onConfirmExistsAs(kind: ContainerKind) = confirmExists(seenKind = kind)
+
+    private fun confirmExists(seenKind: ContainerKind?) {
         val containerId = _state.value.selectedId ?: return
         val detail = _state.value.detail ?: return
         if (detail.confirmingExists) return
@@ -453,7 +460,7 @@ class MapViewModel @Inject constructor(
                 _state.value = _state.value.copy(error = KantaError.TooFarToConfirm(null))
                 return@launch
             }
-            repository.confirmContainerExists(containerId, here.lon, here.lat).collect { result ->
+            repository.confirmContainerExists(containerId, here.lon, here.lat, seenKind).collect { result ->
                 when (result) {
                     is KantaResult.Loading -> Unit
                     is KantaResult.Failure -> {
@@ -464,11 +471,7 @@ class MapViewModel @Inject constructor(
                         setConfirming(false)
                         _state.value = _state.value.copy(
                             userLocation = here,
-                            notice = if (result.data.verified) {
-                                R.string.notice_confirmed_verified
-                            } else {
-                                R.string.notice_confirmed
-                            },
+                            notice = confirmedNotice(seenKind, result.data.verified, result.data.kind),
                         )
                         if (_state.value.selectedId == containerId) loadDetail(containerId, here)
                         // A container verified just now loses its dashed outline.
@@ -482,6 +485,47 @@ class MapViewModel @Inject constructor(
     private fun setConfirming(value: Boolean) {
         val detail = _state.value.detail ?: return
         _state.value = _state.value.copy(detail = detail.copy(confirmingExists = value))
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // Admin: big container ↔ small can (0019). The server checks role = 'admin'.
+    // -----------------------------------------------------------------------------------------
+
+    fun onAdminSetKind(kind: ContainerKind) {
+        val containerId = _state.value.selectedId ?: return
+        val detail = _state.value.detail ?: return
+        if (detail.changingKind) return
+        _state.value = _state.value.copy(detail = detail.copy(changingKind = true))
+
+        viewModelScope.launch {
+            repository.adminSetContainerKind(containerId, kind).collect { result ->
+                when (result) {
+                    is KantaResult.Loading -> Unit
+                    is KantaResult.Failure -> {
+                        setChangingKind(false)
+                        _state.value = _state.value.copy(error = result.error)
+                    }
+                    is KantaResult.Success -> {
+                        setChangingKind(false)
+                        _state.value = _state.value.copy(
+                            notice = if (kind == ContainerKind.BIG) {
+                                R.string.notice_admin_kind_big
+                            } else {
+                                R.string.notice_admin_kind_small
+                            },
+                        )
+                        if (_state.value.selectedId == containerId) loadDetail(containerId)
+                        // The marker changes shape: rectangle ↔ triangle.
+                        viewport.value?.let { refresh(it) }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setChangingKind(value: Boolean) {
+        val detail = _state.value.detail ?: return
+        _state.value = _state.value.copy(detail = detail.copy(changingKind = value))
     }
 
     private fun loadDetail(containerId: String, from: LatLon? = _state.value.userLocation) {
@@ -601,6 +645,29 @@ private fun String.toStatus(): ContainerStatus = when (this) {
     "destroyed" -> ContainerStatus.DESTROYED
     "missing" -> ContainerStatus.MISSING
     else -> ContainerStatus.OK
+}
+
+/**
+ * The line after "Yes, it's here". [seenKind] is what the person said it is, if
+ * they said; [kindNow] is the kind the server reports after their vote (0019).
+ */
+internal fun confirmedNotice(seenKind: ContainerKind?, verified: Boolean, kindNow: String?): Int {
+    val now = when (kindNow) {
+        "big" -> ContainerKind.BIG
+        "small" -> ContainerKind.SMALL
+        else -> null
+    }
+    return when {
+        seenKind != null && now == seenKind -> if (seenKind == ContainerKind.BIG) {
+            R.string.notice_kind_changed_big
+        } else {
+            R.string.notice_kind_changed_small
+        }
+        // The first of the two votes the change needs.
+        seenKind != null && !verified -> R.string.notice_kind_vote
+        verified -> R.string.notice_confirmed_verified
+        else -> R.string.notice_confirmed
+    }
 }
 
 /**

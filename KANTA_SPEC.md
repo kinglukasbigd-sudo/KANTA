@@ -190,10 +190,11 @@ Tap **Suggest** → map in pick mode with a centre crosshair → confirm spot �
 - When the limit is reached: explain kindly "You've already added your 2 containers — thank you! If another one is missing, send it for review." → the user can send a **container request** (photo + pin + type) that does NOT appear on the map; it goes into the admin review queue. Max 3 requests per user per day.
 - New user-added containers start as `verified = false`: drawn with a **dashed outline** in the normal type/status colour. They become verified when **2 other users** tap "Yes, it's here", or an admin verifies them. Unverified containers can be reported like any other.
 - If 2 users report an unverified container as `missing`, it is removed from the map (soft delete) and the adder's trust_score goes down by 1. When a user's added container gets verified, their trust_score goes up by 1.
+- **Wrong kind.** Next to "Yes, it's here" an unverified container offers **"It's here, but it's a big container"** (or "…a small can" on a big one). It counts as a confirmation like the plain button, and when **2 people** say the other kind, the container changes to it. A container that becomes a small can becomes General; one that becomes big keeps its category. Imported Mapillary detections all start as small cans (Mapillary has one class for every bin), so this is how the big ones among them are found.
 
 **Admin (Ivan)**
 - `profiles.role` = 'user' | 'admin'. Set admin manually in Supabase for Ivan's account.
-- Admins have **no add limit**, their containers are verified immediately, and they see a hidden **Admin** row in the bottom sheet with: review queue of container requests (approve → becomes a verified container / reject), list of unverified containers (verify / delete), and a **coverage map** layer showing where area checks happened (green = checked in last 90 days, empty = never checked) so Ivan knows which parts of Skopje still need mapping.
+- Admins have **no add limit**, their containers are verified immediately, and they see a hidden **Admin** row in the bottom sheet with: review queue of container requests (approve → becomes a verified container / reject), list of unverified containers (verify / delete), and a **coverage map** layer showing where area checks happened (green = checked in last 90 days, empty = never checked) so Ivan knows which parts of Skopje still need mapping. On any container's detail sheet an admin also sees **"Change to big container"** / **"Change to small can"**.
 
 **Data model additions (section 6)**
 ```
@@ -202,6 +203,7 @@ profiles: + role text check in ('user','admin') default 'user'
           + last_area_check_at timestamptz null
 containers: + deleted_at timestamptz null   -- soft delete; all queries ignore deleted rows
 container_confirmations(container_id uuid fk, user_id uuid fk, kind text check in ('exists'), created_at timestamptz,
+  seen_kind text null check in ('big','small'),   -- "It's here, but it's a big container"; null = plain yes
   primary key(container_id, user_id))
 container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text, category text, photo_path text not null,
   note text, state text check in ('pending','approved','rejected') default 'pending',
@@ -209,7 +211,7 @@ container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text
 area_checks(id uuid pk, user_id uuid fk, geom geography(point), radius_m int default 150,
   result text check in ('all_present','added','reported_missing'), created_at timestamptz)
 ```
-**RPC additions:** `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` (enforces 30 m, duplicate radius, the 2-container limit unless admin, updates containers_added), `my_add_allowance()` → remaining adds, `confirm_container_exists(container_id, lon, lat)` (50 m, not the adder, verifies at 2), `submit_container_request(...)` (3/day), `submit_area_check(lon, lat, result)`, `should_prompt_area_check(lon, lat)` → bool, admin-only: `admin_review_request(id, approve bool)`, `admin_verify_container(id)`, `admin_delete_container(id)`, `admin_coverage(days int)` → GeoJSON of checks. RLS: container_requests readable only by their author and admins; admin RPCs check role = 'admin'.
+**RPC additions:** `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` (enforces 30 m, duplicate radius, the 2-container limit unless admin, updates containers_added), `my_add_allowance()` → remaining adds, `confirm_container_exists(container_id, lon, lat)` (50 m, not the adder, verifies at 2), `confirm_container_exists_as(container_id, lon, lat, kind)` (the same, plus the kind the user saw; changes the kind at 2), `submit_container_request(...)` (3/day), `submit_area_check(lon, lat, result)`, `should_prompt_area_check(lon, lat)` → bool, admin-only: `admin_review_request(id, approve bool)`, `admin_verify_container(id)`, `admin_delete_container(id)`, `admin_set_container_kind(id, kind)`, `admin_coverage(days int)` → GeoJSON of checks. RLS: container_requests readable only by their author and admins; admin RPCs check role = 'admin'.
 
 **Map marker addition (section 3.4):** unverified containers keep their normal filled shape and type/status colour at 85% opacity, plus a 1.5dp dashed border and a small "?" badge at zoom ≥ 16. They must never be confused with MISSING, which is hollow. See 3.4 for the full rule and the governing principle (**filled = it exists, hollow = it's gone**).
 
@@ -295,6 +297,7 @@ profiles(id uuid pk references auth.users, display_name text, municipality_id sm
 
 -- 4.6 "Map your street"
 container_confirmations(container_id uuid fk, user_id uuid fk, kind text check in ('exists'), created_at timestamptz,
+  seen_kind text null check in ('big','small'),   -- "It's here, but it's a big container"; null = plain yes
   primary key(container_id, user_id))
 container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text, category text, photo_path text not null,
   note text, state text check in ('pending','approved','rejected') default 'pending',
@@ -321,6 +324,7 @@ RPC functions (SQL, `security definer` where needed):
 - `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` → enforces the 30 m device-to-pin rule, the duplicate radius (10 m big / 5 m small, same kind), and the 2-container lifetime limit unless `role = 'admin'`; increments `profiles.containers_added`; inserts `verified = false` (admins: `verified = true`)
 - `my_add_allowance()` → remaining adds for the current user
 - `confirm_container_exists(container_id, lon, lat)` → 50 m rule, rejects the container's own adder, sets `verified = true` at 2 confirmations and gives the adder trust_score +1
+- `confirm_container_exists_as(container_id, lon, lat, kind)` → `confirm_container_exists` plus the kind the user saw; when 2 confirmations name the same other kind, the container changes to it (§4.6 "Wrong kind")
 - `submit_container_request(lon, lat, kind, category, photo_path, note)` → max 3 per user per day; never appears on the map
 - `submit_area_check(lon, lat, result)` → writes `area_checks`, updates `profiles.last_area_check_at`
 - `should_prompt_area_check(lon, lat)` → bool; true only if the user has no check in 30 days AND the area has no recent check

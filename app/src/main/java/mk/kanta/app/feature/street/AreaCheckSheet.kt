@@ -61,6 +61,8 @@ fun ColumnScope.AreaCheckContent(
     onCancelPicking: () -> Unit,
     onConfirmExists: (String) -> Unit,
     onLater: () -> Unit,
+    /** "It's here, but it's a big container" (0019). */
+    onConfirmExistsAs: (String, ContainerKind) -> Unit = { _, _ -> },
 ) {
     // Fills the sheet's body and scrolls when the content is taller than it.
     Column(
@@ -81,6 +83,7 @@ fun ColumnScope.AreaCheckContent(
                     onMissingOne = onMissingOne,
                     onNotHere = onNotHere,
                     onConfirmExists = onConfirmExists,
+                    onConfirmExistsAs = onConfirmExistsAs,
                     onLater = onLater,
                 )
                 Screen.Pick -> Picking(onCancel = onCancelPicking)
@@ -106,6 +109,7 @@ private fun Asking(
     onMissingOne: () -> Unit,
     onNotHere: () -> Unit,
     onConfirmExists: (String) -> Unit,
+    onConfirmExistsAs: (String, ContainerKind) -> Unit,
     onLater: () -> Unit,
 ) {
     Column {
@@ -148,6 +152,7 @@ private fun Asking(
                     item = item,
                     confirming = state.confirmingId == item.id,
                     onConfirm = { onConfirmExists(item.id) },
+                    onConfirmAs = { kind -> onConfirmExistsAs(item.id, kind) },
                 )
             }
         }
@@ -230,6 +235,7 @@ private fun UnverifiedRow(
     item: UnverifiedNearbyUi,
     confirming: Boolean,
     onConfirm: () -> Unit,
+    onConfirmAs: (ContainerKind) -> Unit,
 ) {
     KantaListRow(
         title = item.code,
@@ -257,6 +263,30 @@ private fun UnverifiedRow(
         },
         showDivider = false,
     )
+    // Mapillary brings every bin in as a small can, so the person standing next to
+    // it says when it is really a big container (0019). Its own line: the row's
+    // trailing slot has no room for a second label this long.
+    if (item.canConfirm) {
+        val otherKind = if (item.kind == ContainerKind.BIG) ContainerKind.SMALL else ContainerKind.BIG
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.screenHorizontal),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            KantaCompactAction(
+                text = stringResource(
+                    if (otherKind == ContainerKind.BIG) {
+                        R.string.container_action_exists_as_big
+                    } else {
+                        R.string.container_action_exists_as_small
+                    },
+                ),
+                onClick = { onConfirmAs(otherKind) },
+                enabled = !confirming,
+            )
+        }
+    }
 }
 
 @Composable
