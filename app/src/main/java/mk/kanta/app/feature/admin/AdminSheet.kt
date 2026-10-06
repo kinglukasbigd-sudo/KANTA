@@ -55,6 +55,7 @@ import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
+import mk.kanta.app.core.designsystem.component.kindLabel
 import mk.kanta.app.core.designsystem.kantaSoftShadow
 import mk.kanta.app.core.network.publicPhotoUrl
 
@@ -100,7 +101,7 @@ fun ColumnScope.AdminContent(
             Text(
                 text = line,
                 style = MaterialTheme.typography.bodySmall,
-                color = if (state.error != null) MarkerColors.Broken else KantaTheme.colors.brand,
+                color = if (state.error != null) KantaTheme.colors.error else KantaTheme.colors.brand,
             )
         }
         Spacer(Modifier.height(Spacing.s))
@@ -119,7 +120,7 @@ fun ColumnScope.AdminContent(
             text = { Text(stringResource(R.string.admin_delete_message, container.code)) },
             confirmButton = {
                 TextButton(onClick = onConfirmDelete) {
-                    Text(stringResource(R.string.admin_delete), color = MarkerColors.Broken)
+                    Text(stringResource(R.string.admin_delete), color = KantaTheme.colors.error)
                 }
             },
             dismissButton = {
@@ -323,7 +324,7 @@ private fun UnverifiedTab(
                                 text = stringResource(R.string.admin_delete),
                                 onClick = { onDelete(container) },
                                 enabled = !busy,
-                                contentColor = MarkerColors.Broken,
+                                contentColor = KantaTheme.colors.error,
                             )
                             Spacer(Modifier.width(Spacing.s))
                             KantaCompactAction(
@@ -442,9 +443,7 @@ private fun Skeletons() {
 
 @Composable
 private fun kindLine(kind: ContainerKind, category: ContainerCategory): String {
-    val kindText = stringResource(
-        if (kind == ContainerKind.BIG) R.string.container_kind_big else R.string.container_kind_small,
-    )
+    val kindText = kindLabel(kind)
     if (kind == ContainerKind.SMALL || category == ContainerCategory.GENERAL) return kindText
     val categoryText = stringResource(
         when (category) {

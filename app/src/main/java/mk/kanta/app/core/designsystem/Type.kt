@@ -12,31 +12,49 @@ import androidx.compose.ui.unit.sp
 import mk.kanta.app.R
 
 /**
- * Typography from KANTA_SPEC.md §3.2.
+ * Typography (KANTA_SPEC.md §3.2): two families with two jobs.
  *
- * Nunito ships from Google Fonts as a single variable font (`wght` axis 200..1000), so all four
- * weights the spec asks for come from one 277 KB file instead of four statics. Verified to cover
- * Macedonian Cyrillic (including Ќ/Џ) and Albanian ë/ç. Licence: assets/fonts/NUNITO_OFL_LICENSE.txt
+ *  - **Manrope** carries everything people read: headings set tight and heavy, body open and
+ *    regular. A clean grotesque, so the app reads as a civic tool rather than a toy.
+ *  - **JetBrains Mono** carries the field-guide chrome: section captions, container codes,
+ *    distances, timestamps, counts. Monospaced, so figures never jitter.
+ *
+ * Both ship as single variable fonts from Google Fonts (`wght` axis), so every weight comes from
+ * one file. Both cover Macedonian Cyrillic (including Ѓ, Ќ, Ѕ, Џ) and Albanian ë/ç, and Manrope has
+ * the `tnum` feature [tabularFigures] relies on. Licences: assets/fonts/*_OFL_LICENSE.txt
  */
-private fun nunito(weight: FontWeight) = Font(
-    resId = R.font.nunito,
+private fun manrope(weight: FontWeight) = Font(
+    resId = R.font.manrope,
     weight = weight,
     variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
 )
 
-val Nunito = FontFamily(
-    nunito(FontWeight.Normal),     // 400
-    nunito(FontWeight.SemiBold),   // 600
-    nunito(FontWeight.Bold),       // 700
-    nunito(FontWeight.ExtraBold),  // 800
+private fun jetBrainsMono(weight: FontWeight) = Font(
+    resId = R.font.jetbrains_mono,
+    weight = weight,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
+)
+
+val Manrope = FontFamily(
+    manrope(FontWeight.Normal),     // 400
+    manrope(FontWeight.Medium),     // 500
+    manrope(FontWeight.SemiBold),   // 600
+    manrope(FontWeight.Bold),       // 700
+    manrope(FontWeight.ExtraBold),  // 800
+)
+
+val KantaMono = FontFamily(
+    jetBrainsMono(FontWeight.Normal),   // 400
+    jetBrainsMono(FontWeight.Medium),   // 500
+    jetBrainsMono(FontWeight.SemiBold), // 600
 )
 
 /** Kept as an alias so call sites read as "the app font". */
-val KantaFontFamily: FontFamily = Nunito
+val KantaFontFamily: FontFamily = Manrope
 
 /**
- * Trim the extra first-line/last-line padding Android adds, so our generous spacing scale
- * (§3.3) is what actually shows up rather than being padded by font metrics.
+ * Trim the extra first-line/last-line padding Android adds, so our spacing scale (§3.3) is what
+ * actually shows up rather than being padded by font metrics.
  */
 private val KantaLineHeightStyle = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,
@@ -48,8 +66,9 @@ private fun kantaStyle(
     lineHeight: Int,
     weight: FontWeight,
     letterSpacing: Double = 0.0,
+    family: FontFamily = Manrope,
 ) = TextStyle(
-    fontFamily = Nunito,
+    fontFamily = family,
     fontWeight = weight,
     fontSize = size.sp,
     lineHeight = lineHeight.sp,
@@ -59,42 +78,48 @@ private fun kantaStyle(
 )
 
 /**
- * The spec's six-step scale, mapped onto the Material 3 slots that components actually read.
- * Each spec step is filled in at more than one slot so that stock M3 components (which pick
- * their own slot) still land on a Kanta style rather than a Material default.
+ * The scale, mapped onto the Material 3 slots that components actually read. Each step is filled
+ * in at more than one slot so that stock M3 components (which pick their own slot) still land on
+ * a Kanta style rather than a Material default.
+ *
+ * Large sizes are set tight (negative tracking, line height close to the size) the way editorial
+ * display type is; body text stays open for reading on the move.
  */
 val KantaTypography = Typography(
-    // --- Display 34 / 800 ---
-    displayLarge = kantaStyle(34, 40, FontWeight.ExtraBold),
-    displayMedium = kantaStyle(34, 40, FontWeight.ExtraBold),
-    displaySmall = kantaStyle(34, 40, FontWeight.ExtraBold),
+    // --- Display 34 / 800, tight ---
+    displayLarge = kantaStyle(34, 38, FontWeight.ExtraBold, letterSpacing = -0.8),
+    displayMedium = kantaStyle(34, 38, FontWeight.ExtraBold, letterSpacing = -0.8),
+    displaySmall = kantaStyle(34, 38, FontWeight.ExtraBold, letterSpacing = -0.8),
 
-    // --- Title 22 / 700 ---
-    headlineLarge = kantaStyle(22, 28, FontWeight.Bold),
-    headlineMedium = kantaStyle(22, 28, FontWeight.Bold),
-    titleLarge = kantaStyle(22, 28, FontWeight.Bold),
+    // --- Title 22 / 800 ---
+    headlineLarge = kantaStyle(22, 28, FontWeight.ExtraBold, letterSpacing = -0.4),
+    headlineMedium = kantaStyle(22, 28, FontWeight.ExtraBold, letterSpacing = -0.4),
+    titleLarge = kantaStyle(22, 28, FontWeight.ExtraBold, letterSpacing = -0.4),
 
     // --- Headline 18 / 700 ---
-    headlineSmall = kantaStyle(18, 24, FontWeight.Bold),
-    titleMedium = kantaStyle(18, 24, FontWeight.Bold),
+    headlineSmall = kantaStyle(18, 24, FontWeight.Bold, letterSpacing = -0.2),
+    titleMedium = kantaStyle(18, 24, FontWeight.Bold, letterSpacing = -0.2),
 
     // --- Body 16 / 400 ---
     bodyLarge = kantaStyle(16, 24, FontWeight.Normal),
     bodyMedium = kantaStyle(16, 24, FontWeight.Normal),
 
-    // --- Label 14 / 600 ---
-    titleSmall = kantaStyle(14, 20, FontWeight.SemiBold),
-    labelLarge = kantaStyle(14, 20, FontWeight.SemiBold),
+    // --- Label 15 / 600 (buttons, row titles) ---
+    titleSmall = kantaStyle(15, 20, FontWeight.SemiBold),
+    labelLarge = kantaStyle(15, 20, FontWeight.SemiBold),
     bodySmall = kantaStyle(14, 20, FontWeight.Normal),
 
-    // --- Caption 12 / 600 / +0.4 tracking (small uppercase labels) ---
-    labelMedium = kantaStyle(12, 16, FontWeight.SemiBold, letterSpacing = 0.4),
-    labelSmall = kantaStyle(12, 16, FontWeight.SemiBold, letterSpacing = 0.4),
+    // --- Caption: mono 11–12 / 500, tracked out (section captions, codes, metadata) ---
+    labelMedium = kantaStyle(12, 16, FontWeight.Medium, letterSpacing = 0.4, family = KantaMono),
+    labelSmall = kantaStyle(11, 14, FontWeight.Medium, letterSpacing = 0.8, family = KantaMono),
 )
 
 /**
  * Spec §3.2: "Numbers in stats use tabular figures where available."
- * Nunito ships the `tnum` OpenType feature; apply this to any style showing a figure that
- * changes (counters, hours-to-resolve, distances) so digits do not jitter.
+ * Manrope ships the `tnum` OpenType feature (JetBrains Mono is tabular by nature); apply this to
+ * any style showing a figure that changes (counters, hours-to-resolve, distances).
  */
 fun TextStyle.tabularFigures(): TextStyle = copy(fontFeatureSettings = "tnum")
+
+/** Container codes ("SK-00412") and other identifiers: the mono face at this style's size. */
+fun TextStyle.mono(): TextStyle = copy(fontFamily = KantaMono, letterSpacing = 0.sp)

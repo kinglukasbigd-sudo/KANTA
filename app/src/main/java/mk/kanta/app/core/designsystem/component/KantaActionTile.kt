@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -73,12 +72,12 @@ fun KantaActionTile(
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .clip(CircleShape),
+                    .clip(KantaShape.button),
                 contentAlignment = Alignment.Center,
             ) {
                 Surface(
                     modifier = Modifier.size(44.dp),
-                    shape = CircleShape,
+                    shape = KantaShape.button,
                     // A tint of the action colour, not the full colour: §3 restraint.
                     color = accent.copy(alpha = if (KantaTheme.colors.isDark) 0.22f else 0.12f),
                     content = {},

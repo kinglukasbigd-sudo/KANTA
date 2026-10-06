@@ -28,12 +28,12 @@ import mk.kanta.app.core.data.model.ContainerCategory
 import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaDragHandle
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
+import mk.kanta.app.core.designsystem.component.KantaSizeChooser
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
 import mk.kanta.app.core.designsystem.tabularFigures
@@ -160,21 +160,12 @@ fun AddContainerSheet(
 
             // --- Type -------------------------------------------------------------------
             Caption(stringResource(R.string.add_type))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-                verticalArrangement = Arrangement.spacedBy(Spacing.s),
-            ) {
-                KantaChip(
-                    label = stringResource(R.string.container_kind_big),
-                    selected = state.kind == ContainerKind.BIG,
-                    onClick = { onKind(ContainerKind.BIG) },
-                )
-                KantaChip(
-                    label = stringResource(R.string.container_kind_small),
-                    selected = state.kind == ContainerKind.SMALL,
-                    onClick = { onKind(ContainerKind.SMALL) },
-                )
-            }
+            // The same Small/Big tiles as on a bin's sheet (§4.6 "Bin size"): the person
+            // adding it is standing next to it, so their choice is its size from the start.
+            KantaSizeChooser(
+                selected = state.kind,
+                onChoose = onKind,
+            )
 
             // §4.6: "for big: category General / Glass / Paper / Plastic".
             if (state.kind == ContainerKind.BIG) {
@@ -200,7 +191,7 @@ fun AddContainerSheet(
 
             state.error?.let {
                 Spacer(Modifier.height(Spacing.m))
-                Text(stringResource(it.messageRes), style = MaterialTheme.typography.bodySmall, color = MarkerColors.Broken)
+                Text(stringResource(it.messageRes), style = MaterialTheme.typography.bodySmall, color = KantaTheme.colors.error)
             }
 
             Spacer(Modifier.height(Spacing.xl))

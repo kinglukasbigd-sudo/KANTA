@@ -49,40 +49,48 @@ Every report is tied to a specific container on a public map. The app shows how 
 
 ### 3.1 Colour tokens
 
+Kanta green mixed with a warm editorial base: ivory paper and green-tinted carbon ink, oat hairlines, tiger gold and ember for the loud moments, highlighter mint as the dark theme's green. Every text pairing is at least WCAG AA (4.5:1).
+
 | Token | Light | Dark | Use |
 |---|---|---|---|
-| `brand` | `#1F5A3A` | `#7CC79A` | Primary buttons, active states, logo |
-| `accent` | `#E0B41C` | `#F0C94A` | Tiny highlights only (badges, impact counter) |
-| `background` | `#F3F5F2` | `#0F1411` | App background |
-| `surface` | `#FFFFFF` | `#171D19` | Sheets, cards |
-| `surfaceMuted` | `#EAEEE9` | `#1F2622` | Chips, input fields |
-| `onSurface` | `#141A16` | `#E7ECE8` | Primary text |
-| `onSurfaceMuted` | `#5E6A62` | `#98A49C` | Secondary text |
-| `outline` | `#D8DED7` | `#2B342E` | Hairlines (1dp) |
+| `brand` | `#1F5A3A` forest | `#E2FFCC` highlighter mint | Primary buttons, active states, logo |
+| `brandContainer` | `#E2FFCC` mint | `#26331F` | Selected chips and Small/Big tiles |
+| `accent` | `#FAAE33` tiger gold | `#FAAE33` | Tiny highlights only (badges, impact counter) |
+| `background` | `#FAF9F5` ivory | `#161B13` carbon ink | App background |
+| `surface` | `#FFFFFF` | `#1E241B` | Sheets, cards |
+| `surfaceMuted` | `#F0EEE6` | `#2D3329` forest charcoal | Chips, input fields, status pills |
+| `onSurface` | `#161B13` | `#F0EEE6` | Primary text |
+| `onSurfaceMuted` | `#655A4D` driftwood | `#A3AD9E` sage | Secondary text |
+| `outline` | `#E3DACC` oat | `#343B30` | Hairlines (1dp) |
+| `outlineStrong` | `#B0AEA5` stone | `#4F5849` | Borders of tappable things: outlined buttons, tiles |
+| `error` | `#C21F52` | `#F0628F` | Error text and icons |
 
 **Marker colours (the only loud colours in the app):**
 
 | Meaning | Colour |
 |---|---|
+| Size not known yet — OK | `#2D3329` forest charcoal, mint `#E2FFCC` glyph |
 | Big container — OK | `#2E7D4F` green |
-| Small can — OK | `#E0B41C` yellow |
-| FULL (any type) | `#E8772E` orange |
-| BROKEN / damaged / burning | `#C0392B` red |
-| DESTROYED | `#8A918C` grey (filled) |
-| MISSING | `#8A918C` grey outline only (hollow, dashed) |
+| Small can — OK | `#FAAE33` tiger gold |
+| FULL (any type) | `#DC5000` ember |
+| BROKEN / damaged / burning | `#D1255C` chili |
+| DESTROYED | `#87867F` stone grey (filled) |
+| MISSING | `#87867F` grey outline only (hollow, dashed) |
 | Suggestion ("container should be here") | `#1F5A3A` brand-green hollow circle with "+" |
 
-Orange (full) must stay clearly different from yellow (small can OK): full markers also get a 2dp white border (dark theme: `#0F1411` border) and render 15% larger.
+Every marker sits on a ring: white on light tiles, ivory `#F0EEE6` on dark ones (that is what keeps the charcoal universal marker visible at night), with a soft ink hairline outside it on light tiles so gold and grey hold their edge. Full markers get a 2dp ring and render 15% larger. The glyph is ink on gold and grey, white on the darker fills.
 
 ### 3.2 Typography
 
-- Font: **Nunito** (Google Fonts, has Cyrillic + Latin Extended for Albanian ë/ç). Bundle as downloadable or resource fonts, weights 400/600/700/800.
-- Scale (sp): Display 34/800 · Title 22/700 · Headline 18/700 · Body 16/400 · Label 14/600 · Caption 12/600 (+0.4 letter-spacing, used for small uppercase labels)
-- Numbers in stats use tabular figures where available.
+- Fonts (Google Fonts, both cover Macedonian Cyrillic incl. Ѓ Ќ Ѕ Џ and Albanian ë/ç), bundled as variable resource fonts:
+  - **Manrope** for everything people read — headings set tight and heavy, body open.
+  - **JetBrains Mono** for the field-guide chrome: section captions, container codes, distances, timestamps, counts.
+- Scale (sp): Display 34/800 (−0.8 tracking) · Title 22/800 (−0.4) · Headline 18/700 (−0.2) · Body 16/400 · Label 15/600 · Caption mono 11–12/500 (+0.4–0.8 tracking, small uppercase section labels)
+- Numbers in stats use tabular figures (Manrope `tnum`; the mono face is tabular by nature).
 
 ### 3.3 Shape, spacing, elevation, motion
 
-- Corner radii: 12dp (chips/inputs), 20dp (cards), 28dp (bottom sheet top corners, big buttons = full pill).
+- Corner radii: 8dp (chips/inputs), 12dp (buttons, Small/Big tiles), 16dp (cards), 24dp (bottom sheet top corners). Status pills and compact actions are rounded; buttons are rounded rectangles, 52dp tall. Outlined buttons and tiles use `outlineStrong`; selected chips and tiles are `brandContainer` with a 1.5dp `brand` border.
 - Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 dp. Screen side padding 20dp.
 - Elevation: almost none. Separate things with background tone and 1dp hairlines. Only the bottom sheet and the primary floating button get a soft shadow (y 8, blur 24, 8% black).
 - Motion: 200–300ms, `FastOutSlowIn` / spring (dampingRatio 0.85). Markers fade/scale in. Success = small check animation + light haptic. Respect "remove animations" system setting.
@@ -91,14 +99,16 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 
 ### 3.4 Map markers (custom drawn, not default pins)
 
-- **Big container** (`amenity=waste_disposal`, underground or above-ground municipal containers, Pakomak recycling containers): **small rounded rectangle**, 14×10dp at zoom 16, scales with zoom.
-- **Small can** (`amenity=waste_basket`, street bins): **small rounded triangle**, 10dp at zoom 16.
-- Fill colour = status colour from 3.1. OK big = green, OK small = yellow.
-- Recycling containers optionally show a 3dp inner dot in their material colour (glass green, paper blue, plastic yellow) — only at zoom ≥ 17.
+Shape tells size at a glance, even where the glyph inside is too small to read; colour stays free to tell status. The same three marks are drawn in lists, sheets and the Small/Big tiles (one painter for map and app).
+- **Size not known yet** (every bin starts here, §4.6 "Bin size"): **round badge, 14dp**, with the universal bin pictogram (handle, lid, ribbed body).
+- **Small can** (street bins): **tall rounded tile, 11×15dp**, with a slim street can.
+- **Big container** (municipal 1,100 L containers, Pakomak recycling containers): **wide rounded tile, 18×13dp**, with a wheeled container.
+- Sizes are at zoom 16 and scale with zoom. Fill colour = status colour from 3.1. OK unknown = charcoal, OK big = green, OK small = gold.
+- Recycling containers that are not small cans show a small ringed dot on their bottom-left corner in their material colour (glass green, paper blue, plastic gold) — only at zoom ≥ 17.
 - **No numbers on the map — no clustering, at any zoom.** Every container is always drawn; its size follows the zoom:
-  - zoom < 14: a tiny **4dp dot** in its status colour (green = big OK, yellow = small OK, orange = full, red = broken, grey = destroyed/missing). No border, no shape.
+  - zoom < 14: a tiny **4dp dot** in its status colour (charcoal = size unknown, green = big OK, gold = small OK, ember = full, chili = broken, grey = destroyed/missing). A hairline ring in the marker ring colour, no shape.
   - zoom 14–15.5: the dot grows slightly, to **6dp**.
-  - zoom ≥ 15.5: the real shapes — rectangles for big containers, triangles for small cans — scaling up smoothly as you zoom in.
+  - zoom ≥ 15.5: the real marks — round for size unknown, tall for small cans, wide for big containers — scaling up smoothly as you zoom in.
   - Dots and shapes **cross-fade** (≈ 15.2–15.8); nothing pops. The shape variants (badge at 16, recycling dot at 17) cross-fade the same way.
 - **Draw order:** problem markers (red, orange) always draw on top of OK ones; the selected marker on top of all.
 - Markers never cover the chrome: the Kanta label, profile button and map buttons always sit above the map.
@@ -107,9 +117,9 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 - A report < 1h old: one-time gentle pulse ring.
 - **Verified vs unverified (4.6).** Governing principle: **filled = it exists, hollow = it's gone.** The two dashed
   treatments on the map must never be confusable:
-  - **MISSING** — hollow shape, **no fill**, dashed grey (`#8A918C`) outline. The container is gone.
-  - **UNVERIFIED** — normal **filled** shape in its normal type/status colour at **85% opacity**, plus a **1.5dp dashed
-    border** (white in light theme, `#0F1411` in dark) and a tiny **"?" badge** in the top-right corner. The badge is
+  - **MISSING** — hollow shape, **no fill**, dashed grey (`#87867F`) outline, the glyph faint inside. The container is gone.
+  - **UNVERIFIED** — normal **filled** shape in its normal type/status colour at **85% opacity**, its ring **dashed**
+    instead of solid, and a tiny **"?" badge** (ink on the ring colour) in the top-right corner. The badge is
     drawn only at **zoom ≥ 16**, so at city zoom an unverified container still reads as an ordinary container.
   An unverified container can hold any status, so UNVERIFIED composes with the status colours above rather than
   replacing them; a user-added container reported missing is hollow like any other missing one.
@@ -134,7 +144,7 @@ Orange (full) must stay clearly different from yellow (small can OK): full marke
 **Rotation and tilt** (like Google Maps): a two-finger twist rotates the map freely; a two-finger drag up/down tilts it, at most 45°. Pinch-zoom and pan work exactly as before — rotation needs a deliberate twist (threshold ~20°, raised further while pinching) so zooming never turns the map by accident.
 - **Compass button:** in the same stack, above my-location, shown only while the map is rotated or tilted. A small north arrow turns with the map. Tap → smoothly back to north and flat (300 ms); it fades out once the map faces north again. TalkBack: "Reset map to north".
 - **My-location button, two modes**, its icon shows which is on: 1st tap centres on me; 2nd tap = **follow mode** — the map turns with the direction the phone is facing (compass heading) and the location dot shows a small heading cone. Any pan, or a tap on the compass, exits follow mode; a tap while following stops it and faces north.
-- **Markers stay upright:** rectangles, triangles, dots and suggestion pins never rotate or lean with the map — they always face the screen. Street names follow their streets as MapLibre does by default.
+- **Markers stay upright:** bin marks, dots and suggestion pins never rotate or lean with the map — they always face the screen. Street names follow their streets as MapLibre does by default.
 
 **Collapsed state:** a drag handle and a row of **three big action choices**:
 1. **Full** — "This container is full" (fastest path, orange icon)
@@ -175,26 +185,31 @@ Tap **Suggest** → map in pick mode with a centre crosshair → confirm spot �
 - Also permanently available in the bottom sheet under "My reports & profile" → "Map your street".
 
 **The check flow**
-1. Card/sheet: "Are all containers near you on the map?" with a small map of a **150 m radius** around the user, showing existing markers clearly (rectangles + triangles), and a short hint: "Look around. Big containers = rectangles, small cans = triangles."
+1. Card/sheet: "Are all containers near you on the map?" with a small map of a **150 m radius** around the user, showing existing markers clearly, a legend of the three marks, and a short hint: "A circle means nobody has given the size yet, a tall tile is a small can, a wide tile is a big container."
 2. Three answers:
    - **"Yes, everything is there"** → saves an area check (confirms coverage). Thank-you micro-animation.
    - **"One is missing"** → Add container flow (below).
    - **"One on the map is not here"** → user taps that marker → creates a `missing` report for it (normal report flow, photo required).
-3. Unverified user-added containers inside the radius are shown with a dashed outline and a button **"Yes, it's here"** so the user can confirm them in one tap (must be within 50 m of it).
+3. Bins inside the radius that still need someone — not yet confirmed, or size not known yet — are listed: unverified ones with a button **"Yes, it's here"** (one tap, within 50 m), and every one within 50 m with **Small can / Big container** (see "Bin size" below).
 
 **Add container flow (the same flow is used everywhere a container is added, including "Container not on map — add it" in the report flow 4.3)**
 - Photo required (camera only, same privacy processing), GPS must be within **30 m** of the pin, user drags the pin to the exact spot.
-- Choose type: Big container (rectangle) or Small can (triangle); for big: category General / Glass / Paper / Plastic.
+- Choose type with the same Small/Big tiles as on a bin's sheet; for big: category General / Glass / Paper / Plastic. The adder's choice is the bin's size from the start and counts as their answer.
 - Duplicate check: if a container of the same kind already exists within **10 m** (big) or **5 m** (small) → "Is it this one?" with the existing marker; user must confirm it's different to continue.
 - **Limit: each normal account can add at most 2 containers in total (lifetime).** Show remaining count before adding: "You can add 2 containers" / "You can add 1 more container". The limit is enforced on the server, never only in the app.
 - When the limit is reached: explain kindly "You've already added your 2 containers — thank you! If another one is missing, send it for review." → the user can send a **container request** (photo + pin + type) that does NOT appear on the map; it goes into the admin review queue. Max 3 requests per user per day.
 - New user-added containers start as `verified = false`: drawn with a **dashed outline** in the normal type/status colour. They become verified when **2 other users** tap "Yes, it's here", or an admin verifies them. Unverified containers can be reported like any other.
 - If 2 users report an unverified container as `missing`, it is removed from the map (soft delete) and the adder's trust_score goes down by 1. When a user's added container gets verified, their trust_score goes up by 1.
-- **Wrong kind.** Next to "Yes, it's here" an unverified container offers **"It's here, but it's a big container"** (or "…a small can" on a big one). It counts as a confirmation like the plain button, and when **2 people** say the other kind, the container changes to it. A container that becomes a small can becomes General; one that becomes big keeps its category. Imported Mapillary detections all start as small cans (Mapillary has one class for every bin), so this is how the big ones among them are found.
+- **Bin size.** No source can be trusted to say how big a bin is (Mapillary has one class for every trash can; OSM in Skopje barely tags it), so **every bin starts with its size unknown** and gets the universal marker (3.4). The person standing next to it says **Small can** or **Big container** — on the bin's detail sheet, where it is the first thing shown while the size is unknown, and in "Map your street":
+  - the **first answer marks the bin right away**; after that the size is the **majority** of everyone's answers, a tie keeping what the map shows — so two people who disagree with the first one switch it;
+  - one answer per person per bin; answering again replaces it;
+  - answering needs the person within **50 m** (same as "Yes, it's here"); signed out, tapping signs in first and then sends the answer; on an unverified bin, answering also counts as "Yes, it's here";
+  - an **admin's** answer sets the size at once, from anywhere;
+  - the size each import claimed is kept (`source_kind`) but never shown as the size; imports keep arriving unknown.
 
 **Admin (Ivan)**
 - `profiles.role` = 'user' | 'admin'. Set admin manually in Supabase for Ivan's account.
-- Admins have **no add limit**, their containers are verified immediately, and they see a hidden **Admin** row in the bottom sheet with: review queue of container requests (approve → becomes a verified container / reject), list of unverified containers (verify / delete), and a **coverage map** layer showing where area checks happened (green = checked in last 90 days, empty = never checked) so Ivan knows which parts of Skopje still need mapping. On any container's detail sheet an admin also sees **"Change to big container"** / **"Change to small can"**.
+- Admins have **no add limit**, their containers are verified immediately, and they see a hidden **Admin** row in the bottom sheet with: review queue of container requests (approve → becomes a verified container / reject), list of unverified containers (verify / delete), and a **coverage map** layer showing where area checks happened (green = checked in last 90 days, empty = never checked) so Ivan knows which parts of Skopje still need mapping. On any container's detail sheet an admin's Small/Big answer sets the size at once, from anywhere.
 
 **Data model additions (section 6)**
 ```
@@ -203,15 +218,16 @@ profiles: + role text check in ('user','admin') default 'user'
           + last_area_check_at timestamptz null
 containers: + deleted_at timestamptz null   -- soft delete; all queries ignore deleted rows
 container_confirmations(container_id uuid fk, user_id uuid fk, kind text check in ('exists'), created_at timestamptz,
-  seen_kind text null check in ('big','small'),   -- "It's here, but it's a big container"; null = plain yes
   primary key(container_id, user_id))
 container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text, category text, photo_path text not null,
   note text, state text check in ('pending','approved','rejected') default 'pending',
   created_container_id uuid null, created_at timestamptz, reviewed_at timestamptz null)
+container_size_votes(container_id uuid fk, user_id uuid fk, kind text check in ('big','small'),
+  created_at timestamptz, updated_at timestamptz, primary key(container_id, user_id))   -- 4.6 "Bin size"
 area_checks(id uuid pk, user_id uuid fk, geom geography(point), radius_m int default 150,
   result text check in ('all_present','added','reported_missing'), created_at timestamptz)
 ```
-**RPC additions:** `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` (enforces 30 m, duplicate radius, the 2-container limit unless admin, updates containers_added), `my_add_allowance()` → remaining adds, `confirm_container_exists(container_id, lon, lat)` (50 m, not the adder, verifies at 2), `confirm_container_exists_as(container_id, lon, lat, kind)` (the same, plus the kind the user saw; changes the kind at 2), `submit_container_request(...)` (3/day), `submit_area_check(lon, lat, result)`, `should_prompt_area_check(lon, lat)` → bool, admin-only: `admin_review_request(id, approve bool)`, `admin_verify_container(id)`, `admin_delete_container(id)`, `admin_set_container_kind(id, kind)`, `admin_coverage(days int)` → GeoJSON of checks. RLS: container_requests readable only by their author and admins; admin RPCs check role = 'admin'.
+**RPC additions:** `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` (enforces 30 m, duplicate radius, the 2-container limit unless admin, updates containers_added), `my_add_allowance()` → remaining adds, `confirm_container_exists(container_id, lon, lat)` (50 m, not the adder, verifies at 2), `vote_container_size(container_id, lon, lat, kind)` (50 m; first answer sets an unknown bin, then majority; confirms an unverified bin), `submit_container_request(...)` (3/day), `submit_area_check(lon, lat, result)`, `should_prompt_area_check(lon, lat)` → bool, admin-only: `admin_review_request(id, approve bool)`, `admin_verify_container(id)`, `admin_delete_container(id)`, `admin_set_container_kind(id, kind)`, `admin_coverage(days int)` → GeoJSON of checks. RLS: container_requests readable only by their author and admins; admin RPCs check role = 'admin'.
 
 **Map marker addition (section 3.4):** unverified containers keep their normal filled shape and type/status colour at 85% opacity, plus a 1.5dp dashed border and a small "?" badge at zoom ≥ 16. They must never be confused with MISSING, which is hollow. See 3.4 for the full rule and the governing principle (**filled = it exists, hollow = it's gone**).
 
@@ -270,7 +286,8 @@ One vote per user per suggestion. Merge radius 50 m. Status: `open` → `sent` (
 ```
 municipalities(id smallint pk, name_mk text, name_sq text, name_en text, geom geography(multipolygon))
 containers(id uuid pk, code text unique  -- e.g. SK-00412,
-  kind text check in ('big','small'),
+  kind text check in ('big','small','unknown'),   -- 4.6 "Bin size": every bin starts 'unknown'
+  source_kind text null check in ('big','small'), -- what an import claimed; kept, never shown
   category text check in ('general','glass','paper','plastic','mixed_recycling'),
   geom geography(point) not null, municipality_id smallint fk,
   status text default 'ok', status_since timestamptz,
@@ -297,11 +314,12 @@ profiles(id uuid pk references auth.users, display_name text, municipality_id sm
 
 -- 4.6 "Map your street"
 container_confirmations(container_id uuid fk, user_id uuid fk, kind text check in ('exists'), created_at timestamptz,
-  seen_kind text null check in ('big','small'),   -- "It's here, but it's a big container"; null = plain yes
   primary key(container_id, user_id))
 container_requests(id uuid pk, user_id uuid fk, geom geography(point), kind text, category text, photo_path text not null,
   note text, state text check in ('pending','approved','rejected') default 'pending',
   created_container_id uuid null, created_at timestamptz, reviewed_at timestamptz null)
+container_size_votes(container_id uuid fk, user_id uuid fk, kind text check in ('big','small'),
+  created_at timestamptz, updated_at timestamptz, primary key(container_id, user_id))   -- 4.6 "Bin size"
 area_checks(id uuid pk, user_id uuid fk, geom geography(point), radius_m int default 150,
   result text check in ('all_present','added','reported_missing'), created_at timestamptz)
 ```
@@ -324,7 +342,7 @@ RPC functions (SQL, `security definer` where needed):
 - `add_container(lon, lat, kind, category, photo_path, device_lon, device_lat)` → enforces the 30 m device-to-pin rule, the duplicate radius (10 m big / 5 m small, same kind), and the 2-container lifetime limit unless `role = 'admin'`; increments `profiles.containers_added`; inserts `verified = false` (admins: `verified = true`)
 - `my_add_allowance()` → remaining adds for the current user
 - `confirm_container_exists(container_id, lon, lat)` → 50 m rule, rejects the container's own adder, sets `verified = true` at 2 confirmations and gives the adder trust_score +1
-- `confirm_container_exists_as(container_id, lon, lat, kind)` → `confirm_container_exists` plus the kind the user saw; when 2 confirmations name the same other kind, the container changes to it (§4.6 "Wrong kind")
+- `vote_container_size(container_id, lon, lat, kind)` → 50 m rule; records the caller's Small/Big answer (one per person, replaceable); an unknown bin takes the first answer, after that the majority (tie keeps the current size); on an unverified bin it also counts as `confirm_container_exists` (§4.6 "Bin size")
 - `submit_container_request(lon, lat, kind, category, photo_path, note)` → max 3 per user per day; never appears on the map
 - `submit_area_check(lon, lat, result)` → writes `area_checks`, updates `profiles.last_area_check_at`
 - `should_prompt_area_check(lon, lat)` → bool; true only if the user has no check in 30 days AND the area has no recent check

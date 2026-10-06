@@ -29,7 +29,7 @@ import mk.kanta.app.core.designsystem.rememberKantaHaptics
 
 /**
  * The one loud action on a screen (spec §3: "colour is spent almost only on container markers
- * and one primary action"). Full pill, brand fill.
+ * and one primary action"). Brand fill, 12dp corners, 52dp tall.
  *
  * [elevated] adds the app's only shadow (§3.3) and is reserved for the primary *floating*
  * button over the map — not for buttons sitting inside a sheet or card.
@@ -51,10 +51,10 @@ fun KantaPrimaryButton(
             onClick()
         },
         modifier = modifier
-            .then(if (elevated) Modifier.kantaSoftShadow(KantaShape.pill) else Modifier)
-            .defaultMinSize(minHeight = Spacing.minTouchTarget),
+            .then(if (elevated) Modifier.kantaSoftShadow(KantaShape.button) else Modifier)
+            .defaultMinSize(minHeight = ButtonHeight),
         enabled = enabled,
-        shape = KantaShape.pill,
+        shape = KantaShape.button,
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -69,7 +69,7 @@ fun KantaPrimaryButton(
     }
 }
 
-/** Quiet companion action — hairline outline, no fill (spec §3.3). */
+/** Quiet companion action — a 1dp stone outline, no fill (spec §3.3). */
 @Composable
 fun KantaSecondaryButton(
     text: String,
@@ -85,10 +85,13 @@ fun KantaSecondaryButton(
             haptics.tick()
             onClick()
         },
-        modifier = modifier.defaultMinSize(minHeight = Spacing.minTouchTarget),
+        modifier = modifier.defaultMinSize(minHeight = ButtonHeight),
         enabled = enabled,
-        shape = KantaShape.pill,
-        border = BorderStroke(Spacing.hairline, KantaTheme.colors.outline),
+        shape = KantaShape.button,
+        border = BorderStroke(
+            Spacing.hairline,
+            if (enabled) KantaTheme.colors.outlineStrong else KantaTheme.colors.outline,
+        ),
         colors = ButtonDefaults.outlinedButtonColors(
             contentColor = MaterialTheme.colorScheme.onSurface,
             disabledContentColor = KantaTheme.colors.onSurfaceMuted,
@@ -98,6 +101,9 @@ fun KantaSecondaryButton(
         ButtonContent(text = text, icon = icon)
     }
 }
+
+/** Taller than the 48dp touch minimum: these are the actions people hit while walking. */
+private val ButtonHeight = 52.dp
 
 @Composable
 private fun ButtonContent(text: String, icon: ImageVector?) {

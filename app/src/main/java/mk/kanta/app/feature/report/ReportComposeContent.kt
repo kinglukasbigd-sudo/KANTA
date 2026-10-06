@@ -42,7 +42,6 @@ import mk.kanta.app.R
 import mk.kanta.app.core.data.model.ContainerStatus
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaIcons
@@ -250,7 +249,7 @@ private fun OutcomeCard(outcome: SendOutcome, onAddContainer: () -> Unit, onDism
                 androidx.compose.material3.Icon(
                     imageVector = KantaIcons.Error,
                     contentDescription = null,
-                    tint = MarkerColors.Broken,
+                    tint = KantaTheme.colors.error,
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(Spacing.m))

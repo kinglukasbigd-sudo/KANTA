@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import mk.kanta.app.R
 import mk.kanta.app.core.auth.AuthGate
+import mk.kanta.app.core.auth.AuthRepository
 import mk.kanta.app.core.auth.PendingAction
 import mk.kanta.app.core.data.local.ContainerDao
 import mk.kanta.app.core.data.local.ContainerEntity
@@ -31,6 +32,7 @@ import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.core.data.remote.dto.PublicReportDto
+import mk.kanta.app.core.data.remote.dto.toContainerKind
 import mk.kanta.app.core.data.suggest.SuggestionVoting
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
@@ -59,7 +61,7 @@ data class Bbox(
 data class ContainerDetailState(
     val loading: Boolean = true,
     val code: String = "",
-    val kind: ContainerKind = ContainerKind.BIG,
+    val kind: ContainerKind = ContainerKind.UNKNOWN,
     val category: ContainerCategory = ContainerCategory.GENERAL,
     val status: ContainerStatus = ContainerStatus.OK,
     val statusSinceHours: Double? = null,
@@ -76,8 +78,16 @@ data class ContainerDetailState(
     /** The server's answer to "may this person say it exists?" (0015). */
     val canConfirmExists: Boolean = false,
     val confirmingExists: Boolean = false,
-    /** Admin "Change to big container / small can" in flight (0019). */
-    val changingKind: Boolean = false,
+    /** §4.6 "Bin size": whether Small/Big would be accepted here (signed in, within 50 m). */
+    val canVoteSize: Boolean = false,
+    /** This person's own answer, if they gave one. */
+    val mySizeVote: ContainerKind? = null,
+    val sizeVotesBig: Long = 0,
+    val sizeVotesSmall: Long = 0,
+    /** The tile whose answer is on its way. */
+    val sizeSending: ContainerKind? = null,
+    /** Signed out, Small/Big still shows: tapping it signs in first (§4.2). */
+    val signedIn: Boolean = false,
 )
 
 data class MapUiState(
@@ -109,6 +119,7 @@ class MapViewModel @Inject constructor(
     private val containerDao: ContainerDao,
     private val locationProvider: LocationProvider,
     private val authGate: AuthGate,
+    private val authRepository: AuthRepository,
     private val suggestionVoting: SuggestionVoting,
     private val mapRequests: MapRequests,
 ) : ViewModel() {
@@ -128,6 +139,7 @@ class MapViewModel @Inject constructor(
         refreshOnIdle()
         resolveInitialCamera()
         runConfirmationsWhenReady()
+        runSizeVotesWhenReady()
         followSuggestions()
         followRequests()
     }
@@ -264,7 +276,7 @@ class MapViewModel @Inject constructor(
                                 NearestContainerUi(
                                     id = it.id,
                                     code = it.code,
-                                    kind = if (it.kind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+                                    kind = it.kind.toContainerKind(),
                                     status = it.status.toStatus(),
                                     distanceMetres = it.distanceM.roundToInt(),
                                 )
@@ -440,12 +452,7 @@ class MapViewModel @Inject constructor(
     // §4.6 "Yes, it's here" on an unverified container
     // -----------------------------------------------------------------------------------------
 
-    fun onConfirmExists() = confirmExists(seenKind = null)
-
-    /** "It's here, but it's a big container" — two of these change its kind (0019). */
-    fun onConfirmExistsAs(kind: ContainerKind) = confirmExists(seenKind = kind)
-
-    private fun confirmExists(seenKind: ContainerKind?) {
+    fun onConfirmExists() {
         val containerId = _state.value.selectedId ?: return
         val detail = _state.value.detail ?: return
         if (detail.confirmingExists) return
@@ -460,7 +467,7 @@ class MapViewModel @Inject constructor(
                 _state.value = _state.value.copy(error = KantaError.TooFarToConfirm(null))
                 return@launch
             }
-            repository.confirmContainerExists(containerId, here.lon, here.lat, seenKind).collect { result ->
+            repository.confirmContainerExists(containerId, here.lon, here.lat).collect { result ->
                 when (result) {
                     is KantaResult.Loading -> Unit
                     is KantaResult.Failure -> {
@@ -471,7 +478,11 @@ class MapViewModel @Inject constructor(
                         setConfirming(false)
                         _state.value = _state.value.copy(
                             userLocation = here,
-                            notice = confirmedNotice(seenKind, result.data.verified, result.data.kind),
+                            notice = if (result.data.verified) {
+                                R.string.notice_confirmed_verified
+                            } else {
+                                R.string.notice_confirmed
+                            },
                         )
                         if (_state.value.selectedId == containerId) loadDetail(containerId, here)
                         // A container verified just now loses its dashed outline.
@@ -488,25 +499,73 @@ class MapViewModel @Inject constructor(
     }
 
     // -----------------------------------------------------------------------------------------
-    // Admin: big container ↔ small can (0019). The server checks role = 'admin'.
+    // §4.6 "Bin size": Small or Big
     // -----------------------------------------------------------------------------------------
 
+    /** Small or Big from the detail sheet. Signed out, the gate keeps it for after sign-in. */
+    fun onChooseSize(kind: ContainerKind) {
+        val containerId = _state.value.selectedId ?: return
+        if (kind == ContainerKind.UNKNOWN || _state.value.detail?.sizeSending != null) return
+        authGate.request(PendingAction.VoteSize(containerId, kind.name))
+    }
+
+    private fun runSizeVotesWhenReady() {
+        authGate.ready
+            .filterIsInstance<PendingAction.VoteSize>()
+            .onEach { action ->
+                authGate.consume(action)
+                val kind = ContainerKind.entries.firstOrNull { it.name == action.kind }
+                if (kind != null && kind != ContainerKind.UNKNOWN) voteSize(action.containerId, kind)
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun voteSize(containerId: String, kind: ContainerKind) {
+        setSizeSending(containerId, kind)
+        // Saying how big it is means standing next to it (50 m): a fresh fix.
+        val here = locationProvider.fresh()
+        if (here == null) {
+            setSizeSending(containerId, null)
+            _state.value = _state.value.copy(error = KantaError.TooFarToConfirm(null))
+            return
+        }
+        repository.voteContainerSize(containerId, here.lon, here.lat, kind).collect { result ->
+            when (result) {
+                is KantaResult.Loading -> Unit
+                is KantaResult.Failure -> {
+                    setSizeSending(containerId, null)
+                    _state.value = _state.value.copy(error = result.error)
+                }
+                is KantaResult.Success -> {
+                    setSizeSending(containerId, null)
+                    _state.value = _state.value.copy(
+                        userLocation = here,
+                        notice = sizeNotice(kind, result.data.kind, result.data.changed),
+                    )
+                    if (_state.value.selectedId == containerId) loadDetail(containerId, here)
+                    // The marker changes from the universal bin to its size, or between sizes.
+                    viewport.value?.let { refresh(it) }
+                }
+            }
+        }
+    }
+
+    /** An admin's answer sets the size at once, from anywhere (0020). */
     fun onAdminSetKind(kind: ContainerKind) {
         val containerId = _state.value.selectedId ?: return
-        val detail = _state.value.detail ?: return
-        if (detail.changingKind) return
-        _state.value = _state.value.copy(detail = detail.copy(changingKind = true))
+        if (kind == ContainerKind.UNKNOWN || _state.value.detail?.sizeSending != null) return
+        setSizeSending(containerId, kind)
 
         viewModelScope.launch {
             repository.adminSetContainerKind(containerId, kind).collect { result ->
                 when (result) {
                     is KantaResult.Loading -> Unit
                     is KantaResult.Failure -> {
-                        setChangingKind(false)
+                        setSizeSending(containerId, null)
                         _state.value = _state.value.copy(error = result.error)
                     }
                     is KantaResult.Success -> {
-                        setChangingKind(false)
+                        setSizeSending(containerId, null)
                         _state.value = _state.value.copy(
                             notice = if (kind == ContainerKind.BIG) {
                                 R.string.notice_admin_kind_big
@@ -515,7 +574,6 @@ class MapViewModel @Inject constructor(
                             },
                         )
                         if (_state.value.selectedId == containerId) loadDetail(containerId)
-                        // The marker changes shape: rectangle ↔ triangle.
                         viewport.value?.let { refresh(it) }
                     }
                 }
@@ -523,9 +581,11 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    private fun setChangingKind(value: Boolean) {
+    /** Which tile is sending, on the sheet of [containerId] only. */
+    private fun setSizeSending(containerId: String, kind: ContainerKind?) {
+        if (_state.value.selectedId != containerId) return
         val detail = _state.value.detail ?: return
-        _state.value = _state.value.copy(detail = detail.copy(changingKind = value))
+        _state.value = _state.value.copy(detail = detail.copy(sizeSending = kind))
     }
 
     private fun loadDetail(containerId: String, from: LatLon? = _state.value.userLocation) {
@@ -550,7 +610,7 @@ class MapViewModel @Inject constructor(
                                 detail = current.copy(
                                     loading = false,
                                     code = dto.code,
-                                    kind = if (dto.kind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+                                    kind = dto.kind.toContainerKind(),
                                     category = dto.category.toCategory(),
                                     status = dto.status.toStatus(),
                                     statusSinceHours = hoursSince(dto.statusSince),
@@ -562,15 +622,21 @@ class MapViewModel @Inject constructor(
                                     addedByMe = dto.addedByMe,
                                     iConfirmed = dto.iConfirmed,
                                     canConfirmExists = dto.canConfirmExists,
+                                    canVoteSize = dto.canVoteSize,
+                                    mySizeVote = dto.mySizeVote?.toContainerKind(),
+                                    sizeVotesBig = dto.sizeVotesBig,
+                                    sizeVotesSmall = dto.sizeVotesSmall,
+                                    signedIn = authRepository.isSignedIn,
                                     error = null,
                                 ),
                             ).also {
-                                // Unverified and someone else's: whether "Yes, it's here"
-                                // is offered depends on 50 m, so ask again with a fresh
-                                // fix rather than trust the cached one (§4.6).
-                                if (!dto.verified && !dto.addedByMe && !dto.iConfirmed &&
-                                    !dto.canConfirmExists && from == _state.value.userLocation
-                                ) {
+                                // Whether "Yes, it's here" and Small/Big are offered
+                                // depends on 50 m, so ask again with a fresh fix rather
+                                // than trust the cached one (§4.6).
+                                val confirmBlocked = !dto.verified && !dto.addedByMe &&
+                                    !dto.iConfirmed && !dto.canConfirmExists
+                                val sizeBlocked = !dto.canVoteSize && authRepository.isSignedIn
+                                if ((confirmBlocked || sizeBlocked) && from == _state.value.userLocation) {
                                     recheckWithFreshFix(containerId)
                                 }
                             }
@@ -623,7 +689,7 @@ class MapViewModel @Inject constructor(
 private fun ContainerEntity.toFeature() = MapLayers.ContainerFeature(
     id = id,
     code = code,
-    kind = if (kind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+    kind = kind.toContainerKind(),
     category = category.toCategory(),
     status = status.toStatus(),
     verified = verified,
@@ -648,25 +714,20 @@ private fun String.toStatus(): ContainerStatus = when (this) {
 }
 
 /**
- * The line after "Yes, it's here". [seenKind] is what the person said it is, if
- * they said; [kindNow] is the kind the server reports after their vote (0019).
+ * The line after a Small/Big answer (§4.6 "Bin size"). [kindNow] is the server's `kind` after the
+ * answer and [changed] whether this answer is what moved it.
  */
-internal fun confirmedNotice(seenKind: ContainerKind?, verified: Boolean, kindNow: String?): Int {
-    val now = when (kindNow) {
-        "big" -> ContainerKind.BIG
-        "small" -> ContainerKind.SMALL
-        else -> null
-    }
+internal fun sizeNotice(chosen: ContainerKind, kindNow: String, changed: Boolean): Int {
+    val now = kindNow.toContainerKind()
     return when {
-        seenKind != null && now == seenKind -> if (seenKind == ContainerKind.BIG) {
+        now == chosen && changed -> if (chosen == ContainerKind.BIG) {
             R.string.notice_kind_changed_big
         } else {
             R.string.notice_kind_changed_small
         }
-        // The first of the two votes the change needs.
-        seenKind != null && !verified -> R.string.notice_kind_vote
-        verified -> R.string.notice_confirmed_verified
-        else -> R.string.notice_confirmed
+        now == chosen -> R.string.notice_size_counted
+        // Most neighbours said otherwise, so the map keeps what they said.
+        else -> R.string.notice_kind_vote
     }
 }
 

@@ -37,7 +37,6 @@ import mk.kanta.app.core.auth.AuthState
 import mk.kanta.app.core.auth.Municipalities
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
@@ -178,7 +177,7 @@ private fun SignedInProfile(
 
             state.error?.let {
                 Spacer(Modifier.height(Spacing.m))
-                Text(stringResource(it.messageRes), style = MaterialTheme.typography.bodySmall, color = MarkerColors.Broken)
+                Text(stringResource(it.messageRes), style = MaterialTheme.typography.bodySmall, color = KantaTheme.colors.error)
             }
 
             Spacer(Modifier.height(Spacing.xl))
@@ -206,7 +205,7 @@ private fun SignedInProfile(
             Text(
                 text = stringResource(R.string.profile_delete_account),
                 style = MaterialTheme.typography.labelLarge,
-                color = MarkerColors.Broken,
+                color = KantaTheme.colors.error,
             )
         }
         Spacer(Modifier.height(Spacing.xxl))
@@ -236,7 +235,7 @@ private fun DeleteAccountDialog(
             TextButton(onClick = onConfirm, enabled = !deleting) {
                 Text(
                     stringResource(if (deleting) R.string.profile_deleting else R.string.profile_delete_confirm),
-                    color = MarkerColors.Broken,
+                    color = KantaTheme.colors.error,
                     style = MaterialTheme.typography.labelLarge,
                 )
             }

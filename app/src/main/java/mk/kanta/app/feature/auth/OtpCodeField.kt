@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.dp
 import mk.kanta.app.core.auth.AuthInput
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.tabularFigures
 
@@ -101,7 +100,7 @@ private fun CodeBox(
     modifier: Modifier = Modifier,
 ) {
     val borderColor: Color = when {
-        isError -> MarkerColors.Broken
+        isError -> KantaTheme.colors.error
         active -> KantaTheme.colors.brand
         else -> KantaTheme.colors.outline
     }

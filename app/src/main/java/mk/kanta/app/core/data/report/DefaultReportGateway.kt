@@ -21,6 +21,7 @@ import mk.kanta.app.core.data.remote.dto.AddAllowanceDto
 import mk.kanta.app.core.data.remote.dto.AddContainerResultDto
 import mk.kanta.app.core.data.remote.dto.ContainerRequestResultDto
 import mk.kanta.app.core.data.remote.dto.SubmitReportResultDto
+import mk.kanta.app.core.data.remote.dto.toContainerKind
 import mk.kanta.app.core.location.GeoMath
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
@@ -48,7 +49,7 @@ class DefaultReportGateway @Inject constructor(
                 ContainerCandidate(
                     id = it.id,
                     code = it.code,
-                    kind = it.kind.toKind(),
+                    kind = it.kind.toContainerKind(),
                     category = it.category.toCategory(),
                     status = it.status.toStatus(),
                     verified = it.verified,
@@ -69,7 +70,7 @@ class DefaultReportGateway @Inject constructor(
                 ContainerCandidate(
                     id = it.id,
                     code = it.code,
-                    kind = it.kind.toKind(),
+                    kind = it.kind.toContainerKind(),
                     category = it.category.toCategory(),
                     status = it.status.toStatus(),
                     verified = it.verified,
@@ -87,7 +88,7 @@ class DefaultReportGateway @Inject constructor(
             ContainerCandidate(
                 id = it.id,
                 code = it.code,
-                kind = it.kind.toKind(),
+                kind = it.kind.toContainerKind(),
                 category = it.category.toCategory(),
                 status = it.status.toStatus(),
                 verified = it.verified,
@@ -203,7 +204,6 @@ class DefaultReportGateway @Inject constructor(
 internal suspend fun <T> Flow<KantaResult<T>>.settle(): KantaResult<T> =
     first { it !is KantaResult.Loading }
 
-private fun String.toKind() = if (this == "small") ContainerKind.SMALL else ContainerKind.BIG
 
 private fun String.toCategory() = when (this) {
     "glass" -> ContainerCategory.GLASS

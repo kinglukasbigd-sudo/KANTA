@@ -33,7 +33,8 @@ import mk.kanta.app.core.designsystem.rememberKantaHaptics
 /**
  * Selectable chip — the report-kind and suggestion-reason pickers (spec §4.3, §4.4).
  *
- * Selection is carried by fill + outline, not by a checkmark, to keep the surface quiet.
+ * Selection is carried by a mint fill and a brand outline rather than a solid block of green, so
+ * a row of chips stays calm and the chosen one still reads at a glance.
  * The [Role.RadioButton] semantics mean TalkBack announces selected state without us adding a
  * "selected" string, and the 48dp min height keeps it within the §8 touch-target rule.
  */
@@ -51,8 +52,8 @@ fun KantaChip(
     val container by animateColorAsState(
         targetValue = when {
             !enabled -> KantaTheme.colors.surfaceMuted
-            selected -> MaterialTheme.colorScheme.primary
-            else -> KantaTheme.colors.surfaceMuted
+            selected -> KantaTheme.colors.brandContainer
+            else -> MaterialTheme.colorScheme.surface
         },
         animationSpec = Motion.tweenFast(),
         label = "chipContainer",
@@ -60,7 +61,7 @@ fun KantaChip(
     val content by animateColorAsState(
         targetValue = when {
             !enabled -> KantaTheme.colors.onSurfaceMuted
-            selected -> MaterialTheme.colorScheme.onPrimary
+            selected -> KantaTheme.colors.brand
             else -> MaterialTheme.colorScheme.onSurface
         },
         animationSpec = Motion.tweenFast(),
@@ -80,7 +81,11 @@ fun KantaChip(
         shape = KantaShape.chip,
         color = container,
         contentColor = content,
-        border = if (selected) null else BorderStroke(Spacing.hairline, KantaTheme.colors.outline),
+        border = when {
+            !enabled -> BorderStroke(Spacing.hairline, KantaTheme.colors.outline)
+            selected -> BorderStroke(1.5.dp, KantaTheme.colors.brand)
+            else -> BorderStroke(Spacing.hairline, KantaTheme.colors.outlineStrong)
+        },
     ) {
         Row(
             modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.m),

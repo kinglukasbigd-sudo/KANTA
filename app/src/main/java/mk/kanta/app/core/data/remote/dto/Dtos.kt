@@ -21,8 +21,17 @@ import mk.kanta.app.core.data.model.ContainerStatus
 internal fun String.toContainerKind(): ContainerKind = when (this) {
     "big" -> ContainerKind.BIG
     "small" -> ContainerKind.SMALL
-    else -> ContainerKind.BIG
+    // 'unknown', and anything newer than this app: never claim a size we were not told.
+    else -> ContainerKind.UNKNOWN
 }
+
+/** The same values back to the server — `big`, `small`, `unknown`. */
+internal val ContainerKind.wire: String
+    get() = when (this) {
+        ContainerKind.BIG -> "big"
+        ContainerKind.SMALL -> "small"
+        ContainerKind.UNKNOWN -> "unknown"
+    }
 
 internal fun String.toContainerCategory(): ContainerCategory = when (this) {
     "general" -> ContainerCategory.GENERAL
@@ -98,6 +107,12 @@ data class ContainerDetailDto(
      * (50 m, not the adder, not already confirmed), never re-derived here.
      */
     @SerialName("can_confirm_exists") val canConfirmExists: Boolean = false,
+    /** §4.6 "Bin size": whether Small/Big would be accepted (signed in, within 50 m). */
+    @SerialName("can_vote_size") val canVoteSize: Boolean = false,
+    /** The caller's own answer, `big` or `small`, or null. */
+    @SerialName("my_size_vote") val mySizeVote: String? = null,
+    @SerialName("size_votes_big") val sizeVotesBig: Long = 0,
+    @SerialName("size_votes_small") val sizeVotesSmall: Long = 0,
 )
 
 // -------------------------------------------------------------------------------------------
@@ -284,14 +299,25 @@ data class AddContainerResultDto(
     val remaining: Int,
 )
 
-/** `confirm_container_exists` / `confirm_container_exists_as` (§4.6). */
+/** `confirm_container_exists` (§4.6). */
 @Serializable
 data class ConfirmContainerResultDto(
     @SerialName("container_id") val containerId: String,
     val verified: Boolean,
     @SerialName("confirmation_count") val confirmationCount: Long,
-    /** Only from `confirm_container_exists_as`: the kind after this vote. */
-    val kind: String? = null,
+)
+
+/** `vote_container_size` (§4.6 "Bin size"). */
+@Serializable
+data class VoteSizeResultDto(
+    @SerialName("container_id") val containerId: String,
+    /** The size the map shows after this answer. */
+    val kind: String,
+    val verified: Boolean,
+    @SerialName("votes_big") val votesBig: Long,
+    @SerialName("votes_small") val votesSmall: Long,
+    /** True when this answer changed what the map shows. */
+    val changed: Boolean,
 )
 
 /** `submit_container_request` (§4.6). */
@@ -316,6 +342,10 @@ data class UnverifiedContainerDto(
     @SerialName("is_mine") val isMine: Boolean,
     /** The server's answer to "may I show 'Yes, it's here'?" (0015). */
     @SerialName("can_confirm") val canConfirm: Boolean = false,
+    /** 0020: the list also holds verified bins whose size nobody has given yet. */
+    val verified: Boolean = false,
+    @SerialName("can_vote_size") val canVoteSize: Boolean = false,
+    @SerialName("my_size_vote") val mySizeVote: String? = null,
 )
 
 // -------------------------------------------------------------------------------------------

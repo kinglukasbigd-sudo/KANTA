@@ -8,11 +8,17 @@ package mk.kanta.app.core.data.model
 
 /** Spec §6: containers.kind. */
 enum class ContainerKind {
-    /** amenity=waste_disposal — municipal / recycling container. */
+    /** Municipal or recycling container — the 1,100-litre kind. */
     BIG,
 
-    /** amenity=waste_basket — small street can. */
+    /** Small street can. */
     SMALL,
+
+    /**
+     * §4.6 "Bin size": nobody standing next to it has said yet. Every bin starts here and gets
+     * the universal marker until someone answers Small or Big.
+     */
+    UNKNOWN,
 }
 
 /** Spec §6: containers.category. */

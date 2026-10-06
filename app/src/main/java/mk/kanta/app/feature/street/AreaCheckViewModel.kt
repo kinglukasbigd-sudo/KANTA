@@ -27,6 +27,7 @@ import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.core.data.remote.dto.UnverifiedContainerDto
+import mk.kanta.app.core.data.remote.dto.toContainerKind
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
 import javax.inject.Inject
@@ -57,6 +58,11 @@ data class UnverifiedNearbyUi(
     val canConfirm: Boolean,
     val isMine: Boolean,
     val iConfirmed: Boolean,
+    /** 0020: the list also holds verified bins whose size nobody has given yet. */
+    val verified: Boolean = false,
+    /** §4.6 "Bin size": within 50 m, so Small/Big would be accepted. */
+    val canVoteSize: Boolean = false,
+    val mySizeVote: ContainerKind? = null,
 )
 
 data class AreaCheckUiState(
@@ -68,6 +74,8 @@ data class AreaCheckUiState(
     val locationMissing: Boolean = false,
     val unverified: List<UnverifiedNearbyUi> = emptyList(),
     val confirmingId: String? = null,
+    /** The bin whose Small/Big answer is on its way, and which answer. */
+    val sizeSending: Pair<String, ContainerKind>? = null,
     val error: KantaError? = null,
 )
 
@@ -254,12 +262,7 @@ class AreaCheckViewModel @Inject constructor(
     // "Yes, it's here" (§4.6 step 3)
     // -----------------------------------------------------------------------------------------
 
-    fun confirmExists(containerId: String) = confirm(containerId, seenKind = null)
-
-    /** "It's here, but it's a big container" — two of these change its kind (0019). */
-    fun confirmExistsAs(containerId: String, kind: ContainerKind) = confirm(containerId, seenKind = kind)
-
-    private fun confirm(containerId: String, seenKind: ContainerKind?) {
+    fun confirmExists(containerId: String) {
         if (_state.value.confirmingId != null) return
         _state.update { it.copy(confirmingId = containerId, error = null) }
         viewModelScope.launch {
@@ -268,12 +271,40 @@ class AreaCheckViewModel @Inject constructor(
                 _state.update { it.copy(confirmingId = null, error = KantaError.TooFarToConfirm(null)) }
                 return@launch
             }
-            repository.confirmContainerExists(containerId, here.lon, here.lat, seenKind).collect { result ->
+            repository.confirmContainerExists(containerId, here.lon, here.lat).collect { result ->
                 when (result) {
                     is KantaResult.Loading -> Unit
                     is KantaResult.Failure -> _state.update { it.copy(confirmingId = null, error = result.error) }
                     is KantaResult.Success -> {
                         _state.update { it.copy(confirmingId = null) }
+                        _events.trySend(AreaCheckEvent.RefreshMap)
+                        _state.value.centre?.let { loadUnverified(it) }
+                    }
+                }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    // §4.6 "Bin size": Small or Big, for every bin around you
+    // -----------------------------------------------------------------------------------------
+
+    fun chooseSize(containerId: String, kind: ContainerKind) {
+        if (kind == ContainerKind.UNKNOWN || _state.value.sizeSending != null) return
+        _state.update { it.copy(sizeSending = containerId to kind, error = null) }
+        viewModelScope.launch {
+            val here = location.fresh() ?: _state.value.centre
+            if (here == null) {
+                _state.update { it.copy(sizeSending = null, error = KantaError.TooFarToConfirm(null)) }
+                return@launch
+            }
+            repository.voteContainerSize(containerId, here.lon, here.lat, kind).collect { result ->
+                when (result) {
+                    is KantaResult.Loading -> Unit
+                    is KantaResult.Failure -> _state.update { it.copy(sizeSending = null, error = result.error) }
+                    is KantaResult.Success -> {
+                        _state.update { it.copy(sizeSending = null) }
+                        // The marker under the ring changes from the universal bin to its size.
                         _events.trySend(AreaCheckEvent.RefreshMap)
                         _state.value.centre?.let { loadUnverified(it) }
                     }
@@ -316,7 +347,7 @@ class AreaCheckViewModel @Inject constructor(
 private fun UnverifiedContainerDto.toUi() = UnverifiedNearbyUi(
     id = id,
     code = code,
-    kind = if (kind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+    kind = kind.toContainerKind(),
     status = when (status) {
         "full" -> ContainerStatus.FULL
         "broken" -> ContainerStatus.BROKEN
@@ -328,4 +359,7 @@ private fun UnverifiedContainerDto.toUi() = UnverifiedNearbyUi(
     canConfirm = canConfirm,
     isMine = isMine,
     iConfirmed = iConfirmed,
+    verified = verified,
+    canVoteSize = canVoteSize,
+    mySizeVote = mySizeVote?.toContainerKind(),
 )

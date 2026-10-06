@@ -25,6 +25,7 @@ import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.core.data.remote.dto.MyReportDto
 import mk.kanta.app.core.data.remote.dto.MySuggestionDto
+import mk.kanta.app.core.data.remote.dto.toContainerKind
 import mk.kanta.app.core.data.suggest.SuggestionVoting
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.util.isoToMillis
@@ -208,7 +209,7 @@ internal fun MyReportDto.toUi() = MyReportUi(
     id = reportId,
     containerId = containerId,
     code = containerCode,
-    containerKind = if (containerKind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+    containerKind = containerKind.toContainerKind(),
     position = if (containerLat != null && containerLon != null) LatLon(containerLat, containerLon) else null,
     municipalityId = municipalityId,
     kind = kind,

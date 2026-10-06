@@ -49,9 +49,9 @@ fun KantaCompactAction(
                 onClick()
             },
             enabled = enabled,
-            shape = KantaShape.pill,
+            shape = KantaShape.chip,
             color = if (emphasis && enabled) MaterialTheme.colorScheme.primary else Color.Transparent,
-            border = if (emphasis) null else BorderStroke(Spacing.hairline, KantaTheme.colors.outline),
+            border = if (emphasis) null else BorderStroke(Spacing.hairline, KantaTheme.colors.outlineStrong),
             modifier = Modifier
                 .defaultMinSize(minHeight = 36.dp)
                 .semantics { role = Role.Button },

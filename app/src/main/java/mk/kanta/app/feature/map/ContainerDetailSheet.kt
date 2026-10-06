@@ -22,6 +22,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import mk.kanta.app.R
@@ -37,8 +39,11 @@ import mk.kanta.app.core.designsystem.component.KantaListRowSkeleton
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
 import mk.kanta.app.core.designsystem.component.KantaSectionHeader
+import mk.kanta.app.core.designsystem.component.KantaSizeChooser
 import mk.kanta.app.core.designsystem.component.KantaStatusBadge
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
+import mk.kanta.app.core.designsystem.component.kindLabel
+import mk.kanta.app.core.designsystem.mono
 import mk.kanta.app.core.designsystem.tabularFigures
 import mk.kanta.app.core.network.publicPhotoUrl
 import mk.kanta.app.core.util.compactDuration
@@ -60,11 +65,11 @@ fun ColumnScope.ContainerDetailContent(
     onEmptied: () -> Unit = {},
     onReportOther: () -> Unit = {},
     onConfirmExists: () -> Unit = {},
-    /** "It's here, but it's a big container" (0019). */
-    onConfirmExistsAs: (ContainerKind) -> Unit = {},
+    /** §4.6 "Bin size": Small or Big. */
+    onChooseSize: (ContainerKind) -> Unit = {},
     /** §5.2: from a full container, the nearest ones that still have space. */
     onNearestWithSpace: () -> Unit = {},
-    /** §4.6: admins can change a container's kind in one tap (0019). */
+    /** An admin's answer sets the size at once, from anywhere (0020). */
     isAdmin: Boolean = false,
     onAdminSetKind: (ContainerKind) -> Unit = {},
 ) {
@@ -88,6 +93,21 @@ fun ColumnScope.ContainerDetailContent(
 
     Spacer(Modifier.height(Spacing.l))
 
+    val sizeSection: @Composable () -> Unit = {
+        SizeSection(
+            state = state,
+            isAdmin = isAdmin,
+            onChoose = { kind -> if (isAdmin) onAdminSetKind(kind) else onChooseSize(kind) },
+        )
+    }
+    // §4.6 "Bin size": while nobody has said how big it is, that is the most useful thing
+    // anyone at the bin can do, so it comes first. Once known, it sits below the actions.
+    val sizeUnknown = state.kind == ContainerKind.UNKNOWN
+    if (sizeUnknown) {
+        sizeSection()
+        Spacer(Modifier.height(Spacing.l))
+    }
+
     // §4.1 photo timeline.
     KantaSectionHeader(stringResource(R.string.container_detail_timeline))
     if (state.reports.isEmpty()) {
@@ -109,12 +129,14 @@ fun ColumnScope.ContainerDetailContent(
         onEmptied = onEmptied,
         onReportOther = onReportOther,
         onConfirmExists = onConfirmExists,
-        onConfirmExistsAs = onConfirmExistsAs,
         onNavigate = { context.openInMaps(state.lat, state.lon, state.code) },
         onNearestWithSpace = onNearestWithSpace,
-        isAdmin = isAdmin,
-        onAdminSetKind = onAdminSetKind,
     )
+
+    if (!sizeUnknown) {
+        Spacer(Modifier.height(Spacing.xl))
+        sizeSection()
+    }
 
     Spacer(Modifier.height(Spacing.xl))
 }
@@ -128,18 +150,12 @@ private fun DetailHeader(state: ContainerDetailState) {
             Column {
                 Text(
                     text = state.code,
-                    style = MaterialTheme.typography.titleLarge.tabularFigures(),
+                    style = MaterialTheme.typography.titleLarge.mono(),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = listOfNotNull(
-                        stringResource(
-                            if (state.kind == ContainerKind.BIG) {
-                                R.string.container_kind_big
-                            } else {
-                                R.string.container_kind_small
-                            },
-                        ),
+                        kindLabel(state.kind),
                         state.municipality,
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
@@ -239,46 +255,40 @@ private fun DetailActions(
     onEmptied: () -> Unit,
     onReportOther: () -> Unit,
     onConfirmExists: () -> Unit,
-    onConfirmExistsAs: (ContainerKind) -> Unit,
     onNavigate: () -> Unit,
     onNearestWithSpace: () -> Unit,
-    isAdmin: Boolean,
-    onAdminSetKind: (ContainerKind) -> Unit,
 ) {
-    // A small can that is really a big container, or the other way round.
-    val otherKind = if (state.kind == ContainerKind.BIG) ContainerKind.SMALL else ContainerKind.BIG
+    // On a bin of unknown size the Small/Big tiles above are the main action.
+    val sizeUnknown = state.kind == ContainerKind.UNKNOWN
 
     Column(
         modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
         verticalArrangement = Arrangement.spacedBy(Spacing.m),
     ) {
         // §4.6: one tap to confirm an unverified container. Offered only when the
-        // server says it would accept it (within 50 m, not your own, not twice);
-        // then it is the most useful thing on the sheet, so it leads.
+        // server says it would accept it (within 50 m, not your own, not twice). On a bin
+        // of unknown size, answering Small/Big above confirms it too, so it steps back.
         if (state.canConfirmExists) {
-            KantaPrimaryButton(
-                text = stringResource(
-                    if (state.confirmingExists) R.string.report_sending else R.string.container_action_exists,
-                ),
-                onClick = onConfirmExists,
-                icon = KantaIcons.Success,
-                enabled = !state.confirmingExists,
-                modifier = Modifier.fillMaxWidth(),
+            val label = stringResource(
+                if (state.confirmingExists) R.string.report_sending else R.string.container_action_exists,
             )
-            // Mapillary brings every bin in as a small can (tools/import_external),
-            // so the person standing next to it is the one who can say it's big.
-            KantaSecondaryButton(
-                text = stringResource(
-                    if (otherKind == ContainerKind.BIG) {
-                        R.string.container_action_exists_as_big
-                    } else {
-                        R.string.container_action_exists_as_small
-                    },
-                ),
-                onClick = { onConfirmExistsAs(otherKind) },
-                enabled = !state.confirmingExists,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (sizeUnknown) {
+                KantaSecondaryButton(
+                    text = label,
+                    onClick = onConfirmExists,
+                    icon = KantaIcons.Success,
+                    enabled = !state.confirmingExists,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                KantaPrimaryButton(
+                    text = label,
+                    onClick = onConfirmExists,
+                    icon = KantaIcons.Success,
+                    enabled = !state.confirmingExists,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         // The primary action depends on what is wrong: confirming a problem when
@@ -301,7 +311,7 @@ private fun DetailActions(
                 onClick = onEmptied,
                 modifier = Modifier.fillMaxWidth(),
             )
-        } else if (state.canConfirmExists) {
+        } else if (state.canConfirmExists || sizeUnknown) {
             KantaSecondaryButton(
                 text = stringResource(R.string.container_action_report_other),
                 onClick = onReportOther,
@@ -325,22 +335,65 @@ private fun DetailActions(
             icon = KantaIcons.Navigate,
             modifier = Modifier.fillMaxWidth(),
         )
-
-        if (isAdmin) {
-            KantaSecondaryButton(
-                text = stringResource(
-                    when {
-                        state.changingKind -> R.string.report_sending
-                        otherKind == ContainerKind.BIG -> R.string.admin_set_kind_big
-                        else -> R.string.admin_set_kind_small
-                    },
-                ),
-                onClick = { onAdminSetKind(otherKind) },
-                enabled = !state.changingKind,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
     }
+}
+
+/**
+ * §4.6 "Bin size": "How big is this bin?" with the Small/Big tiles.
+ *
+ * The tiles are live when the server would take the answer (signed in, within 50 m), when the
+ * person is signed out (tapping signs in first, then sends it), and always for an admin, whose
+ * answer sets the size from anywhere. Otherwise they stay visible but still, with a line saying
+ * to get closer.
+ */
+@Composable
+private fun SizeSection(
+    state: ContainerDetailState,
+    isAdmin: Boolean,
+    onChoose: (ContainerKind) -> Unit,
+) {
+    val unknown = state.kind == ContainerKind.UNKNOWN
+    val enabled = isAdmin || state.canVoteSize || !state.signedIn
+
+    Column(modifier = Modifier.padding(horizontal = Spacing.screenHorizontal)) {
+        SizeTitle(
+            stringResource(if (unknown) R.string.size_title_unknown else R.string.size_title_known),
+        )
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            text = stringResource(
+                when {
+                    isAdmin -> R.string.size_hint_admin
+                    !enabled -> R.string.size_hint_far
+                    unknown && !state.verified && state.canConfirmExists -> R.string.size_hint_unknown_confirms
+                    unknown -> R.string.size_hint_unknown
+                    else -> R.string.size_hint_known
+                },
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = KantaTheme.colors.onSurfaceMuted,
+        )
+        Spacer(Modifier.height(Spacing.m))
+        KantaSizeChooser(
+            selected = state.mySizeVote,
+            onChoose = onChoose,
+            enabled = enabled,
+            sending = state.sizeSending,
+            votesSmall = state.sizeVotesSmall,
+            votesBig = state.sizeVotesBig,
+        )
+    }
+}
+
+/** The section's title: the size question reads as a heading, not a caption. */
+@Composable
+private fun SizeTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.semantics { heading() },
+    )
 }
 
 @Composable

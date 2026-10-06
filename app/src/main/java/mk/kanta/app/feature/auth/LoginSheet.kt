@@ -46,7 +46,6 @@ import mk.kanta.app.core.auth.Municipalities
 import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Motion
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaChip
@@ -315,7 +314,7 @@ private fun ErrorLine(error: KantaError?) {
     Text(
         text = stringResource(error.messageRes),
         style = MaterialTheme.typography.bodySmall,
-        color = MarkerColors.Broken,
+        color = KantaTheme.colors.error,
     )
 }
 

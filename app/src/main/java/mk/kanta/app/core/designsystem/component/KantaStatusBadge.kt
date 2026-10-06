@@ -1,5 +1,8 @@
 package mk.kanta.app.core.designsystem.component
 
+import android.graphics.DashPathEffect
+import android.graphics.Paint
+import android.graphics.RectF
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -11,12 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -29,23 +30,14 @@ import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.marker.BinMarkerPainter
 
 /**
- * Status colour for a container (spec §3.1/§3.4).
- *
- * OK is the only status whose colour depends on the container kind — big containers are green,
- * small street cans yellow. Every problem status reads the same regardless of kind.
+ * Status colour for a container (spec §3.1/§3.4) — the same mapping the map markers use.
+ * OK depends on the size (green big, gold small, charcoal while unknown); every problem status
+ * reads the same whatever the size.
  */
-fun statusColor(status: ContainerStatus, kind: ContainerKind): Color = when (status) {
-    ContainerStatus.OK -> when (kind) {
-        ContainerKind.BIG -> MarkerColors.BigOk
-        ContainerKind.SMALL -> MarkerColors.SmallOk
-    }
-    ContainerStatus.FULL -> MarkerColors.Full
-    ContainerStatus.BROKEN -> MarkerColors.Broken
-    ContainerStatus.DESTROYED -> MarkerColors.Destroyed
-    ContainerStatus.MISSING -> MarkerColors.Missing
-}
+fun statusColor(status: ContainerStatus, kind: ContainerKind): Color = MarkerColors.status(status, kind)
 
 @Composable
 fun statusLabel(status: ContainerStatus): String = stringResource(
@@ -58,10 +50,20 @@ fun statusLabel(status: ContainerStatus): String = stringResource(
     },
 )
 
+/** "Big container" / "Small can" / "Size not known yet". */
+@Composable
+fun kindLabel(kind: ContainerKind): String = stringResource(
+    when (kind) {
+        ContainerKind.BIG -> R.string.container_kind_big
+        ContainerKind.SMALL -> R.string.container_kind_small
+        ContainerKind.UNKNOWN -> R.string.container_kind_unknown
+    },
+)
+
 /**
- * A small mark carrying the same shape language as the map (§3.4): rounded rectangle for a big
- * container, rounded triangle for a small can, so a row and its marker are recognisably the same
- * thing. MISSING draws hollow and dashed, matching the map.
+ * The bin mark at list size — the same picture as the map marker ([BinMarkerPainter]): a round
+ * universal bin while the size is unknown, a tall tile for a small can, a wide tile for a big
+ * container, filled in the status colour. MISSING draws hollow and dashed, matching the map.
  */
 @Composable
 fun KantaStatusDot(
@@ -69,75 +71,53 @@ fun KantaStatusDot(
     kind: ContainerKind,
     modifier: Modifier = Modifier,
 ) {
-    val color = statusColor(status, kind)
+    val fill = statusColor(status, kind).toArgb()
+    val glyph = MarkerColors.glyph(status, kind).toArgb()
+    val ring = MarkerColors.ring(KantaTheme.colors.isDark).toArgb()
     val hollow = status == ContainerStatus.MISSING
 
     Canvas(modifier = modifier.size(20.dp)) {
-        val stroke = 2.dp.toPx()
-        when (kind) {
-            ContainerKind.BIG -> {
-                val w = size.width * 0.86f
-                val h = size.height * 0.62f
-                val topLeft = Offset((size.width - w) / 2f, (size.height - h) / 2f)
-                val corner = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
-                if (hollow) {
-                    drawRoundRect(
-                        color = color,
-                        topLeft = topLeft,
-                        size = Size(w, h),
-                        cornerRadius = corner,
-                        style = Stroke(
-                            width = stroke,
-                            pathEffect = PathEffect.dashPathEffect(
-                                floatArrayOf(3.dp.toPx(), 2.dp.toPx()),
-                            ),
-                        ),
-                    )
-                } else {
-                    drawRoundRect(
-                        color = color,
-                        topLeft = topLeft,
-                        size = Size(w, h),
-                        cornerRadius = corner,
-                    )
-                }
-            }
-
-            ContainerKind.SMALL -> {
-                val path = trianglePath(size.width, size.height)
-                if (hollow) {
-                    drawPath(
-                        path = path,
-                        color = color,
-                        style = Stroke(
-                            width = stroke,
-                            pathEffect = PathEffect.dashPathEffect(
-                                floatArrayOf(3.dp.toPx(), 2.dp.toPx()),
-                            ),
-                        ),
-                    )
-                } else {
-                    drawPath(path = path, color = color)
-                }
+        val ringWidth = 1.dp.toPx()
+        val body = BinMarkerPainter.fit(
+            kind,
+            RectF(ringWidth, ringWidth, size.width - ringWidth, size.height - ringWidth),
+        )
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            if (hollow) {
+                native.drawPath(
+                    BinMarkerPainter.bodyPath(kind, body),
+                    Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.STROKE
+                        color = fill
+                        strokeWidth = 1.5.dp.toPx()
+                        pathEffect = DashPathEffect(floatArrayOf(2.5.dp.toPx(), 2.dp.toPx()), 0f)
+                    },
+                )
+                BinMarkerPainter.drawGlyph(native, kind, body, fill, knockout = null, alpha = 150)
+            } else {
+                // The ring only shows where the surface is dark enough to need it, exactly as on
+                // the map: it is what keeps the charcoal universal mark visible in dark mode.
+                val ringed = RectF(body).apply { inset(-ringWidth, -ringWidth) }
+                native.drawPath(
+                    BinMarkerPainter.bodyPath(kind, ringed),
+                    Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ring },
+                )
+                native.drawPath(
+                    BinMarkerPainter.bodyPath(kind, body),
+                    Paint(Paint.ANTI_ALIAS_FLAG).apply { color = fill },
+                )
+                BinMarkerPainter.drawGlyph(native, kind, body, glyph, knockout = fill)
             }
         }
     }
 }
 
-/** Rounded-ish triangle pointing up, inset inside the given box. */
-private fun trianglePath(width: Float, height: Float): Path {
-    val inset = width * 0.08f
-    return Path().apply {
-        moveTo(width / 2f, inset)
-        lineTo(width - inset, height - inset)
-        lineTo(inset, height - inset)
-        close()
-    }
-}
-
 /**
- * Status as a tinted pill with its label — used on the container detail sheet and in lists.
- * The whole badge is one semantics node so TalkBack reads "Full" once, not shape-then-text.
+ * Status as a quiet pill: a status dot and the label in ink on a neutral surface. Colour lives in
+ * the dot only, so the label keeps full contrast whatever the status (gold or ember text on a
+ * tint of itself never reads well). The whole badge is one semantics node so TalkBack reads
+ * "Full" once.
  */
 @Composable
 fun KantaStatusBadge(
@@ -145,26 +125,21 @@ fun KantaStatusBadge(
     modifier: Modifier = Modifier,
     kind: ContainerKind = ContainerKind.BIG,
 ) {
-    val color = statusColor(status, kind)
     val label = statusLabel(status)
 
     Surface(
         modifier = modifier.clearAndSetSemantics { contentDescription = label },
         shape = KantaShape.pill,
-        color = color.copy(alpha = if (KantaTheme.colors.isDark) 0.24f else 0.12f),
+        color = KantaTheme.colors.surfaceMuted,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs),
+            modifier = Modifier.padding(start = Spacing.s, end = Spacing.m, top = Spacing.xs, bottom = Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
-            KantaStatusDot(status = status, kind = kind, modifier = Modifier.size(12.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                // Full-strength status colour on a tint of itself keeps AA contrast in both themes.
-                color = color,
-            )
+            Canvas(Modifier.size(8.dp)) { drawCircle(statusColor(status, kind)) }
+            Text(text = label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }
@@ -181,8 +156,9 @@ private fun BadgeSample() {
             horizontalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
             KantaStatusBadge(status = status, kind = ContainerKind.BIG)
-            KantaStatusDot(status = status, kind = ContainerKind.BIG)
-            KantaStatusDot(status = status, kind = ContainerKind.SMALL)
+            KantaStatusDot(status = status, kind = ContainerKind.UNKNOWN, modifier = Modifier.size(28.dp))
+            KantaStatusDot(status = status, kind = ContainerKind.SMALL, modifier = Modifier.size(28.dp))
+            KantaStatusDot(status = status, kind = ContainerKind.BIG, modifier = Modifier.size(28.dp))
         }
     }
 }

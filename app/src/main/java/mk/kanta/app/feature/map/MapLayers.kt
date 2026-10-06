@@ -166,11 +166,9 @@ object MapLayers {
                     PROP_ICON_NEAR,
                     factory.idFor(
                         container.kind, container.status,
-                        // Only an otherwise-fine big container shows its material
-                        // dot; anything else reads as its problem first.
-                        if (container.kind == ContainerKind.BIG &&
-                            container.status == ContainerStatus.OK
-                        ) {
+                        // Only an otherwise-fine container that is not a small can shows
+                        // its material dot; anything else reads as its problem first.
+                        if (MarkerBitmapFactory.showsCategory(container.kind, container.status)) {
                             container.category
                         } else {
                             ContainerCategory.GENERAL
@@ -200,14 +198,7 @@ object MapLayers {
 
     /** §3.4 dot colours: the same status rules as the shapes. */
     private fun dotColor(container: ContainerFeature): String {
-        val color = when (container.status) {
-            ContainerStatus.OK ->
-                if (container.kind == ContainerKind.BIG) MarkerColors.BigOk else MarkerColors.SmallOk
-            ContainerStatus.FULL -> MarkerColors.Full
-            ContainerStatus.BROKEN -> MarkerColors.Broken
-            ContainerStatus.DESTROYED -> MarkerColors.Destroyed
-            ContainerStatus.MISSING -> MarkerColors.Missing
-        }
+        val color = MarkerColors.status(container.status, container.kind)
         return String.format("#%06X", color.toArgb() and 0xFFFFFF)
     }
 
@@ -245,7 +236,7 @@ object MapLayers {
         // Area shading sits under every marker; the focus ring sits on top.
         addCoverageLayer(style, darkTheme)
         addRingLayer(style, darkTheme)
-        addDotLayer(style)
+        addDotLayer(style, darkTheme)
         addContainerLayers(style)
         addSuggestionLayer(style)
         addFocusLayer(style, darkTheme)
@@ -376,11 +367,12 @@ object MapLayers {
     }
 
     /**
-     * §3.4 city zoom: every container a small dot in its status colour — no border,
-     * no shape — 4 dp below zoom 14, 6 dp by 15.5, then fading out as the shapes
-     * fade in.
+     * §3.4 city zoom: every container a small dot in its status colour — no shape —
+     * 4 dp below zoom 14, 6 dp by 15.5, then fading out as the shapes fade in. A
+     * hairline ring in the markers' ring colour keeps the charcoal dots of bins with
+     * no size yet visible on the dark map.
      */
-    private fun addDotLayer(style: Style) {
+    private fun addDotLayer(style: Style, darkTheme: Boolean) {
         style.addLayer(
             CircleLayer(LAYER_DOTS, CONTAINER_SOURCE).apply {
                 maxZoom = SHAPES_FADE_IN_END + 0.01f
@@ -396,7 +388,9 @@ object MapLayers {
                         ),
                     ),
                     PropertyFactory.circleOpacity(dotOpacity(highlight = null)),
-                    PropertyFactory.circleStrokeWidth(0f),
+                    PropertyFactory.circleStrokeWidth(0.6f),
+                    PropertyFactory.circleStrokeColor(MarkerColors.ring(darkTheme).toArgb()),
+                    PropertyFactory.circleStrokeOpacity(dotOpacity(highlight = null)),
                     // §4.1: dots stay round on screen when the map is tilted.
                     PropertyFactory.circlePitchAlignment("viewport"),
                 )
@@ -458,7 +452,7 @@ object MapLayers {
             // §3.4: problems on top of OK ones.
             PropertyFactory.symbolSortKey(Expression.toNumber(Expression.get(PROP_RANK))),
             PropertyFactory.iconOpacity(bandOpacity(fadeIn, fadeOut, highlight = null)),
-            // §3.4: shapes grow smoothly with the zoom; 1.0 is the drawn size (14×10 dp at z16).
+            // §3.4: shapes grow smoothly with the zoom; 1.0 is the drawn size (BinMarkerPainter, at z16).
             PropertyFactory.iconSize(
                 Expression.interpolate(
                     Expression.linear(),
@@ -560,7 +554,10 @@ object MapLayers {
      * all of them normally again.
      */
     fun setHighlight(style: Style, ids: Collection<String>?) {
-        style.getLayer(LAYER_DOTS)?.setProperties(PropertyFactory.circleOpacity(dotOpacity(ids)))
+        style.getLayer(LAYER_DOTS)?.setProperties(
+            PropertyFactory.circleOpacity(dotOpacity(ids)),
+            PropertyFactory.circleStrokeOpacity(dotOpacity(ids)),
+        )
         bands.forEach { (layerId, band) ->
             style.getLayer(layerId)?.setProperties(
                 PropertyFactory.iconOpacity(bandOpacity(band.first, band.second, ids)),

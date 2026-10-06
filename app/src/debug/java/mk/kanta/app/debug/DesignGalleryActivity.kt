@@ -134,7 +134,7 @@ private fun GalleryHeader(label: String) {
 
 @Composable
 private fun TypographySection() {
-    KantaSectionHeader("Type · Nunito")
+    KantaSectionHeader("Type · Manrope + JetBrains Mono")
     Column(
         modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
         verticalArrangement = Arrangement.spacedBy(Spacing.s),
@@ -283,8 +283,9 @@ private fun StatusSection() {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             ) {
                 KantaStatusBadge(status)
-                KantaStatusDot(status, ContainerKind.BIG)
+                KantaStatusDot(status, ContainerKind.UNKNOWN)
                 KantaStatusDot(status, ContainerKind.SMALL)
+                KantaStatusDot(status, ContainerKind.BIG)
             }
         }
     }
@@ -344,7 +345,11 @@ private fun MarkerSection(darkTheme: Boolean) {
     ) {
         ContainerKind.entries.forEach { kind ->
             Text(
-                text = if (kind == ContainerKind.BIG) "Big · rectangle" else "Small · triangle",
+                text = when (kind) {
+                    ContainerKind.BIG -> "Big · wide tile"
+                    ContainerKind.SMALL -> "Small · tall tile"
+                    ContainerKind.UNKNOWN -> "Unknown size · universal bin"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = KantaTheme.colors.onSurfaceMuted,
             )

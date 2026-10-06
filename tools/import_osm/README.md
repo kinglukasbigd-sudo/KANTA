@@ -101,6 +101,11 @@ attribution doesn't change.
    re-running after the boundaries land also fixes rows imported earlier.
 6. Prints a per-municipality summary.
 
+Sizes: since migration 0020 every bin is shown with its size **unknown** until
+someone standing next to it says Small or Big in the app. The size the mapping
+above gives is kept in `containers.source_kind`, and the summary at the end of
+the SQL counts by it.
+
 Imported containers start `verified = true`: OSM data is surveyed, not guessed,
 so it shouldn't wear the dashed unverified marker from §4.6.
 

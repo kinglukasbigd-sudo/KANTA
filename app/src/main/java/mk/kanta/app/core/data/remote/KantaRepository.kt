@@ -39,7 +39,9 @@ import mk.kanta.app.core.data.remote.dto.SubmitReportResultDto
 import mk.kanta.app.core.data.remote.dto.SubmitSuggestionResultDto
 import mk.kanta.app.core.data.remote.dto.SuggestionDto
 import mk.kanta.app.core.data.remote.dto.UnverifiedContainerDto
+import mk.kanta.app.core.data.remote.dto.VoteSizeResultDto
 import mk.kanta.app.core.data.remote.dto.VoteSuggestionResultDto
+import mk.kanta.app.core.data.remote.dto.wire
 import mk.kanta.app.core.location.LatLon
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -281,23 +283,33 @@ class KantaRepository @Inject constructor(
         put("p_confirm_different", confirmDifferent)
     }
 
-    /**
-     * `confirm_container_exists` — the one-tap "Yes, it's here". With [seenKind],
-     * `confirm_container_exists_as`: "…but it's a big container". Two of those
-     * change the container's kind (0019).
-     */
+    /** `confirm_container_exists` — the one-tap "Yes, it's here". */
     fun confirmContainerExists(
         containerId: String,
         lon: Double,
         lat: Double,
-        seenKind: ContainerKind? = null,
-    ): Flow<KantaResult<ConfirmContainerResultDto>> =
-        rpcFirst(if (seenKind == null) "confirm_container_exists" else "confirm_container_exists_as") {
-            put("p_container_id", containerId)
-            put("p_lon", lon)
-            put("p_lat", lat)
-            if (seenKind != null) put("p_kind", seenKind.wire)
-        }
+    ): Flow<KantaResult<ConfirmContainerResultDto>> = rpcFirst("confirm_container_exists") {
+        put("p_container_id", containerId)
+        put("p_lon", lon)
+        put("p_lat", lat)
+    }
+
+    /**
+     * `vote_container_size` — "it's a small can" / "it's a big container" (§4.6 "Bin size").
+     * The first answer on a bin of unknown size marks it at once; after that the majority
+     * decides. On an unverified bin it also counts as "Yes, it's here".
+     */
+    fun voteContainerSize(
+        containerId: String,
+        lon: Double,
+        lat: Double,
+        kind: ContainerKind,
+    ): Flow<KantaResult<VoteSizeResultDto>> = rpcFirst("vote_container_size") {
+        put("p_container_id", containerId)
+        put("p_lon", lon)
+        put("p_lat", lat)
+        put("p_kind", kind.wire)
+    }
 
     /** `submit_container_request` — for users who used up their 2 adds. */
     fun submitContainerRequest(
@@ -369,7 +381,7 @@ class KantaRepository @Inject constructor(
     fun adminDeleteContainer(containerId: String): Flow<KantaResult<Boolean>> =
         rpcScalar("admin_delete_container") { put("p_id", containerId) }
 
-    /** Big container ↔ small can, on any container (0019). */
+    /** An admin's Small/Big answer: sets the size at once, from anywhere (0020). */
     fun adminSetContainerKind(containerId: String, kind: ContainerKind): Flow<KantaResult<Boolean>> =
         rpcScalar("admin_set_container_kind") {
             put("p_id", containerId)
@@ -452,13 +464,6 @@ class KantaRepository @Inject constructor(
         emit(KantaResult.Failure(throwable.toKantaError()))
     }.flowOn(io)
 }
-
-/** Wire values, so an enum rename cannot silently change what the database receives. */
-private val ContainerKind.wire: String
-    get() = when (this) {
-        ContainerKind.BIG -> "big"
-        ContainerKind.SMALL -> "small"
-    }
 
 private val ContainerCategory.wire: String
     get() = when (this) {

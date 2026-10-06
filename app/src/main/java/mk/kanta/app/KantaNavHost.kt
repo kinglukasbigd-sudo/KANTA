@@ -82,9 +82,11 @@ fun KantaNavHost(
                 authViewModel.consume(PendingAction.OpenSuggest)
                 navController.navigate(SuggestRoute)
             }
-            // Consumed elsewhere: the map owns the detail it refreshes and the check it
-            // opens; votes run in SuggestionVoting wherever the user is by then.
-            is PendingAction.ConfirmReport, PendingAction.OpenAreaCheck, is PendingAction.Vote, null -> Unit
+            // Consumed elsewhere: the map owns the detail it refreshes, the check it opens
+            // and the size answers given on it; votes run in SuggestionVoting wherever the
+            // user is by then.
+            is PendingAction.ConfirmReport, PendingAction.OpenAreaCheck, is PendingAction.Vote,
+            is PendingAction.VoteSize, null -> Unit
         }
     }
 

@@ -25,7 +25,7 @@ import mk.kanta.app.core.data.prefs.ThemeMode
 private val LightColors = lightColorScheme(
     primary = BrandLight,
     onPrimary = Color.White,
-    primaryContainer = SurfaceMutedLight,
+    primaryContainer = BrandContainerLight,
     onPrimaryContainer = BrandLight,
     inversePrimary = BrandDark,
 
@@ -59,10 +59,10 @@ private val LightColors = lightColorScheme(
     surfaceBright = SurfaceLight,
     surfaceDim = SurfaceMutedLight,
 
-    error = MarkerColors.Broken,
+    error = ErrorLight,
     onError = Color.White,
     errorContainer = SurfaceMutedLight,
-    onErrorContainer = MarkerColors.Broken,
+    onErrorContainer = ErrorLight,
 
     outline = OutlineLight,
     outlineVariant = OutlineLight,
@@ -72,7 +72,7 @@ private val LightColors = lightColorScheme(
 private val DarkColors = darkColorScheme(
     primary = BrandDark,
     onPrimary = BackgroundDark,
-    primaryContainer = SurfaceMutedDark,
+    primaryContainer = BrandContainerDark,
     onPrimaryContainer = BrandDark,
     inversePrimary = BrandLight,
 
@@ -105,10 +105,10 @@ private val DarkColors = darkColorScheme(
     surfaceBright = SurfaceMutedDark,
     surfaceDim = BackgroundDark,
 
-    error = MarkerColors.Broken,
-    onError = Color.White,
+    error = ErrorDark,
+    onError = BackgroundDark,
     errorContainer = SurfaceMutedDark,
-    onErrorContainer = MarkerColors.Broken,
+    onErrorContainer = ErrorDark,
 
     outline = OutlineDark,
     outlineVariant = OutlineDark,
@@ -121,28 +121,41 @@ private val DarkColors = darkColorScheme(
  */
 data class KantaColors(
     val brand: Color,
+    /** Selected tiles and chips: mint in light, green-tinted charcoal in dark. */
+    val brandContainer: Color,
     val accent: Color,
     val surfaceMuted: Color,
     val onSurfaceMuted: Color,
+    /** Hairlines between rows and around quiet surfaces. */
     val outline: Color,
+    /** Borders that mark something tappable: outlined buttons, choice tiles. */
+    val outlineStrong: Color,
+    /** Error text — lifted in dark so it keeps 4.5:1 on carbon. */
+    val error: Color,
     val isDark: Boolean,
 )
 
 private val LightKantaColors = KantaColors(
     brand = BrandLight,
+    brandContainer = BrandContainerLight,
     accent = AccentLight,
     surfaceMuted = SurfaceMutedLight,
     onSurfaceMuted = OnSurfaceMutedLight,
     outline = OutlineLight,
+    outlineStrong = OutlineStrongLight,
+    error = ErrorLight,
     isDark = false,
 )
 
 private val DarkKantaColors = KantaColors(
     brand = BrandDark,
+    brandContainer = BrandContainerDark,
     accent = AccentDark,
     surfaceMuted = SurfaceMutedDark,
     onSurfaceMuted = OnSurfaceMutedDark,
     outline = OutlineDark,
+    outlineStrong = OutlineStrongDark,
+    error = ErrorDark,
     isDark = true,
 )
 

@@ -305,7 +305,7 @@ fun MapScreen(
                                 onEmptied = viewModel::onEmptied,
                                 onReportOther = onReport,
                                 onConfirmExists = viewModel::onConfirmExists,
-                                onConfirmExistsAs = viewModel::onConfirmExistsAs,
+                                onChooseSize = viewModel::onChooseSize,
                                 isAdmin = isAdmin,
                                 onAdminSetKind = viewModel::onAdminSetKind,
                                 onNearestWithSpace = {
@@ -342,7 +342,7 @@ fun MapScreen(
                     onCancelPicking = areaCheckViewModel::cancelPicking,
                     onConfirmExists = areaCheckViewModel::confirmExists,
                     onLater = areaCheckViewModel::later,
-                    onConfirmExistsAs = areaCheckViewModel::confirmExistsAs,
+                    onChooseSize = areaCheckViewModel::chooseSize,
                 )
                 SheetMode.Admin -> AdminContent(
                     state = admin,

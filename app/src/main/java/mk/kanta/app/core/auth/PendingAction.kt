@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Something a signed-out user tried to do (spec §4.2: Full / Report / Suggest /
- * vote, plus Me too and It's been emptied from the detail sheet).
+ * vote, plus Me too, It's been emptied and Small/Big from the detail sheet).
  *
  * It is plain serialisable data rather than a lambda on purpose: signing in means
  * leaving the app to read an email, and on a phone short on memory the process can
@@ -48,6 +48,14 @@ sealed interface PendingAction {
     @Serializable
     @SerialName("vote")
     data class Vote(val suggestionId: String) : PendingAction
+
+    /**
+     * Small or Big on a bin from its detail sheet (§4.6 "Bin size"). [kind] is the
+     * `ContainerKind` name, `BIG` or `SMALL`.
+     */
+    @Serializable
+    @SerialName("vote_size")
+    data class VoteSize(val containerId: String, val kind: String) : PendingAction
 }
 
 /** What is stored on disk: the action plus when it was requested. */

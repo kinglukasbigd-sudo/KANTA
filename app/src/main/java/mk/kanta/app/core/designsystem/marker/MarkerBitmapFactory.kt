@@ -4,7 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.DashPathEffect
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.RectF
 import androidx.annotation.ColorInt
 import androidx.compose.ui.graphics.toArgb
@@ -13,17 +12,6 @@ import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.data.model.ContainerStatus
 import mk.kanta.app.core.designsystem.MarkerColors
 
-/**
- * Draws the map markers from KANTA_SPEC.md §3.4 as [Bitmap]s, to be registered once as MapLibre
- * style images and then referenced by id from a symbol layer.
- *
- * Spec §3.4 is explicit that markers must NOT be Android views — with 10,000+ containers the only
- * thing that stays at 60fps is a GeoJSON source plus style images. So this factory runs once at
- * style load, produces one bitmap per (kind × status × category) combination that can appear, and
- * is never touched again while panning.
- *
- * Sizes are given in dp at zoom 16 (the spec's reference zoom); MapLibre scales them per zoom.
- */
 /** One entry in the marker image registry. */
 data class MarkerVariant(
     val kind: ContainerKind,
@@ -34,6 +22,22 @@ data class MarkerVariant(
     val badge: Boolean,
 )
 
+/**
+ * Draws the map markers from KANTA_SPEC.md §3.4 as [Bitmap]s, to be registered once as MapLibre
+ * style images and then referenced by id from a symbol layer.
+ *
+ * Spec §3.4 is explicit that markers must NOT be Android views — with 10,000+ containers the only
+ * thing that stays at 60fps is a GeoJSON source plus style images. So this factory runs once at
+ * style load, produces one bitmap per (kind × status × category) combination that can appear, and
+ * is never touched again while panning.
+ *
+ * The bin marks themselves (round universal bin, tall small can, wide big container) come from
+ * [BinMarkerPainter]; this class adds what only the map needs: the ring that keeps a marker
+ * legible on any tile, the selection halo, the full and unverified treatments, the recycling dot
+ * and the "?" badge.
+ *
+ * Sizes are given in dp at zoom 16 (the spec's reference zoom); MapLibre scales them per zoom.
+ */
 class MarkerBitmapFactory(private val density: Float) {
 
     private fun dp(value: Float): Float = value * density
@@ -71,12 +75,7 @@ class MarkerBitmapFactory(private val density: Float) {
         if (selected) append("-selected")
     }
 
-    /**
-     * Every marker image the map can need. Generated once at style load.
-     *
-     * Recycling categories only vary the inner dot, and only on big containers that are OK —
-     * a destroyed glass container reads as destroyed first — so the product stays small.
-     */
+    /** Every marker image the map can need. Generated once at style load. */
     fun buildAll(darkTheme: Boolean): Map<String, Bitmap> = buildMap {
         for (variant in variants()) {
             put(
@@ -107,10 +106,7 @@ class MarkerBitmapFactory(private val density: Float) {
         for (kind in ContainerKind.entries) {
             for (status in ContainerStatus.entries) {
                 for (selected in listOf(false, true)) {
-                    // The recycling dot (§3.4) is only meaningful on a big
-                    // container that is otherwise fine — a broken glass container
-                    // must read as broken first.
-                    val categories = if (kind == ContainerKind.BIG && status == ContainerStatus.OK) {
+                    val categories = if (showsCategory(kind, status)) {
                         ContainerCategory.entries
                     } else {
                         listOf(ContainerCategory.GENERAL)
@@ -140,9 +136,10 @@ class MarkerBitmapFactory(private val density: Float) {
     /**
      * One container marker.
      *
-     * Spec §3.4 shapes: big container = rounded rectangle 14×10dp, small can = rounded triangle
-     * 10dp. Spec §3.1: FULL renders 15% larger with a 2dp white (dark theme: background) border
-     * so orange can never be mistaken for the small-can yellow. MISSING is hollow and dashed.
+     * §3.1: FULL renders 15% larger with a 2dp ring. MISSING is hollow and dashed. Unverified
+     * keeps its fill at 85% with a dashed ring instead of a solid one. Every other marker sits
+     * on a solid 1.25dp ring (white on light tiles, ivory on dark), with a soft ink hairline
+     * outside it on light tiles so gold and grey hold their edge.
      */
     fun marker(
         kind: ContainerKind,
@@ -155,35 +152,26 @@ class MarkerBitmapFactory(private val density: Float) {
     ): Bitmap {
         val isFull = status == ContainerStatus.FULL
         val isMissing = status == ContainerStatus.MISSING
-        // §3.4: "filled = it exists, hollow = it's gone". MISSING wins over UNVERIFIED — a
-        // user-added container reported missing is hollow like any other missing one, so the
-        // unverified dashed border is never drawn on top of a hollow shape.
+        // §3.4: "filled = it exists, hollow = it's gone". MISSING wins over UNVERIFIED.
         val showUnverified = unverified && !isMissing
 
         // §3.1: full markers render 15% larger. §3.4: selected scales 1.4x with a brand halo.
         val scale = (if (isFull) 1.15f else 1f) * (if (selected) 1.4f else 1f)
 
-        val shapeW: Float
-        val shapeH: Float
-        when (kind) {
-            ContainerKind.BIG -> {
-                shapeW = dp(14f) * scale
-                shapeH = dp(10f) * scale
-            }
-            ContainerKind.SMALL -> {
-                shapeW = dp(10f) * scale
-                shapeH = dp(10f) * scale
-            }
-        }
+        val (bodyW, bodyH) = BinMarkerPainter.bodySizeDp(kind)
+        val shapeW = dp(bodyW) * scale
+        val shapeH = dp(bodyH) * scale
 
-        val border = if (isFull) dp(2f) else 0f
-        val haloWidth = if (selected) dp(3f) else 0f
+        val ring = if (isFull) dp(2f) else dp(1.25f)
+        val hairline = if (!darkTheme && !isMissing && !showUnverified) dp(0.75f) else 0f
+        val halo = if (selected) dp(3f) else 0f
         val missingStroke = if (isMissing) dp(1.5f) else 0f
-        val unverifiedStroke = if (showUnverified) dp(1.5f) else 0f
-        // The "?" badge overhangs the top-right corner, so it needs its own headroom.
+        // The "?" badge overhangs the top-right corner, the recycling dot the bottom-left.
         val badgeRadius = if (showUnverified && badge) dp(3.5f) * scale else 0f
+        val dot = recyclingDotColor(category).takeIf { showsCategory(kind, status) }
+        val dotRadius = if (dot != null) dp(2.6f) * scale else 0f
         // Pad for whichever outer decoration is widest, plus a pixel of antialias headroom.
-        val pad = maxOf(border, haloWidth, missingStroke, unverifiedStroke, badgeRadius) + dp(2f)
+        val pad = maxOf(ring + hairline, halo, missingStroke, badgeRadius, dotRadius) + dp(2f)
 
         val width = Math.ceil((shapeW + pad * 2).toDouble()).toInt().coerceAtLeast(1)
         val height = Math.ceil((shapeH + pad * 2).toDouble()).toInt().coerceAtLeast(1)
@@ -193,81 +181,92 @@ class MarkerBitmapFactory(private val density: Float) {
         val rect = RectF(pad, pad, pad + shapeW, pad + shapeH)
 
         @ColorInt val color = statusColorInt(status, kind)
+        @ColorInt val ringColor = MarkerColors.ring(darkTheme).toArgb()
 
         if (selected) {
             // §3.4: soft halo in brand colour behind the selected marker.
-            drawShape(
-                canvas, kind, inflate(rect, haloWidth),
+            canvas.drawPath(
+                BinMarkerPainter.bodyPath(kind, inflate(rect, ring + halo)),
                 fillPaint().apply {
                     this.color = MarkerColors.Suggestion.toArgb()
-                    alpha = 56
+                    alpha = 64
                 },
             )
         }
 
-        if (isFull) {
-            // Border sits outside the shape, drawn as a slightly larger filled copy underneath.
-            drawShape(
-                canvas, kind, inflate(rect, border),
-                fillPaint().apply { this.color = MarkerColors.fullBorder(darkTheme).toArgb() },
-            )
-        }
-
         if (isMissing) {
-            // §3.1: hollow, dashed grey outline only.
-            drawShape(
-                canvas, kind, rect,
+            // §3.1: hollow, dashed grey outline, with the glyph faint inside so the size still
+            // reads on a container that is gone.
+            canvas.drawPath(
+                BinMarkerPainter.bodyPath(kind, rect),
                 strokePaint().apply {
                     this.color = color
                     strokeWidth = missingStroke
                     pathEffect = DashPathEffect(floatArrayOf(dp(2.5f), dp(2f)), 0f)
                 },
             )
+            BinMarkerPainter.drawGlyph(canvas, kind, rect, color, knockout = null, alpha = 150)
         } else {
-            // §3.4: an unverified container keeps its normal fill, at 85% opacity.
-            drawShape(
-                canvas, kind, rect,
-                fillPaint().apply {
-                    this.color = color
-                    if (showUnverified) alpha = UNVERIFIED_ALPHA
-                },
-            )
-
-            if (showUnverified) {
-                // 1.5dp dashed border, white in light / background colour in dark, so the
-                // "not yet confirmed" state reads without changing the status colour.
-                //
-                // Offset by half the stroke width so the dashes sit ENTIRELY OUTSIDE the fill.
-                // Stroked on the edge itself they cut into the shape and it reads as a
-                // perforated stamp rather than a filled container with a dashed ring.
-                drawShape(
-                    canvas, kind, inflate(rect, unverifiedStroke / 2f),
-                    strokePaint().apply {
-                        this.color = MarkerColors.fullBorder(darkTheme).toArgb()
-                        strokeWidth = unverifiedStroke
-                        pathEffect = DashPathEffect(floatArrayOf(dp(2f), dp(1.5f)), 0f)
-                    },
+            if (hairline > 0f) {
+                canvas.drawPath(
+                    BinMarkerPainter.bodyPath(kind, inflate(rect, ring + hairline)),
+                    fillPaint().apply { this.color = MarkerColors.Shadow.toArgb() },
                 )
             }
 
-            // §3.4: recycling material dot, 3dp, only meaningful on big containers.
-            val dot = recyclingDotColor(category)
-            if (dot != null && kind == ContainerKind.BIG) {
-                // A contrasting ring under the dot. Without it the glass green would vanish
-                // against the identical green of an OK big container.
-                canvas.drawCircle(
-                    rect.centerX(), rect.centerY(), dp(2.1f) * scale,
-                    fillPaint().apply { this.color = MarkerColors.fullBorder(darkTheme).toArgb() },
+            if (showUnverified) {
+                // §3.4: "not yet confirmed" reads as a dashed ring, sitting entirely outside the
+                // fill so the body stays whole rather than looking perforated.
+                canvas.drawPath(
+                    BinMarkerPainter.bodyPath(kind, inflate(rect, ring / 2f)),
+                    strokePaint().apply {
+                        this.color = ringColor
+                        strokeWidth = ring
+                        pathEffect = DashPathEffect(floatArrayOf(dp(2f), dp(1.5f)), 0f)
+                    },
                 )
-                canvas.drawCircle(
-                    rect.centerX(), rect.centerY(), dp(1.5f) * scale,
-                    fillPaint().apply { this.color = dot },
+            } else {
+                canvas.drawPath(
+                    BinMarkerPainter.bodyPath(kind, inflate(rect, ring)),
+                    fillPaint().apply { this.color = ringColor },
                 )
+            }
+
+            // §3.4: an unverified container keeps its normal fill, at 85% opacity.
+            val bodyAlpha = if (showUnverified) UNVERIFIED_ALPHA else 255
+            canvas.drawPath(
+                BinMarkerPainter.bodyPath(kind, rect),
+                fillPaint().apply {
+                    this.color = color
+                    alpha = bodyAlpha
+                },
+            )
+            BinMarkerPainter.drawGlyph(
+                canvas, kind, rect,
+                glyph = MarkerColors.glyph(status, kind).toArgb(),
+                knockout = color,
+                alpha = bodyAlpha,
+            )
+
+            // §3.4: recycling material dot, on the bottom-left corner of an otherwise-fine
+            // container, ringed so glass green never vanishes against a green body.
+            if (dot != null) {
+                val cx = rect.left + dotRadius * 0.6f
+                val cy = rect.bottom - dotRadius * 0.6f
+                canvas.drawCircle(cx, cy, dotRadius, fillPaint().apply { this.color = ringColor })
+                canvas.drawCircle(cx, cy, dotRadius * 0.68f, fillPaint().apply { this.color = dot })
             }
         }
 
         if (showUnverified && badge) {
-            drawQuestionBadge(canvas, rect.right, rect.top, badgeRadius, color, darkTheme)
+            drawQuestionBadge(
+                canvas,
+                cx = rect.right - badgeRadius * 0.3f,
+                cy = rect.top + badgeRadius * 0.3f,
+                radius = badgeRadius,
+                statusColor = color,
+                darkTheme = darkTheme,
+            )
         }
 
         return bitmap
@@ -285,7 +284,7 @@ class MarkerBitmapFactory(private val density: Float) {
         @ColorInt statusColor: Int,
         darkTheme: Boolean,
     ) {
-        @ColorInt val plate = MarkerColors.fullBorder(darkTheme).toArgb()
+        @ColorInt val plate = MarkerColors.ring(darkTheme).toArgb()
 
         canvas.drawCircle(cx, cy, radius, fillPaint().apply { color = plate })
         canvas.drawCircle(
@@ -297,7 +296,8 @@ class MarkerBitmapFactory(private val density: Float) {
         )
 
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = statusColor
+            // Charcoal on the ivory plate whatever the status, so the "?" never turns gold-on-white.
+            color = MarkerColors.GlyphInk.toArgb()
             textSize = radius * 1.6f
             textAlign = Paint.Align.CENTER
             isFakeBoldText = true
@@ -333,15 +333,15 @@ class MarkerBitmapFactory(private val density: Float) {
                 cx, cy, radius + halo,
                 fillPaint().apply {
                     this.color = color
-                    alpha = 56
+                    alpha = 64
                 },
             )
         }
 
-        // Fill the disc with the map background tone so the "+" stays readable over dark tiles.
+        // Fill the disc with the ring tone so the "+" stays readable over dark tiles.
         canvas.drawCircle(
             cx, cy, radius,
-            fillPaint().apply { this.color = MarkerColors.fullBorder(darkTheme).toArgb() },
+            fillPaint().apply { this.color = MarkerColors.ring(darkTheme).toArgb() },
         )
 
         val ring = strokePaint().apply {
@@ -386,7 +386,7 @@ class MarkerBitmapFactory(private val density: Float) {
         canvas.drawCircle(
             centre, centre, radius,
             strokePaint().apply {
-                color = MarkerColors.fullBorder(darkTheme).toArgb()
+                color = MarkerColors.ring(darkTheme).toArgb()
                 strokeWidth = ring
             },
         )
@@ -395,54 +395,6 @@ class MarkerBitmapFactory(private val density: Float) {
     }
 
     // -----------------------------------------------------------------------------------------
-
-    private fun drawShape(canvas: Canvas, kind: ContainerKind, rect: RectF, paint: Paint) {
-        when (kind) {
-            ContainerKind.BIG -> {
-                val r = rect.height() * 0.28f
-                canvas.drawRoundRect(rect, r, r, paint)
-            }
-            ContainerKind.SMALL -> canvas.drawPath(roundedTriangle(rect), paint)
-        }
-    }
-
-    /**
-     * Rounded triangle pointing up. Corners are rounded by walking the three vertices and
-     * cutting each with a quadratic — a plain Path with a CornerPathEffect would round the
-     * dashed MISSING outline unevenly.
-     */
-    private fun roundedTriangle(rect: RectF): Path {
-        val radius = rect.height() * 0.18f
-        val apex = floatArrayOf(rect.centerX(), rect.top)
-        val right = floatArrayOf(rect.right, rect.bottom)
-        val left = floatArrayOf(rect.left, rect.bottom)
-        val points = listOf(apex, right, left)
-
-        return Path().apply {
-            for (i in points.indices) {
-                val current = points[i]
-                val next = points[(i + 1) % points.size]
-                val previous = points[(i + points.size - 1) % points.size]
-
-                val toPrev = normalize(previous[0] - current[0], previous[1] - current[1])
-                val toNext = normalize(next[0] - current[0], next[1] - current[1])
-
-                val startX = current[0] + toPrev[0] * radius
-                val startY = current[1] + toPrev[1] * radius
-                val endX = current[0] + toNext[0] * radius
-                val endY = current[1] + toNext[1] * radius
-
-                if (i == 0) moveTo(startX, startY) else lineTo(startX, startY)
-                quadTo(current[0], current[1], endX, endY)
-            }
-            close()
-        }
-    }
-
-    private fun normalize(dx: Float, dy: Float): FloatArray {
-        val length = Math.hypot(dx.toDouble(), dy.toDouble()).toFloat()
-        return if (length == 0f) floatArrayOf(0f, 0f) else floatArrayOf(dx / length, dy / length)
-    }
 
     private fun inflate(rect: RectF, by: Float) =
         RectF(rect.left - by, rect.top - by, rect.right + by, rect.bottom + by)
@@ -461,17 +413,17 @@ class MarkerBitmapFactory(private val density: Float) {
 
         const val SUGGESTION_ID = "kanta-suggestion"
 
+        /**
+         * The recycling dot (§3.4) only means something on a container that is otherwise fine,
+         * and never on a small can. A bin of unknown size keeps it: a glass bank is still a
+         * glass bank while nobody has said how big it is.
+         */
+        fun showsCategory(kind: ContainerKind, status: ContainerStatus): Boolean =
+            kind != ContainerKind.SMALL && status == ContainerStatus.OK
+
         /** Same mapping as the UI's `statusColor`, resolved to an Android colour int. */
         @ColorInt
-        fun statusColorInt(status: ContainerStatus, kind: ContainerKind): Int = when (status) {
-            ContainerStatus.OK -> when (kind) {
-                ContainerKind.BIG -> MarkerColors.BigOk
-                ContainerKind.SMALL -> MarkerColors.SmallOk
-            }
-            ContainerStatus.FULL -> MarkerColors.Full
-            ContainerStatus.BROKEN -> MarkerColors.Broken
-            ContainerStatus.DESTROYED -> MarkerColors.Destroyed
-            ContainerStatus.MISSING -> MarkerColors.Missing
-        }.toArgb()
+        fun statusColorInt(status: ContainerStatus, kind: ContainerKind): Int =
+            MarkerColors.status(status, kind).toArgb()
     }
 }

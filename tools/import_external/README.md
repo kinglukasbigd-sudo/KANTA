@@ -33,15 +33,13 @@ The tool reads Mapillary's map-feature **vector tiles**
 accepts the token but returns no data for any area, so tiles are the route
 that works. Tiles are cached in `tools/import_external/.cache/` (git-ignored).
 
-Every detection is imported as a **small** can, because Mapillary has one
-class for all trash cans, from street bins to 1,100-litre containers. Two
-detections within 3 m count as one can, and a detection within 10 m of an
-existing small can is skipped.
-
-The big containers among them are found on the ground: next to "Yes, it's
-here", the app offers "It's here, but it's a big container", and two of those
-turn the can into a big container (migration 0019). An admin can also change
-any container's kind from its detail sheet.
+Mapillary has one class for all trash cans, from street bins to 1,100-litre
+containers, so it cannot say how big a bin is. Like every bin (migration 0020),
+detections arrive with their size **unknown** and the universal marker; the
+size the importer guessed is kept in `source_kind`. People standing next to a
+bin say Small or Big in the app: the first answer marks it, after that the
+majority decides. Two detections within 3 m count as one can, and a detection
+within 10 m of an existing bin of the same or unknown size is skipped.
 
 **Age.** Most of Skopje's imagery is from 2019. Of the 5,159 detections in the
 city (October 2026), about 3,900 were last seen in 2020 or earlier and 1,261

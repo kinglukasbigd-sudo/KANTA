@@ -16,6 +16,7 @@ import mk.kanta.app.core.data.remote.KantaError
 import mk.kanta.app.core.data.remote.KantaRepository
 import mk.kanta.app.core.data.remote.KantaResult
 import mk.kanta.app.core.data.remote.dto.NearbyContainerDto
+import mk.kanta.app.core.data.remote.dto.toContainerKind
 import mk.kanta.app.core.location.LatLon
 import mk.kanta.app.core.location.LocationProvider
 import javax.inject.Inject
@@ -143,7 +144,7 @@ private fun NearbyContainerDto.toUi(): AlternativeUi {
     return AlternativeUi(
         id = id,
         code = code,
-        kind = if (kind == "small") ContainerKind.SMALL else ContainerKind.BIG,
+        kind = kind.toContainerKind(),
         status = when (status) {
             "full" -> ContainerStatus.FULL
             "broken" -> ContainerStatus.BROKEN

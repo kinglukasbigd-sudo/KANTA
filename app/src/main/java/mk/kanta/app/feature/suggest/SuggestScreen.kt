@@ -57,7 +57,6 @@ import coil3.compose.AsyncImage
 import mk.kanta.app.R
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaIcons
@@ -384,7 +383,7 @@ private fun DetailsStage(
                     Text(
                         text = stringResource(error.messageRes),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MarkerColors.Broken,
+                        color = KantaTheme.colors.error,
                     )
                 }
                 Spacer(Modifier.height(Spacing.xl))

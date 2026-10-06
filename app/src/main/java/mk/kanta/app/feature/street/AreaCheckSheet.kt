@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -33,7 +32,6 @@ import mk.kanta.app.R
 import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.data.model.ContainerStatus
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Motion
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaCompactAction
@@ -45,6 +43,7 @@ import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
 import mk.kanta.app.core.designsystem.component.KantaSectionHeader
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
+import mk.kanta.app.core.designsystem.component.kindLabel
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
 import mk.kanta.app.feature.report.SuccessCheck
 
@@ -61,8 +60,8 @@ fun ColumnScope.AreaCheckContent(
     onCancelPicking: () -> Unit,
     onConfirmExists: (String) -> Unit,
     onLater: () -> Unit,
-    /** "It's here, but it's a big container" (0019). */
-    onConfirmExistsAs: (String, ContainerKind) -> Unit = { _, _ -> },
+    /** §4.6 "Bin size": Small or Big on a bin in the list. */
+    onChooseSize: (String, ContainerKind) -> Unit = { _, _ -> },
 ) {
     // Fills the sheet's body and scrolls when the content is taller than it.
     Column(
@@ -83,7 +82,7 @@ fun ColumnScope.AreaCheckContent(
                     onMissingOne = onMissingOne,
                     onNotHere = onNotHere,
                     onConfirmExists = onConfirmExists,
-                    onConfirmExistsAs = onConfirmExistsAs,
+                    onChooseSize = onChooseSize,
                     onLater = onLater,
                 )
                 Screen.Pick -> Picking(onCancel = onCancelPicking)
@@ -109,7 +108,7 @@ private fun Asking(
     onMissingOne: () -> Unit,
     onNotHere: () -> Unit,
     onConfirmExists: (String) -> Unit,
-    onConfirmExistsAs: (String, ContainerKind) -> Unit,
+    onChooseSize: (String, ContainerKind) -> Unit,
     onLater: () -> Unit,
 ) {
     Column {
@@ -144,15 +143,17 @@ private fun Asking(
             }
         }
 
-        // §4.6 step 3: unverified containers inside the ring, one tap to confirm.
+        // §4.6 step 3: bins inside the ring that still need someone — not yet confirmed,
+        // or size not known yet — with one tap to confirm and one to say Small or Big.
         if (state.unverified.isNotEmpty()) {
             KantaSectionHeader(stringResource(R.string.street_unverified_title))
             state.unverified.forEach { item ->
                 UnverifiedRow(
                     item = item,
                     confirming = state.confirmingId == item.id,
+                    sizeSending = state.sizeSending?.takeIf { it.first == item.id }?.second,
                     onConfirm = { onConfirmExists(item.id) },
-                    onConfirmAs = { kind -> onConfirmExistsAs(item.id, kind) },
+                    onChooseSize = { kind -> onChooseSize(item.id, kind) },
                 )
             }
         }
@@ -167,7 +168,7 @@ private fun Asking(
                 Text(
                     text = stringResource(error.messageRes),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MarkerColors.Broken,
+                    color = KantaTheme.colors.error,
                 )
             }
 
@@ -209,24 +210,32 @@ private fun Asking(
     }
 }
 
-/** "Big containers = rectangles, small cans = triangles" — shown, not just said. */
+/** The three marks — round while the size is unknown, tall for small, wide for big — shown, not just said. */
 @Composable
 private fun ShapeLegend() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.l),
     ) {
-        KantaStatusDot(ContainerStatus.OK, ContainerKind.BIG, Modifier.size(18.dp))
-        Text(
-            text = stringResource(R.string.container_kind_big),
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(Modifier.width(Spacing.m))
-        KantaStatusDot(ContainerStatus.OK, ContainerKind.SMALL, Modifier.size(18.dp))
-        Text(
-            text = stringResource(R.string.container_kind_small),
-            style = MaterialTheme.typography.bodySmall,
-        )
+        for (kind in listOf(ContainerKind.UNKNOWN, ContainerKind.SMALL, ContainerKind.BIG)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            ) {
+                KantaStatusDot(ContainerStatus.OK, kind, Modifier.size(22.dp))
+                Text(
+                    text = stringResource(
+                        when (kind) {
+                            ContainerKind.UNKNOWN -> R.string.size_legend_unknown
+                            ContainerKind.SMALL -> R.string.size_legend_small
+                            ContainerKind.BIG -> R.string.size_legend_big
+                        },
+                    ),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = KantaTheme.colors.onSurfaceMuted,
+                )
+            }
+        }
     }
 }
 
@@ -234,17 +243,21 @@ private fun ShapeLegend() {
 private fun UnverifiedRow(
     item: UnverifiedNearbyUi,
     confirming: Boolean,
+    sizeSending: ContainerKind?,
     onConfirm: () -> Unit,
-    onConfirmAs: (ContainerKind) -> Unit,
+    onChooseSize: (ContainerKind) -> Unit,
 ) {
     KantaListRow(
         title = item.code,
-        subtitle = when {
-            item.isMine -> stringResource(R.string.street_yours)
-            item.iConfirmed -> stringResource(R.string.street_confirmed)
-            !item.canConfirm -> stringResource(R.string.street_move_closer)
-            else -> null
-        },
+        subtitle = listOfNotNull(
+            kindLabel(item.kind),
+            when {
+                item.isMine -> stringResource(R.string.street_yours)
+                item.iConfirmed -> stringResource(R.string.street_confirmed)
+                !item.canConfirm && !item.canVoteSize -> stringResource(R.string.street_move_closer)
+                else -> null
+            },
+        ).joinToString(" · "),
         leading = { KantaStatusDot(item.status, item.kind) },
         trailing = {
             // The button exists only where the server said it would be accepted.
@@ -254,7 +267,7 @@ private fun UnverifiedRow(
                         if (confirming) R.string.report_sending else R.string.container_action_exists,
                     ),
                     onClick = onConfirm,
-                    emphasis = true,
+                    emphasis = item.kind != ContainerKind.UNKNOWN,
                     enabled = !confirming,
                 )
             } else {
@@ -263,28 +276,24 @@ private fun UnverifiedRow(
         },
         showDivider = false,
     )
-    // Mapillary brings every bin in as a small can, so the person standing next to
-    // it says when it is really a big container (0019). Its own line: the row's
-    // trailing slot has no room for a second label this long.
-    if (item.canConfirm) {
-        val otherKind = if (item.kind == ContainerKind.BIG) ContainerKind.SMALL else ContainerKind.BIG
+    // §4.6 "Bin size": Small or Big, on its own line — the row's trailing slot has no room
+    // for two more labels. The person's own answer is the filled one.
+    if (item.canVoteSize) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = Spacing.screenHorizontal),
-            horizontalArrangement = Arrangement.End,
+                .padding(start = Spacing.screenHorizontal + 48.dp, end = Spacing.screenHorizontal),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            KantaCompactAction(
-                text = stringResource(
-                    if (otherKind == ContainerKind.BIG) {
-                        R.string.container_action_exists_as_big
-                    } else {
-                        R.string.container_action_exists_as_small
-                    },
-                ),
-                onClick = { onConfirmAs(otherKind) },
-                enabled = !confirming,
-            )
+            for (kind in listOf(ContainerKind.SMALL, ContainerKind.BIG)) {
+                KantaCompactAction(
+                    text = if (sizeSending == kind) stringResource(R.string.report_sending) else kindLabel(kind),
+                    onClick = { onChooseSize(kind) },
+                    emphasis = item.mySizeVote == kind,
+                    enabled = sizeSending == null,
+                )
+            }
         }
     }
 }

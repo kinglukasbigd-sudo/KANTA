@@ -20,7 +20,7 @@ Work in progress. The app is built in numbered steps that follow the spec.
 
 | Done | |
 |---|---|
-| Design system | Colours, type (Nunito), shapes, motion, custom map markers; light and dark |
+| Design system | Colours, type (Manrope + JetBrains Mono), shapes, motion, custom map markers (universal / small / big); light and dark |
 | Backend | Supabase: Postgres + PostGIS, row-level security, every rule enforced in SQL |
 | Map | MapLibre + OpenFreeMap vector tiles, markers drawn from GeoJSON layers, clustering, offline cache |
 | Bottom sheet | A persistent sheet with three heights. It is the app's only menu |
@@ -136,4 +136,4 @@ tools/
 ## Data and credits
 
 - Container locations and municipality borders: **© OpenStreetMap contributors**, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/). Map tiles: **[OpenFreeMap](https://openfreemap.org)**. The attribution is always shown on the map.
-- The app font is **Nunito**, licensed under the SIL Open Font License (see `app/src/main/assets/fonts/`).
+- The app fonts are **Manrope** and **JetBrains Mono**, both licensed under the SIL Open Font License (see `app/src/main/assets/fonts/`).

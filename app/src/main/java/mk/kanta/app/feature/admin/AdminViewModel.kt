@@ -25,6 +25,7 @@ import mk.kanta.app.core.data.remote.dto.AdminUnverifiedDto
 import mk.kanta.app.core.data.remote.dto.PendingRequestDto
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import mk.kanta.app.core.data.remote.dto.toContainerKind
 import mk.kanta.app.core.location.LatLon
 import javax.inject.Inject
 
@@ -293,7 +294,6 @@ class AdminViewModel @Inject constructor(
     }
 }
 
-private fun String.toKind() = if (this == "small") ContainerKind.SMALL else ContainerKind.BIG
 
 private fun String.toCategory() = when (this) {
     "glass" -> ContainerCategory.GLASS
@@ -306,7 +306,7 @@ private fun String.toCategory() = when (this) {
 private fun PendingRequestDto.toUi() = PendingRequestUi(
     id = id,
     position = LatLon(lat, lon),
-    kind = kind.toKind(),
+    kind = kind.toContainerKind(),
     category = category.toCategory(),
     photoPath = photoPath,
     note = note?.takeIf { it.isNotBlank() },
@@ -316,7 +316,7 @@ private fun PendingRequestDto.toUi() = PendingRequestUi(
 private fun AdminUnverifiedDto.toUi() = UnverifiedUi(
     id = id,
     code = code,
-    kind = kind.toKind(),
+    kind = kind.toContainerKind(),
     category = category.toCategory(),
     position = LatLon(lat, lon),
     confirmations = confirmationCount.toInt(),

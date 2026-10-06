@@ -96,7 +96,7 @@ fun SuggestionsScreen(
                 Text(
                     text = stringResource(error.messageRes),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MarkerColors.Broken,
+                    color = KantaTheme.colors.error,
                     modifier = Modifier.padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.s),
                 )
             }

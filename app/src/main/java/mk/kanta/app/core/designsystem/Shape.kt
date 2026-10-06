@@ -5,23 +5,27 @@ import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
 /**
- * Corner radii from KANTA_SPEC.md §3.3: 12dp chips/inputs, 20dp cards,
- * 28dp bottom-sheet top corners, big buttons = full pill.
+ * Corner radii (KANTA_SPEC.md §3.3). Restrained and consistent: 8dp chips, 12dp buttons and
+ * choice tiles, 16dp cards, 24dp sheet. Buttons are rounded rectangles rather than pills, which
+ * reads as a tool rather than a toy and lines up with the cards they sit in.
  */
 object KantaShape {
-    /** Chips, inputs. */
-    val chip = RoundedCornerShape(12.dp)
+    /** Chips, inputs, small badges. */
+    val chip = RoundedCornerShape(8.dp)
+
+    /** Buttons and the Small/Big choice tiles. */
+    val button = RoundedCornerShape(12.dp)
 
     /** Cards, tiles. */
-    val card = RoundedCornerShape(20.dp)
+    val card = RoundedCornerShape(16.dp)
 
     /** Large surfaces. */
-    val sheet = RoundedCornerShape(28.dp)
+    val sheet = RoundedCornerShape(24.dp)
 
     /** Bottom sheet — only the top corners are rounded. */
-    val bottomSheet = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val bottomSheet = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
 
-    /** Big buttons are full pills, so the radius tracks the height. */
+    /** Fully round ends: status pills, the drag handle, compact actions. */
     val pill = RoundedCornerShape(percent = 50)
 }
 

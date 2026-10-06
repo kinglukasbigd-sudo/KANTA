@@ -354,7 +354,8 @@ def write_sql(rows: list[Row], path: Path, source: str, verified: bool, title: s
         "and not exists (",
         "    select 1 from containers c",
         "     where c.deleted_at is null",
-        "       and c.kind = e.kind",
+        # Migration 0020: a bin of unknown size nearby could be either kind.
+        "       and c.kind in (e.kind, 'unknown')",
         "       and st_dwithin(c.geom, st_setsrid(st_makepoint(e.lon, e.lat), 4326)::geography,",
         "                      e.dedupe_m)",
         ")",

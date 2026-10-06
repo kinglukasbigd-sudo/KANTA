@@ -21,7 +21,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
-import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
 
 /** What a toast is telling the user — drives the leading icon only, never a loud fill. */
@@ -45,7 +44,7 @@ fun KantaSnackbar(
     val iconTint = when (kind) {
         KantaToastKind.INFO -> KantaTheme.colors.onSurfaceMuted
         KantaToastKind.SUCCESS -> KantaTheme.colors.brand
-        KantaToastKind.ERROR -> MarkerColors.Broken
+        KantaToastKind.ERROR -> KantaTheme.colors.error
     }
 
     Snackbar(

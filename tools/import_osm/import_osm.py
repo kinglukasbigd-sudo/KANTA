@@ -610,7 +610,9 @@ def write_sql(containers: list[Container], boundaries: list[Boundary], path: Pat
     add("    select 1 from containers c")
     add("     where c.source <> 'osm'")
     add("       and c.deleted_at is null")
-    add("       and c.kind = o.kind")
+    # Migration 0020: every bin starts with its size unknown, so an unknown one nearby
+    # is the same bin as far as this check can tell.
+    add("       and c.kind in (o.kind, 'unknown')")
     add("       and st_dwithin(c.geom, st_setsrid(st_makepoint(o.lon, o.lat), 4326)::geography,")
     add("                      o.dedupe_m)")
     add(")")
@@ -661,9 +663,10 @@ def write_sql(containers: list[Container], boundaries: list[Boundary], path: Pat
     add("-- -----------------------------------------------------------------------------")
     add("select")
     add("    coalesce(m.name_en, '(unassigned)') as municipality,")
-    add("    count(*) filter (where c.kind = 'big' and c.category = 'general') as big_general,")
-    add("    count(*) filter (where c.kind = 'big' and c.category <> 'general') as recycling,")
-    add("    count(*) filter (where c.kind = 'small') as small_cans,")
+    # Counted by what OSM says (source_kind): on the map every bin starts unknown (0020).
+    add("    count(*) filter (where coalesce(c.source_kind, c.kind) = 'big' and c.category = 'general') as big_general,")
+    add("    count(*) filter (where coalesce(c.source_kind, c.kind) = 'big' and c.category <> 'general') as recycling,")
+    add("    count(*) filter (where coalesce(c.source_kind, c.kind) = 'small') as small_cans,")
     add("    count(*) as total")
     add("from containers c")
     add("left join municipalities m on m.id = c.municipality_id")
