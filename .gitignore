@@ -2,6 +2,9 @@
 local.properties
 *.jks
 *.keystore
+# The shared debug key is not a secret (password "android"); it keeps debug builds from CI and
+# every laptop installable over each other. Release keys stay ignored.
+!app/debug.keystore
 keystore.properties
 secrets.properties
 google-services.json

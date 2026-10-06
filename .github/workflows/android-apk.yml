@@ -1,0 +1,70 @@
+# Builds an installable debug APK on every push, so a change can go straight to a phone:
+# open the run on GitHub, download "kanta-debug-apk", unzip, install.
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions):
+#   SUPABASE_URL       https://<project-ref>.supabase.co
+#   SUPABASE_ANON_KEY  the project's anon / publishable key
+# Without them the APK still builds but shows "No backend configured" (app/build.gradle.kts).
+
+name: Android APK
+
+on:
+  push:
+    branches: [master, "claude/**"]
+    paths-ignore:
+      - "supabase/**"
+      - "tools/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check Supabase secrets
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::warning::SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set — this APK will show 'No backend configured'."
+          fi
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kanta-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/
+          retention-days: 7

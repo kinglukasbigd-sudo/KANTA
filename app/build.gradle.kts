@@ -75,9 +75,21 @@ android {
         androidResources.localeFilters += listOf("mk", "sq", "en")
     }
 
+    // One debug key for everyone: the APK from CI (.github/workflows/android-apk.yml) and a build
+    // from Android Studio install over each other. Not a secret — release signing is separate.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
             isMinifyEnabled = true
