@@ -21,7 +21,7 @@ import mk.kanta.app.R
  *
  * Both ship as single variable fonts from Google Fonts (`wght` axis), so every weight comes from
  * one file. Both cover Macedonian Cyrillic (including Ѓ, Ќ, Ѕ, Џ) and Albanian ë/ç, and Manrope has
- * the `tnum` feature [tabularFigures] relies on. Licences: assets/fonts/*_OFL_LICENSE.txt
+ * the `tnum` feature [tabularFigures] relies on. Licences: the OFL_LICENSE files in assets/fonts.
  */
 private fun manrope(weight: FontWeight) = Font(
     resId = R.font.manrope,
