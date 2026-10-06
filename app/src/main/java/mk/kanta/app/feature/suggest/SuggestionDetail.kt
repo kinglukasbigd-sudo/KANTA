@@ -1,5 +1,6 @@
 package mk.kanta.app.feature.suggest
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -46,6 +47,7 @@ import mk.kanta.app.core.data.suggest.SuggestionVoting
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaCard
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaListRowSkeleton
@@ -142,6 +144,14 @@ fun ColumnScope.SuggestionDetailContent(state: SuggestionDetailState, onVote: ()
             )
 
             else -> {
+                Municipalities.byId(suggestion.municipalityId)?.let {
+                    Text(
+                        text = it.localizedName().uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = KantaTheme.colors.brand,
+                    )
+                    Spacer(Modifier.height(Spacing.s))
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = suggestion.reason?.let { stringResource(it.label) } ?: "",
@@ -151,20 +161,15 @@ fun ColumnScope.SuggestionDetailContent(state: SuggestionDetailState, onVote: ()
                     Spacer(Modifier.width(Spacing.m))
                     StateBadge(suggestion.state)
                 }
-                Municipalities.byId(suggestion.municipalityId)?.let {
-                    Text(
-                        text = it.localizedName(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = KantaTheme.colors.onSurfaceMuted,
-                    )
-                }
                 suggestion.note?.let { note ->
-                    Spacer(Modifier.height(Spacing.m))
-                    Text(
-                        text = "“$note”",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = KantaTheme.colors.onSurfaceMuted,
-                    )
+                    Spacer(Modifier.height(Spacing.l))
+                    KantaCard(Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "“$note”",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
                 suggestion.photoPath?.let { path ->
                     Spacer(Modifier.height(Spacing.l))
@@ -174,16 +179,19 @@ fun ColumnScope.SuggestionDetailContent(state: SuggestionDetailState, onVote: ()
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(160.dp)
-                            .clip(KantaShape.card),
+                            .height(180.dp)
+                            .clip(KantaShape.card)
+                            .border(Spacing.hairline, KantaTheme.colors.outline, KantaShape.card),
                     )
                 }
 
-                Spacer(Modifier.height(Spacing.xl))
-                Text(
-                    text = pluralStringResource(R.plurals.suggest_votes, suggestion.votes, suggestion.votes),
-                    style = MaterialTheme.typography.headlineSmall.tabularFigures(),
-                )
+                Spacer(Modifier.height(Spacing.l))
+                KantaCard(Modifier.fillMaxWidth(), color = KantaTheme.colors.surfaceMuted, border = false) {
+                    Text(
+                        text = pluralStringResource(R.plurals.suggest_votes, suggestion.votes, suggestion.votes),
+                        style = MaterialTheme.typography.titleLarge.tabularFigures(),
+                    )
+                }
                 Spacer(Modifier.height(Spacing.l))
 
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.m)) {

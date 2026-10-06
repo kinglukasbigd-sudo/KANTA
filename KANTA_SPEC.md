@@ -92,7 +92,8 @@ Every marker sits on a ring: white on light tiles, ivory `#F0EEE6` on dark ones 
 
 - Corner radii: 8dp (chips/inputs), 12dp (buttons, Small/Big tiles), 16dp (cards), 24dp (bottom sheet top corners). Status pills and compact actions are rounded; buttons are rounded rectangles, 52dp tall. Outlined buttons and tiles use `outlineStrong`; selected chips and tiles are `brandContainer` with a 1.5dp `brand` border.
 - Spacing scale: 4 / 8 / 12 / 16 / 24 / 32 / 48 dp. Screen side padding 20dp.
-- Elevation: almost none. Separate things with background tone and 1dp hairlines. Only the bottom sheet and the primary floating button get a soft shadow (y 8, blur 24, 8% black).
+- Elevation: almost none. Pages and the bottom sheet are ivory (`background`); content sits on white cards (`surface`) with a 1dp oat hairline, and lists are **grouped inside one card** (rows inset, hairlines between them) instead of running edge to edge. Only things floating over the map (the sheet, the map controls, banners) get the soft shadow (y 8, blur 24, 8% black).
+- Page structure: every full screen opens with a top bar (square 44dp outlined back button, actions on the right) and a page title — a mono uppercase caption in `brand` over a Display title, optional muted subtitle. Section captions are mono uppercase in `onSurfaceMuted`. Icons in rows and menus sit on tinted rounded-square tiles. Messages (offline, errors, thanks) are banners: a card with a tinted icon tile and ink text.
 - Motion: 200–300ms, `FastOutSlowIn` / spring (dampingRatio 0.85). Markers fade/scale in. Success = small check animation + light haptic. Respect "remove animations" system setting.
 - Icons: rounded outline icon set (Material Symbols Rounded), 24dp, 1.75 weight feel.
 - Haptics: light tick on selection, confirm pattern on successful send.
@@ -112,7 +113,7 @@ Shape tells size at a glance, even where the glyph inside is too small to read; 
   - Dots and shapes **cross-fade** (≈ 15.2–15.8); nothing pops. The shape variants (badge at 16, recycling dot at 17) cross-fade the same way.
 - **Draw order:** problem markers (red, orange) always draw on top of OK ones; the selected marker on top of all.
 - Markers never cover the chrome: the Kanta label, profile button and map buttons always sit above the map.
-- **Calm basemap.** Roads are three quiet tones, never white or bright in dark mode — dark: minor `#1E2521`, main `#26302A`, motorway/trunk `#2C3630`; light: minor `#FFFFFF` on the `#F3F5F2` ground, main `#E6EAE5`, motorway/trunk `#DDE3DC`. Casings take the road's own colour; motorway/trunk are only slightly wider than main roads. **No road shields, highway refs or any icon behind text.** Every street and place name is plain text with no box: dark `#8A958E` with a 1px `#0F1411` halo, light `#6B766F` with a `#F3F5F2` halo; neighbourhood names stay small uppercase. `tools/map_style/build_styles.py` enforces this and refuses to write a style with an off-palette colour, an icon, or (dark) anything brighter than the label text.
+- **Calm basemap.** Warm ivory ground with sage parks in light, carbon ink with dark forest in dark. Roads are three quiet tones, never white or bright in dark mode — dark: minor `#232A1F`, main `#2B3326`, motorway/trunk `#323B2C` on the `#161B13` ground; light: minor `#FFFFFF` on the `#F2EFE7` ground, main `#E7E2D6`, motorway/trunk `#DDD6C8`. Casings take the road's own colour; motorway/trunk are only slightly wider than main roads. **No road shields, highway refs or any icon behind text.** Every street and place name is plain text with no box: dark `#84907F` (sage) with a 1px `#161B13` halo, light `#6C5F51` (driftwood) with a `#F2EFE7` halo; neighbourhood names stay small uppercase. `tools/map_style/build_styles.py` enforces this and refuses to write a style with an off-palette colour, an icon, or (dark) anything brighter than the label text.
 - Selected marker: scales 1.4× with a soft halo in brand colour.
 - A report < 1h old: one-time gentle pulse ring.
 - **Verified vs unverified (4.6).** Governing principle: **filled = it exists, hollow = it's gone.** The two dashed
@@ -131,7 +132,7 @@ Shape tells size at a glance, even where the glyph inside is too small to read; 
 
 ### 4.1 Main screen = the map
 - Full-screen map, centred on the user (fallback: Skopje centre 41.9965, 21.4314, zoom 14).
-- Minimal overlay: top-left small "Kanta" wordmark; top-right round profile/avatar button; map buttons bottom-right above the sheet (below).
+- Minimal overlay: top-left "Kanta" wordmark on a floating chip with a brand dot; top-right square profile button; map buttons bottom-right above the sheet (below). All three are white, 12dp corners, with the soft shadow.
 - **Bottom sheet** (the only menu), always present:
 
 **Three snap states**, smooth spring between them (§3.3), no jumping:
@@ -139,7 +140,7 @@ Shape tells size at a glance, even where the glyph inside is too small to read; 
 - **Half** — halfway between collapsed and expanded.
 - **Expanded** — the sheet's top stops **below** the Kanta label and profile button (top of sheet = status bar + top overlay height + 8dp), and the sheet reaches the very bottom of the screen with no gap, drawn behind the navigation bar with correct insets. At every position the sheet's bottom edge is at or below the screen's, so the map never shows underneath it. Content taller than the sheet scrolls inside it.
 
-**Map buttons** (suggestions toggle, my location): bottom right, stacked vertically, 16dp above the sheet's top edge and 16dp from the right edge. They move with the sheet while it is dragged and fade out as it rises past half. The map attribution rides the sheet's top edge on the left the same way.
+**Map buttons** (suggestions toggle, my location): bottom right, one grouped vertical control bar (48dp buttons, hairlines between them; active ones tinted brand), 16dp above the sheet's top edge and 16dp from the right edge. They move with the sheet while it is dragged and fade out as it rises past half. The map attribution rides the sheet's top edge on the left the same way.
 
 **Rotation and tilt** (like Google Maps): a two-finger twist rotates the map freely; a two-finger drag up/down tilts it, at most 45°. Pinch-zoom and pan work exactly as before — rotation needs a deliberate twist (threshold ~20°, raised further while pinching) so zooming never turns the map by accident.
 - **Compass button:** in the same stack, above my-location, shown only while the map is rotated or tilted. A small north arrow turns with the map. Tap → smoothly back to north and flat (300 ms); it fades out once the map faces north again. TalkBack: "Reset map to north".

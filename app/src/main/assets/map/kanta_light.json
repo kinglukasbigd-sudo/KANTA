@@ -3,26 +3,26 @@
   "name": "Kanta Light",
   "metadata": {
     "kanta:palette": {
-      "background": "#F3F5F2",
-      "water": "#C4D0D5",
-      "waterway": "#BCC9CF",
-      "waterLabel": "#6A7F8A",
-      "park": "#E4ECE3",
-      "wood": "#DDE6DC",
-      "residential": "#EDEEEA",
-      "building": "#E7E8E3",
-      "buildingOutline": "#DCDED8",
-      "aeroway": "#EFEFEC",
-      "path": "#E6E7E3",
+      "background": "#F2EFE7",
+      "water": "#C9D6D8",
+      "waterway": "#BECDD0",
+      "waterLabel": "#5F777C",
+      "park": "#E2EBD9",
+      "wood": "#D9E4CF",
+      "residential": "#EDE9DF",
+      "building": "#E6E1D6",
+      "buildingOutline": "#D9D3C6",
+      "aeroway": "#EBE7DE",
+      "path": "#E4DFD4",
       "roadMinor": "#FFFFFF",
-      "roadMain": "#E6EAE5",
-      "roadMotorway": "#DDE3DC",
-      "pier": "#EDEEEA",
-      "railway": "#DEDFDA",
-      "railwayDash": "#F5F6F3",
-      "boundary": "#C3C8C1",
-      "labelText": "#6B766F",
-      "labelHalo": "#F3F5F2"
+      "roadMain": "#E7E2D6",
+      "roadMotorway": "#DDD6C8",
+      "pier": "#EDE9DF",
+      "railway": "#D9D3C6",
+      "railwayDash": "#F5F2EC",
+      "boundary": "#C1BAAB",
+      "labelText": "#6C5F51",
+      "labelHalo": "#F2EFE7"
     },
     "kanta:note": "EVERY map colour lives in kanta:palette above. Edit a value there and the whole map follows — KantaMapStyle.kt applies the palette over the layers at load time. Layer paint values below are kept in sync so the file still opens correctly in Maputnik; if you change a colour in Maputnik, copy it up into the palette or your change will be overwritten at runtime. See tools/map_style/MAPUTNIK.md.",
     "kanta:source": "Derived from OpenFreeMap 'positron'. Data (c) OpenStreetMap contributors."
@@ -47,7 +47,7 @@
       "id": "background",
       "type": "background",
       "paint": {
-        "background-color": "#F3F5F2"
+        "background-color": "#F2EFE7"
       },
       "metadata": {
         "kanta:paint": {
@@ -73,7 +73,7 @@
         false
       ],
       "paint": {
-        "fill-color": "#E4ECE3"
+        "fill-color": "#E2EBD9"
       },
       "metadata": {
         "kanta:paint": {
@@ -111,7 +111,7 @@
       ],
       "paint": {
         "fill-antialias": true,
-        "fill-color": "#C4D0D5"
+        "fill-color": "#C9D6D8"
       },
       "metadata": {
         "kanta:paint": {
@@ -149,7 +149,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#EDEEEA",
+        "fill-color": "#EDE9DF",
         "fill-opacity": 0.7
       },
       "metadata": {
@@ -188,7 +188,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#EDEEEA",
+        "fill-color": "#EDE9DF",
         "fill-opacity": [
           "interpolate",
           [
@@ -239,7 +239,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#EDEEEA",
+        "fill-color": "#EDE9DF",
         "fill-opacity": [
           "interpolate",
           [
@@ -291,7 +291,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#DDE6DC",
+        "fill-color": "#D9E4CF",
         "fill-opacity": [
           "interpolate",
           [
@@ -330,7 +330,7 @@
         false
       ],
       "paint": {
-        "line-color": "#BCC9CF"
+        "line-color": "#BECDD0"
       },
       "metadata": {
         "kanta:paint": {
@@ -346,8 +346,8 @@
       "minzoom": 12,
       "paint": {
         "fill-antialias": true,
-        "fill-color": "#E7E8E3",
-        "fill-outline-color": "#DCDED8"
+        "fill-color": "#E6E1D6",
+        "fill-outline-color": "#D9D3C6"
       },
       "metadata": {
         "kanta:paint": {
@@ -401,7 +401,7 @@
         "line-join": "miter"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-opacity": 1,
         "line-width": [
           "interpolate",
@@ -471,7 +471,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-width": [
           "interpolate",
           [
@@ -518,7 +518,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#EFEFEC",
+        "line-color": "#EBE7DE",
         "line-opacity": 1,
         "line-width": [
           "interpolate",
@@ -564,7 +564,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#EFEFEC",
+        "line-color": "#EBE7DE",
         "line-opacity": 1,
         "line-width": [
           "interpolate",
@@ -622,7 +622,7 @@
         ]
       ],
       "paint": {
-        "fill-color": "#EFEFEC",
+        "fill-color": "#EBE7DE",
         "fill-opacity": [
           "interpolate",
           [
@@ -681,7 +681,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#E6EAE5",
+        "line-color": "#E7E2D6",
         "line-opacity": 1,
         "line-width": [
           "interpolate",
@@ -734,7 +734,7 @@
       ],
       "paint": {
         "fill-antialias": true,
-        "fill-color": "#EDEEEA"
+        "fill-color": "#EDE9DF"
       },
       "metadata": {
         "kanta:paint": {
@@ -779,7 +779,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#EDEEEA",
+        "line-color": "#EDE9DF",
         "line-width": [
           "interpolate",
           [
@@ -834,7 +834,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#E6E7E3",
+        "line-color": "#E4DFD4",
         "line-opacity": 0.9,
         "line-width": [
           "interpolate",
@@ -960,7 +960,7 @@
         "line-join": "miter"
       },
       "paint": {
-        "line-color": "#E6EAE5",
+        "line-color": "#E7E2D6",
         "line-dasharray": [
           12,
           0
@@ -1024,7 +1024,7 @@
         "line-join": "miter"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-dasharray": [
           12,
           0
@@ -1092,7 +1092,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#E6EAE5",
+        "line-color": "#E7E2D6",
         "line-width": [
           "interpolate",
           [
@@ -1152,7 +1152,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-width": [
           "interpolate",
           [
@@ -1216,7 +1216,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#E6EAE5",
+        "line-color": "#E7E2D6",
         "line-width": 2
       },
       "metadata": {
@@ -1263,7 +1263,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-width": 2
       },
       "metadata": {
@@ -1322,7 +1322,7 @@
         "line-join": "miter"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-dasharray": [
           2,
           0
@@ -1401,7 +1401,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-width": [
           "interpolate",
           [
@@ -1459,7 +1459,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-width": [
           "interpolate",
           [
@@ -1529,7 +1529,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DEDFDA",
+        "line-color": "#D9D3C6",
         "line-width": 3
       },
       "metadata": {
@@ -1586,7 +1586,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#F5F6F3",
+        "line-color": "#F5F2EC",
         "line-dasharray": [
           3,
           3
@@ -1639,7 +1639,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DEDFDA",
+        "line-color": "#D9D3C6",
         "line-width": 3
       },
       "metadata": {
@@ -1685,7 +1685,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#F5F6F3",
+        "line-color": "#F5F2EC",
         "line-dasharray": [
           3,
           3
@@ -1741,7 +1741,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DEDFDA",
+        "line-color": "#D9D3C6",
         "line-width": [
           "interpolate",
           [
@@ -1806,7 +1806,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#F5F6F3",
+        "line-color": "#F5F2EC",
         "line-dasharray": [
           3,
           3
@@ -1877,7 +1877,7 @@
         "line-join": "miter"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-dasharray": [
           2,
           0
@@ -1951,7 +1951,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#DDE3DC",
+        "line-color": "#DDD6C8",
         "line-width": [
           "interpolate",
           [
@@ -2024,7 +2024,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#C3C8C1",
+        "line-color": "#C1BAAB",
         "line-dasharray": [
           1,
           1
@@ -2094,7 +2094,7 @@
         "line-join": "round"
       },
       "paint": {
-        "line-color": "#C3C8C1",
+        "line-color": "#C1BAAB",
         "line-opacity": [
           "interpolate",
           [
@@ -2155,7 +2155,7 @@
         ]
       ],
       "paint": {
-        "line-color": "#C3C8C1",
+        "line-color": "#C1BAAB",
         "line-dasharray": [
           1,
           2
@@ -2222,8 +2222,8 @@
         "text-size": 14
       },
       "paint": {
-        "text-color": "#6A7F8A",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#5F777C",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2282,8 +2282,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6A7F8A",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#5F777C",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2332,8 +2332,8 @@
         "text-size": 14
       },
       "paint": {
-        "text-color": "#6A7F8A",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#5F777C",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2389,8 +2389,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2467,9 +2467,9 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
+        "text-color": "#6C5F51",
         "text-halo-width": 1,
-        "text-halo-color": "#F3F5F2"
+        "text-halo-color": "#F2EFE7"
       },
       "metadata": {
         "kanta:paint": {
@@ -2531,9 +2531,9 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
+        "text-color": "#6C5F51",
         "text-halo-width": 1,
-        "text-halo-color": "#F3F5F2"
+        "text-halo-color": "#F2EFE7"
       },
       "metadata": {
         "kanta:paint": {
@@ -2581,8 +2581,8 @@
         "text-size": 12
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2648,8 +2648,8 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2706,8 +2706,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2764,8 +2764,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2823,8 +2823,8 @@
         "text-transform": "uppercase"
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2898,8 +2898,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -2973,8 +2973,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -3041,8 +3041,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -3108,8 +3108,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {
@@ -3175,8 +3175,8 @@
         ]
       },
       "paint": {
-        "text-color": "#6B766F",
-        "text-halo-color": "#F3F5F2",
+        "text-color": "#6C5F51",
+        "text-halo-color": "#F2EFE7",
         "text-halo-width": 1
       },
       "metadata": {

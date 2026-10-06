@@ -33,7 +33,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import mk.kanta.app.R
+import mk.kanta.app.core.designsystem.BackgroundDark
 import mk.kanta.app.core.designsystem.KantaShape
+import mk.kanta.app.core.designsystem.OnSurfaceDark
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.network.publicPhotoUrl
 
@@ -101,14 +103,14 @@ fun BeforeAfter(beforePath: String, afterPath: String, modifier: Modifier = Modi
 private fun Tag(text: String, modifier: Modifier) {
     Surface(
         modifier = modifier.padding(Spacing.s),
-        shape = KantaShape.pill,
-        color = Color.Black.copy(alpha = 0.55f),
+        shape = KantaShape.chip,
+        color = BackgroundDark.copy(alpha = 0.7f),
     ) {
         Text(
-            text = text,
+            text = text.uppercase(),
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
-            modifier = Modifier.padding(horizontal = Spacing.s, vertical = 2.dp),
+            color = OnSurfaceDark,
+            modifier = Modifier.padding(horizontal = Spacing.s, vertical = Spacing.xs),
         )
     }
 }

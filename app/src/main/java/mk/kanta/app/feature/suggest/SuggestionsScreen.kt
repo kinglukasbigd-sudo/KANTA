@@ -20,10 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,12 +28,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -48,14 +42,17 @@ import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaBanner
+import mk.kanta.app.core.designsystem.component.KantaBannerTone
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaCompactAction
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaErrorState
 import mk.kanta.app.core.designsystem.component.KantaIcons
+import mk.kanta.app.core.designsystem.component.KantaPageTitle
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
-import mk.kanta.app.core.designsystem.tabularFigures
+import mk.kanta.app.core.designsystem.component.KantaTopBar
 import mk.kanta.app.feature.map.rememberMapSnapshot
 
 /**
@@ -79,24 +76,19 @@ fun SuggestionsScreen(
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.padding(Spacing.s)) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                }
-                Text(
-                    text = stringResource(R.string.menu_suggestions),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
+            KantaTopBar(onBack = onBack)
+            KantaPageTitle(
+                title = stringResource(R.string.menu_suggestions),
+                eyebrow = stringResource(R.string.menu_section_city),
+                subtitle = stringResource(R.string.menu_suggestions_subtitle),
+            )
 
             MunicipalityFilter(selected = state.municipalityId, onSelect = viewModel::filter)
 
             state.message?.let { error ->
-                Text(
+                KantaBanner(
                     text = stringResource(error.messageRes),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = KantaTheme.colors.error,
+                    tone = KantaBannerTone.ERROR,
                     modifier = Modifier.padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.s),
                 )
             }
@@ -189,12 +181,11 @@ fun SuggestionCard(item: SuggestionUi, onVote: () -> Unit) {
         border = BorderStroke(Spacing.hairline, KantaTheme.colors.outline),
     ) {
         Column {
-            // §5.3 card: the spot, on a small still map.
+            // §5.3 card: the spot, on a small still map. The card's own shape clips it.
             Box(
                 Modifier
                     .fillMaxWidth()
                     .height(SNAPSHOT_H.dp)
-                    .clip(KantaShape.card)
                     .background(KantaTheme.colors.surfaceMuted),
             ) {
                 snapshot?.let {
@@ -209,14 +200,15 @@ fun SuggestionCard(item: SuggestionUi, onVote: () -> Unit) {
             }
 
             Column(Modifier.padding(Spacing.l)) {
-                Text(reason, style = MaterialTheme.typography.titleMedium)
                 if (municipality != null) {
                     Text(
-                        text = municipality,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = KantaTheme.colors.onSurfaceMuted,
+                        text = municipality.uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = KantaTheme.colors.brand,
                     )
+                    Spacer(Modifier.height(Spacing.xs))
                 }
+                Text(reason, style = MaterialTheme.typography.titleMedium)
                 item.note?.let { note ->
                     Spacer(Modifier.height(Spacing.s))
                     Text(
@@ -229,7 +221,7 @@ fun SuggestionCard(item: SuggestionUi, onVote: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = votes,
-                        style = MaterialTheme.typography.titleSmall.tabularFigures(),
+                        style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier
                             .weight(1f)
                             .semantics { contentDescription = "$reason, $votes" },
@@ -269,9 +261,9 @@ fun StateBadge(state: SuggestionState, modifier: Modifier = Modifier) {
         SuggestionState.Placed -> R.string.suggestion_state_placed to KantaTheme.colors.brand
         SuggestionState.Rejected -> R.string.suggestion_state_rejected to KantaTheme.colors.onSurfaceMuted
     }
-    Surface(modifier = modifier, shape = KantaShape.pill, color = MaterialTheme.colorScheme.surface) {
+    Surface(modifier = modifier, shape = KantaShape.chip, color = MaterialTheme.colorScheme.surface) {
         Text(
-            text = stringResource(label),
+            text = stringResource(label).uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = tint,
             modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.xs),

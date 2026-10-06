@@ -27,7 +27,6 @@ import mk.kanta.app.core.data.model.ContainerStatus
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
-import mk.kanta.app.core.designsystem.tabularFigures
 
 /**
  * One row in a list: nearest containers, my reports, suggestions, municipality ranking.
@@ -45,8 +44,11 @@ fun KantaListRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     showDivider: Boolean = true,
+    /** Inside a [KantaGroup] card: card padding instead of screen padding. */
+    inset: Boolean = false,
 ) {
     val haptics = rememberKantaHaptics()
+    val horizontal = if (inset) Spacing.l else Spacing.screenHorizontal
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -62,8 +64,8 @@ fun KantaListRow(
                         Modifier
                     },
                 )
-                .defaultMinSize(minHeight = 64.dp)
-                .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.m),
+                .defaultMinSize(minHeight = if (inset) 60.dp else 64.dp)
+                .padding(horizontal = horizontal, vertical = Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (leading != null) {
@@ -81,7 +83,7 @@ fun KantaListRow(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -107,18 +109,18 @@ fun KantaListRow(
             HorizontalDivider(
                 thickness = Spacing.hairline,
                 color = KantaTheme.colors.outline,
-                modifier = Modifier.padding(start = Spacing.screenHorizontal),
+                modifier = Modifier.padding(start = horizontal),
             )
         }
     }
 }
 
-/** Distance in metres, tabular so the digits do not jitter as the user walks (§3.2). */
+/** Distance in metres, in the mono face so the digits do not jitter as the user walks (§3.2). */
 @Composable
 fun KantaDistanceLabel(metres: Int, modifier: Modifier = Modifier) {
     Text(
         text = "$metres m",
-        style = MaterialTheme.typography.labelLarge.tabularFigures(),
+        style = MaterialTheme.typography.labelMedium,
         color = KantaTheme.colors.onSurfaceMuted,
         modifier = modifier,
     )

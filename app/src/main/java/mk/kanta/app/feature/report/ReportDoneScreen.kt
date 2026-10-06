@@ -3,7 +3,6 @@ package mk.kanta.app.feature.report
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,6 +34,7 @@ import mk.kanta.app.R
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Motion
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaIconTile
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
@@ -54,22 +54,22 @@ fun ReportDoneScreen(state: ReportUiState, onDone: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(Spacing.xxl),
-            verticalArrangement = Arrangement.Center,
+                .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(Modifier.weight(1f))
             if (queued) {
                 // Not a check: nothing has been sent yet, and the icon should not
                 // claim otherwise.
-                Icon(
-                    imageVector = KantaIcons.Offline,
-                    contentDescription = null,
+                KantaIconTile(
+                    icon = KantaIcons.Offline,
                     tint = KantaTheme.colors.onSurfaceMuted,
-                    modifier = Modifier.size(72.dp),
+                    size = 96.dp,
                 )
             } else {
-                SuccessCheck(Modifier.size(96.dp))
+                SuccessCheck(Modifier.size(112.dp))
             }
 
             Spacer(Modifier.height(Spacing.xl))
@@ -91,12 +91,12 @@ fun ReportDoneScreen(state: ReportUiState, onDone: () -> Unit) {
                         if (state.presetFull) R.string.report_sent_full else R.string.report_sent,
                     )
                 },
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
             )
+            Spacer(Modifier.weight(1f))
 
             if (!state.goToAlternatives) {
-                Spacer(Modifier.height(Spacing.xxl))
                 KantaPrimaryButton(
                     text = stringResource(R.string.report_done),
                     onClick = onDone,

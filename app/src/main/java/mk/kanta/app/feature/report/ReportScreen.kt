@@ -9,7 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -21,20 +25,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import mk.kanta.app.R
-import mk.kanta.app.core.designsystem.KantaTheme
+import mk.kanta.app.core.designsystem.BackgroundDark
+import mk.kanta.app.core.designsystem.BrandDark
+import mk.kanta.app.core.designsystem.OnSurfaceDark
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.SurfaceMutedDark
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
-import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import androidx.compose.ui.unit.dp
+import mk.kanta.app.core.designsystem.component.KantaTopBar
 
 /**
  * The report flow (spec §4.3): camera → processing → compose → done.
@@ -154,7 +161,7 @@ fun ReportScreen(
 
 @Composable
 private fun PhotoBackdrop(file: java.io.File?) {
-    Surface(Modifier.fillMaxSize(), color = Color.Black) {
+    Surface(Modifier.fillMaxSize(), color = BackgroundDark) {
         if (file != null) {
             coil3.compose.AsyncImage(
                 model = file,
@@ -173,18 +180,24 @@ private fun PhotoBackdrop(file: java.io.File?) {
  */
 @Composable
 private fun ProcessingScreen() {
-    Surface(Modifier.fillMaxSize(), color = Color.Black) {
+    Surface(Modifier.fillMaxSize(), color = BackgroundDark) {
         Column(
             modifier = Modifier.fillMaxSize().padding(Spacing.xxl),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            KantaSkeleton(width = 200.dp, height = 14.dp)
+            CircularProgressIndicator(
+                color = BrandDark,
+                trackColor = SurfaceMutedDark,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(48.dp),
+            )
             Text(
                 text = stringResource(R.string.report_processing),
-                color = Color.White.copy(alpha = 0.85f),
+                color = OnSurfaceDark,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = Spacing.l),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = Spacing.xl),
             )
         }
     }
@@ -193,20 +206,18 @@ private fun ProcessingScreen() {
 @Composable
 private fun CameraPermissionNeeded(onAllow: () -> Unit, onClose: () -> Unit) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Box(contentAlignment = Alignment.Center) {
-            KantaEmptyState(
-                title = stringResource(R.string.report_camera_needed_title),
-                message = stringResource(R.string.report_camera_needed_message),
-                icon = KantaIcons.Camera,
-                action = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            KantaTopBar(onBack = onClose, close = true)
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                KantaEmptyState(
+                    title = stringResource(R.string.report_camera_needed_title),
+                    message = stringResource(R.string.report_camera_needed_message),
+                    icon = KantaIcons.Camera,
+                    action = {
                         KantaPrimaryButton(stringResource(R.string.report_allow_camera), onClick = onAllow)
-                        androidx.compose.material3.TextButton(onClick = onClose) {
-                            Text(stringResource(R.string.action_cancel), color = KantaTheme.colors.onSurfaceMuted)
-                        }
-                    }
-                },
-            )
+                    },
+                )
+            }
         }
     }
 }

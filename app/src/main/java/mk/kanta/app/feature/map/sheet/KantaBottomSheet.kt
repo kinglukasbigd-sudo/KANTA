@@ -235,7 +235,8 @@ fun KantaBottomSheetScaffold(
                 .offset { IntOffset(0, sheetState.offset.value.roundToInt()) }
                 .kantaSoftShadow(KantaShape.bottomSheet),
             shape = KantaShape.bottomSheet,
-            color = MaterialTheme.colorScheme.surface,
+            // Ivory, not white: the white cards inside it are what reads as content (§3.3).
+            color = MaterialTheme.colorScheme.background,
         ) {
             Column(
                 modifier = Modifier

@@ -1,5 +1,6 @@
 package mk.kanta.app.feature.map
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,7 +34,9 @@ import mk.kanta.app.core.data.remote.dto.PublicReportDto
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaCard
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
+import mk.kanta.app.core.designsystem.component.KantaGroupDivider
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaListRowSkeleton
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
@@ -44,7 +47,6 @@ import mk.kanta.app.core.designsystem.component.KantaStatusBadge
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
 import mk.kanta.app.core.designsystem.component.kindLabel
 import mk.kanta.app.core.designsystem.mono
-import mk.kanta.app.core.designsystem.tabularFigures
 import mk.kanta.app.core.network.publicPhotoUrl
 import mk.kanta.app.core.util.compactDuration
 import kotlin.math.roundToInt
@@ -111,12 +113,19 @@ fun ColumnScope.ContainerDetailContent(
     // §4.1 photo timeline.
     KantaSectionHeader(stringResource(R.string.container_detail_timeline))
     if (state.reports.isEmpty()) {
-        Text(
-            text = stringResource(R.string.container_detail_no_reports),
-            style = MaterialTheme.typography.bodyLarge,
-            color = KantaTheme.colors.onSurfaceMuted,
-            modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
-        )
+        KantaCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.screenHorizontal),
+            color = KantaTheme.colors.surfaceMuted,
+            border = false,
+        ) {
+            Text(
+                text = stringResource(R.string.container_detail_no_reports),
+                style = MaterialTheme.typography.bodySmall,
+                color = KantaTheme.colors.onSurfaceMuted,
+            )
+        }
     } else {
         PhotoTimeline(state.reports)
     }
@@ -143,16 +152,21 @@ fun ColumnScope.ContainerDetailContent(
 
 @Composable
 private fun DetailHeader(state: ContainerDetailState) {
-    Column(modifier = Modifier.padding(horizontal = Spacing.screenHorizontal)) {
+    KantaCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.screenHorizontal),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            KantaStatusDot(state.status, state.kind, Modifier.size(28.dp))
-            Spacer(Modifier.width(Spacing.m))
-            Column {
+            KantaStatusDot(state.status, state.kind, Modifier.size(44.dp))
+            Spacer(Modifier.width(Spacing.l))
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = state.code,
                     style = MaterialTheme.typography.titleLarge.mono(),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+                Spacer(Modifier.height(Spacing.xs))
                 Text(
                     text = listOfNotNull(
                         kindLabel(state.kind),
@@ -165,6 +179,8 @@ private fun DetailHeader(state: ContainerDetailState) {
         }
 
         Spacer(Modifier.height(Spacing.l))
+        KantaGroupDivider(startInset = 0.dp)
+        Spacer(Modifier.height(Spacing.m))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -177,7 +193,7 @@ private fun DetailHeader(state: ContainerDetailState) {
             if (hours != null && state.status != ContainerStatus.OK) {
                 Text(
                     text = compactDuration(hours),
-                    style = MaterialTheme.typography.bodySmall.tabularFigures(),
+                    style = MaterialTheme.typography.labelMedium,
                     color = KantaTheme.colors.onSurfaceMuted,
                 )
             }
@@ -228,18 +244,19 @@ private fun PhotoTimeline(reports: List<PublicReportDto>) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp)
-                        .clip(KantaShape.card),
+                        .clip(KantaShape.card)
+                        .border(Spacing.hairline, KantaTheme.colors.outline, KantaShape.card),
                 )
                 Spacer(Modifier.height(Spacing.s))
                 Text(
                     text = compactDuration(report.ageHours),
-                    style = MaterialTheme.typography.labelSmall.tabularFigures(),
+                    style = MaterialTheme.typography.labelSmall,
                     color = KantaTheme.colors.onSurfaceMuted,
                 )
                 if (report.meTooCount > 0) {
                     Text(
                         text = "+${report.meTooCount}",
-                        style = MaterialTheme.typography.labelSmall.tabularFigures(),
+                        style = MaterialTheme.typography.labelSmall,
                         color = KantaTheme.colors.onSurfaceMuted,
                     )
                 }

@@ -7,6 +7,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -34,6 +35,8 @@ import mk.kanta.app.core.data.model.ContainerStatus
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Motion
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaBanner
+import mk.kanta.app.core.designsystem.component.KantaCard
 import mk.kanta.app.core.designsystem.component.KantaCompactAction
 import mk.kanta.app.core.designsystem.component.KantaDistanceLabel
 import mk.kanta.app.core.designsystem.component.KantaIcons
@@ -114,6 +117,12 @@ private fun Asking(
     Column {
         Column(Modifier.padding(horizontal = Spacing.screenHorizontal)) {
             Text(
+                text = stringResource(R.string.menu_map_street).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = KantaTheme.colors.brand,
+            )
+            Spacer(Modifier.height(Spacing.s))
+            Text(
                 text = stringResource(R.string.street_title),
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.semantics { heading() },
@@ -124,8 +133,10 @@ private fun Asking(
                 style = MaterialTheme.typography.bodyLarge,
                 color = KantaTheme.colors.onSurfaceMuted,
             )
-            Spacer(Modifier.height(Spacing.m))
-            ShapeLegend()
+            Spacer(Modifier.height(Spacing.l))
+            KantaCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(Spacing.m)) {
+                ShapeLegend()
+            }
 
             when {
                 state.locating -> {
@@ -134,10 +145,9 @@ private fun Asking(
                 }
                 state.locationMissing -> {
                     Spacer(Modifier.height(Spacing.l))
-                    Text(
+                    KantaBanner(
                         text = stringResource(R.string.street_location_needed),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = KantaTheme.colors.onSurfaceMuted,
+                        icon = KantaIcons.MyLocation,
                     )
                 }
             }
@@ -148,13 +158,20 @@ private fun Asking(
         if (state.unverified.isNotEmpty()) {
             KantaSectionHeader(stringResource(R.string.street_unverified_title))
             state.unverified.forEach { item ->
-                UnverifiedRow(
-                    item = item,
-                    confirming = state.confirmingId == item.id,
-                    sizeSending = state.sizeSending?.takeIf { it.first == item.id }?.second,
-                    onConfirm = { onConfirmExists(item.id) },
-                    onChooseSize = { kind -> onChooseSize(item.id, kind) },
-                )
+                KantaCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.xs),
+                    contentPadding = PaddingValues(bottom = Spacing.s),
+                ) {
+                    UnverifiedRow(
+                        item = item,
+                        confirming = state.confirmingId == item.id,
+                        sizeSending = state.sizeSending?.takeIf { it.first == item.id }?.second,
+                        onConfirm = { onConfirmExists(item.id) },
+                        onChooseSize = { kind -> onChooseSize(item.id, kind) },
+                    )
+                }
             }
         }
 
@@ -258,7 +275,7 @@ private fun UnverifiedRow(
                 else -> null
             },
         ).joinToString(" · "),
-        leading = { KantaStatusDot(item.status, item.kind) },
+        leading = { KantaStatusDot(item.status, item.kind, Modifier.size(28.dp)) },
         trailing = {
             // The button exists only where the server said it would be accepted.
             if (item.canConfirm) {
@@ -275,6 +292,7 @@ private fun UnverifiedRow(
             }
         },
         showDivider = false,
+        inset = true,
     )
     // §4.6 "Bin size": Small or Big, on its own line — the row's trailing slot has no room
     // for two more labels. The person's own answer is the filled one.
@@ -282,7 +300,7 @@ private fun UnverifiedRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = Spacing.screenHorizontal + 48.dp, end = Spacing.screenHorizontal),
+                .padding(start = Spacing.l + 48.dp, end = Spacing.l),
             horizontalArrangement = Arrangement.spacedBy(Spacing.s),
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -9,15 +9,21 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -37,7 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -49,8 +57,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import mk.kanta.app.R
+import mk.kanta.app.core.designsystem.BackgroundDark
+import mk.kanta.app.core.designsystem.BrandDark
+import mk.kanta.app.core.designsystem.ErrorDark
 import mk.kanta.app.core.designsystem.KantaShape
+import mk.kanta.app.core.designsystem.OnSurfaceDark
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
 import java.io.File
 import java.util.UUID
@@ -116,6 +129,31 @@ fun CameraCapture(
     ) {
         AndroidView(factory = { previewView }, modifier = Modifier.fillMaxSize())
 
+        // A framing guide: four corner brackets around where the bin should sit.
+        ViewfinderCorners(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.78f)
+                .aspectRatio(0.8f),
+        )
+
+        // What to photograph, in the app's mono caption voice.
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = Spacing.l + 6.dp),
+            shape = KantaShape.chip,
+            color = CameraScrim,
+        ) {
+            Text(
+                text = stringResource(R.string.camera_hint).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = OnSurfaceDark,
+                modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s),
+            )
+        }
+
         // Close, top-left.
         CameraRoundButton(
             onClick = onClose,
@@ -155,14 +193,25 @@ fun CameraCapture(
                     .statusBarsPadding()
                     .padding(top = 88.dp, start = Spacing.xl, end = Spacing.xl),
                 shape = KantaShape.card,
-                color = Color.Black.copy(alpha = 0.72f),
+                color = CameraScrim,
             ) {
-                Text(
-                    text = message,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(Spacing.l),
-                )
+                Row(
+                    modifier = Modifier.padding(Spacing.m),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = KantaIcons.Error,
+                        contentDescription = null,
+                        tint = ErrorDark,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(Spacing.m))
+                    Text(
+                        text = message,
+                        color = OnSurfaceDark,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
 
@@ -176,7 +225,8 @@ fun CameraCapture(
                 .border(BorderStroke(4.dp, Color.White), CircleShape)
                 .padding(8.dp)
                 .clip(CircleShape)
-                .background(if (capturing) Color.White.copy(alpha = 0.5f) else Color.White)
+                // Mint while the photo is being taken: the shutter answers the tap at once.
+                .background(if (capturing) BrandDark else Color.White)
                 .semantics {
                     role = Role.Button
                     contentDescription = shutterLabel
@@ -214,10 +264,33 @@ private fun CameraRoundButton(
         modifier = modifier
             .size(Spacing.minTouchTarget)
             .semantics { this.contentDescription = contentDescription },
-        shape = CircleShape,
-        color = Color.Black.copy(alpha = 0.45f),
+        shape = KantaShape.button,
+        color = CameraScrim,
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
+    }
+}
+
+/** Carbon ink, translucent: what every control floats on over the live camera. */
+private val CameraScrim = BackgroundDark.copy(alpha = 0.62f)
+
+/** Four white corner brackets — a quiet viewfinder, not a box over the picture. */
+@Composable
+private fun ViewfinderCorners(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val arm = 28.dp.toPx()
+        val stroke = 3.dp.toPx()
+        val color = Color.White.copy(alpha = 0.75f)
+        val w = size.width
+        val h = size.height
+        fun corner(x: Float, y: Float, dx: Float, dy: Float) {
+            drawLine(color, Offset(x, y), Offset(x + dx * arm, y), stroke, StrokeCap.Round)
+            drawLine(color, Offset(x, y), Offset(x, y + dy * arm), stroke, StrokeCap.Round)
+        }
+        corner(0f, 0f, 1f, 1f)
+        corner(w, 0f, -1f, 1f)
+        corner(0f, h, 1f, -1f)
+        corner(w, h, -1f, -1f)
     }
 }
 

@@ -23,10 +23,10 @@ rebuild, done.
   "name": "Kanta Light",
   "metadata": {
     "kanta:palette": {
-      "background": "#F3F5F2",
-      "water": "#C4D0D5",
-      "park": "#E4ECE3",
-      "roadMinor": "#E4E5E1",
+      "background": "#F2EFE7",
+      "water": "#C9D6D8",
+      "park": "#E2EBD9",
+      "roadMinor": "#FFFFFF",
       ...
     }
   }
@@ -117,10 +117,10 @@ script, near the top — that is the place to make a colour permanent.
 ## Things worth knowing
 
 **Fonts.** OpenFreeMap serves only Noto Sans glyphs, so map labels are Noto Sans
-Regular/Bold. §3.2 asks for Nunito, which is not available as served glyph PBFs —
+Regular/Bold. The app's fonts (Manrope, JetBrains Mono, §3.2) are not available as served glyph PBFs —
 using it would mean generating and hosting our own. Noto Sans is the closest
 humanist sans with full Cyrillic and Albanian coverage. The app's own text is
-Nunito; this affects labels drawn inside the map only.
+Manrope; this affects labels drawn inside the map only.
 
 **Label language.** Every label uses
 `["coalesce", ["get", "name:mk"], ["get", "name"]]` — Macedonian where OSM has

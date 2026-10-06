@@ -30,7 +30,7 @@ import mk.kanta.app.core.auth.AuthInput
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
-import mk.kanta.app.core.designsystem.tabularFigures
+import mk.kanta.app.core.designsystem.mono
 
 /**
  * Six boxes for the one-time code (brief: "auto-advance boxes, paste support").
@@ -102,18 +102,18 @@ private fun CodeBox(
     val borderColor: Color = when {
         isError -> KantaTheme.colors.error
         active -> KantaTheme.colors.brand
-        else -> KantaTheme.colors.outline
+        else -> KantaTheme.colors.outlineStrong
     }
     Box(
         modifier = modifier
-            .height(56.dp)
-            .background(KantaTheme.colors.surfaceMuted, KantaShape.chip)
-            .border(BorderStroke(if (active || isError) 2.dp else Spacing.hairline, borderColor), KantaShape.chip),
+            .height(60.dp)
+            .background(MaterialTheme.colorScheme.surface, KantaShape.button)
+            .border(BorderStroke(if (active || isError) 2.dp else Spacing.hairline, borderColor), KantaShape.button),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = digit?.toString() ?: "",
-            style = MaterialTheme.typography.titleLarge.tabularFigures(),
+            style = MaterialTheme.typography.titleLarge.mono(),
             color = MaterialTheme.colorScheme.onSurface,
         )
     }

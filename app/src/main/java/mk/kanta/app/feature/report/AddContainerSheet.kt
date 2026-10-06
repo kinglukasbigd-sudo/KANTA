@@ -1,5 +1,6 @@
 package mk.kanta.app.feature.report
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,11 +11,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -29,6 +30,7 @@ import mk.kanta.app.core.data.model.ContainerKind
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaCard
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaDragHandle
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
@@ -36,7 +38,7 @@ import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
 import mk.kanta.app.core.designsystem.component.KantaSizeChooser
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
-import mk.kanta.app.core.designsystem.tabularFigures
+import mk.kanta.app.core.designsystem.mono
 import mk.kanta.app.core.location.LatLon
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
@@ -66,16 +68,22 @@ fun AddContainerSheet(
         // drag. Back and a tap outside still close it.
         sheetGesturesEnabled = false,
         shape = KantaShape.bottomSheet,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.background,
         dragHandle = { KantaDragHandle() },
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = Spacing.xl)
+                .padding(horizontal = Spacing.screenHorizontal)
                 .padding(bottom = Spacing.xxl),
         ) {
+            Text(
+                text = stringResource(R.string.add_eyebrow).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = KantaTheme.colors.brand,
+            )
+            Spacer(Modifier.height(Spacing.s))
             Text(stringResource(R.string.add_title), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(Spacing.s))
 
@@ -108,15 +116,16 @@ fun AddContainerSheet(
                     contentDescription = stringResource(R.string.add_pin_map),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(184.dp)
-                        .clip(KantaShape.card),
+                        .height(200.dp)
+                        .clip(KantaShape.card)
+                        .border(Spacing.hairline, KantaTheme.colors.outline, KantaShape.card),
                 )
                 Spacer(Modifier.height(Spacing.s))
                 Text(
                     text = state.pinDistanceMetres?.let {
                         stringResource(R.string.add_pin_distance, it.roundToInt())
                     } ?: stringResource(R.string.add_pin_here),
-                    style = MaterialTheme.typography.bodySmall.tabularFigures(),
+                    style = MaterialTheme.typography.labelMedium,
                     color = KantaTheme.colors.onSurfaceMuted,
                 )
             }
@@ -124,12 +133,12 @@ fun AddContainerSheet(
             // --- "Is it this one?" (§4.6 duplicate check) ------------------------------
             state.duplicateOf?.let { existing ->
                 Spacer(Modifier.height(Spacing.l))
-                Surface(shape = KantaShape.card, color = KantaTheme.colors.surfaceMuted) {
-                    Column(Modifier.padding(Spacing.l)) {
-                        Text(stringResource(R.string.add_duplicate_title), style = MaterialTheme.typography.titleSmall)
-                        Spacer(Modifier.height(Spacing.s))
+                KantaCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Text(stringResource(R.string.add_duplicate_title), style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(Spacing.m))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            KantaStatusDot(existing.status, existing.kind)
+                            KantaStatusDot(existing.status, existing.kind, Modifier.size(36.dp))
                             Spacer(Modifier.width(Spacing.m))
                             Text(
                                 text = stringResource(
@@ -137,7 +146,7 @@ fun AddContainerSheet(
                                     existing.code,
                                     existing.distanceMetres.roundToInt(),
                                 ),
-                                style = MaterialTheme.typography.bodyLarge.tabularFigures(),
+                                style = MaterialTheme.typography.titleSmall.mono(),
                             )
                         }
                         Spacer(Modifier.height(Spacing.m))

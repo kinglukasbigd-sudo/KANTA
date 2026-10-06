@@ -23,12 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,8 +60,12 @@ import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Motion
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaCard
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaErrorState
+import mk.kanta.app.core.designsystem.component.KantaGroup
+import mk.kanta.app.core.designsystem.component.KantaIconButton
+import mk.kanta.app.core.designsystem.component.KantaIconTile
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaListRow
 import mk.kanta.app.core.designsystem.component.KantaListRowSkeleton
@@ -74,6 +73,8 @@ import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.component.KantaSectionHeader
 import mk.kanta.app.core.designsystem.component.KantaSkeleton
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
+import mk.kanta.app.core.designsystem.component.KantaTopBar
+import mk.kanta.app.core.designsystem.mono
 import mk.kanta.app.core.designsystem.tabularFigures
 import mk.kanta.app.core.network.publicPhotoUrl
 import mk.kanta.app.core.util.compactDuration
@@ -101,14 +102,12 @@ fun MyProfileScreen(
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.padding(Spacing.s)) {
-                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                }
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = onSettings, modifier = Modifier.padding(Spacing.s)) {
-                    Icon(KantaIcons.Settings, contentDescription = stringResource(R.string.me_settings))
-                }
+            KantaTopBar(onBack = onBack) {
+                KantaIconButton(
+                    icon = KantaIcons.Settings,
+                    contentDescription = stringResource(R.string.me_settings),
+                    onClick = onSettings,
+                )
             }
 
             when (state.auth) {
@@ -191,18 +190,18 @@ private fun SignedInContent(
 
         item {
             Spacer(Modifier.height(Spacing.xl))
-            HorizontalDivider(thickness = Spacing.hairline, color = KantaTheme.colors.outline)
             // §4.5 screen 11: "Link to Settings".
-            KantaListRow(
-                title = stringResource(R.string.me_settings),
-                subtitle = stringResource(R.string.me_settings_subtitle),
-                leading = {
-                    Icon(KantaIcons.Settings, null, tint = KantaTheme.colors.onSurfaceMuted, modifier = Modifier.size(22.dp))
-                },
-                trailing = { Icon(KantaIcons.ChevronRight, null, tint = KantaTheme.colors.outline) },
-                onClick = onSettings,
-                showDivider = false,
-            )
+            KantaGroup {
+                KantaListRow(
+                    title = stringResource(R.string.me_settings),
+                    subtitle = stringResource(R.string.me_settings_subtitle),
+                    leading = { KantaIconTile(icon = KantaIcons.Settings, tint = KantaTheme.colors.onSurfaceMuted) },
+                    trailing = { Icon(KantaIcons.ChevronRight, null, tint = KantaTheme.colors.outlineStrong) },
+                    onClick = onSettings,
+                    showDivider = false,
+                    inset = true,
+                )
+            }
             Spacer(Modifier.navigationBarsPadding())
         }
     }
@@ -219,33 +218,35 @@ private fun Header(state: MyProfileUiState) {
         modifier = Modifier.padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.s),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // A square monogram, like the map's own controls: brand on mint.
         Box(
             Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(KantaTheme.colors.surfaceMuted),
+                .size(64.dp)
+                .clip(KantaShape.card)
+                .background(KantaTheme.colors.brandContainer),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = name.take(1).uppercase(),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.displaySmall,
                 color = KantaTheme.colors.brand,
             )
         }
         Spacer(Modifier.width(Spacing.l))
         Column {
-            Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             val details = listOfNotNull(
                 Municipalities.byId(state.municipalityId)?.localizedName(),
                 state.memberSinceMillis?.let { stringResource(R.string.me_member_since, monthYear(it)) },
             )
             if (details.isNotEmpty()) {
                 Text(
-                    text = details.joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = KantaTheme.colors.onSurfaceMuted,
+                    text = details.joinToString(" · ").uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = KantaTheme.colors.brand,
                 )
+                Spacer(Modifier.height(Spacing.xs))
             }
+            Text(name, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.semantics { heading() })
         }
     }
 }
@@ -260,14 +261,13 @@ private fun monthYear(millis: Long): String =
 
 @Composable
 private fun ImpactCard(state: MyProfileUiState, onRetry: () -> Unit) {
-    Surface(
+    KantaCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.l),
-        shape = KantaShape.card,
-        color = KantaTheme.colors.surfaceMuted,
+        contentPadding = PaddingValues(Spacing.xl),
     ) {
-        Column(Modifier.padding(Spacing.xl)) {
+        Column {
             val impact = state.impact
             when {
                 state.impactLoading && impact == null -> {
@@ -352,8 +352,8 @@ private fun ImpactNumber(value: Int, label: Int, modifier: Modifier = Modifier) 
         )
         Spacer(Modifier.height(Spacing.s))
         Text(
-            text = pluralStringResource(label, value),
-            style = MaterialTheme.typography.bodySmall,
+            text = pluralStringResource(label, value).uppercase(),
+            style = MaterialTheme.typography.labelSmall,
             color = KantaTheme.colors.onSurfaceMuted,
         )
     }
@@ -428,13 +428,18 @@ private fun ReportRow(
         MyReportState.Expired -> KantaTheme.colors.onSurfaceMuted
     }
 
-    Column {
+    KantaCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.xs),
+        contentPadding = PaddingValues(0.dp),
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(role = Role.Button, onClick = onClick)
                 .heightIn(min = Spacing.minTouchTarget)
-                .padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.m),
+                .padding(Spacing.m),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AsyncImage(
@@ -442,8 +447,8 @@ private fun ReportRow(
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .size(56.dp)
-                    .clip(KantaShape.chip)
+                    .size(64.dp)
+                    .clip(KantaShape.button)
                     .background(KantaTheme.colors.surfaceMuted),
             )
             Spacer(Modifier.width(Spacing.m))
@@ -453,7 +458,7 @@ private fun ReportRow(
                     Spacer(Modifier.width(Spacing.xs))
                     Text(
                         text = listOfNotNull(report.code, municipality).joinToString(" · "),
-                        style = MaterialTheme.typography.titleSmall.tabularFigures(),
+                        style = MaterialTheme.typography.titleSmall.mono(),
                     )
                 }
                 Text(
@@ -468,26 +473,27 @@ private fun ReportRow(
                 )
                 Text(
                     text = stateLine,
-                    style = MaterialTheme.typography.bodySmall.tabularFigures(),
+                    style = MaterialTheme.typography.labelMedium,
                     color = stateColor,
                 )
             }
-            Icon(KantaIcons.ChevronRight, null, tint = KantaTheme.colors.outline)
+            Icon(KantaIcons.ChevronRight, null, tint = KantaTheme.colors.outlineStrong)
         }
 
         // §5.4 before/after, for what actually got fixed.
         if (report.state == MyReportState.Resolved) {
             TextButton(
                 onClick = onToggleBeforeAfter,
-                modifier = Modifier.padding(start = Spacing.screenHorizontal + 56.dp),
+                modifier = Modifier.padding(start = Spacing.m + 64.dp),
             ) {
                 Text(
                     text = stringResource(if (expanded) R.string.me_hide_before_after else R.string.me_before_after),
                     style = MaterialTheme.typography.labelLarge,
+                    color = KantaTheme.colors.brand,
                 )
             }
             if (expanded) {
-                Column(Modifier.padding(horizontal = Spacing.screenHorizontal, vertical = Spacing.s)) {
+                Column(Modifier.padding(start = Spacing.m, end = Spacing.m, bottom = Spacing.m)) {
                     val after = report.resolvedPhotoPath
                     if (after != null) {
                         BeforeAfter(beforePath = report.photoPath, afterPath = after)
@@ -548,16 +554,19 @@ private fun reportKindLabel(kind: String): String = stringResource(
 
 @Composable
 private fun SuggestionRow(item: MySuggestionUi, onClick: (MySuggestionUi) -> Unit) {
-    KantaListRow(
-        title = item.reason?.let { stringResource(it.label) } ?: "",
-        subtitle = listOfNotNull(
-            stringResource(if (item.authored) R.string.me_suggestion_mine else R.string.me_suggestion_voted),
-            pluralStringResource(R.plurals.suggest_votes, item.votes, item.votes),
-            Municipalities.byId(item.municipalityId)?.localizedName(),
-        ).joinToString(" · "),
-        leading = { Icon(KantaIcons.Suggest, null, tint = KantaTheme.colors.brand, modifier = Modifier.size(22.dp)) },
-        trailing = { StateBadge(item.state) },
-        onClick = { onClick(item) },
-        showDivider = false,
-    )
+    KantaGroup(Modifier.padding(vertical = Spacing.xs)) {
+        KantaListRow(
+            title = item.reason?.let { stringResource(it.label) } ?: "",
+            subtitle = listOfNotNull(
+                stringResource(if (item.authored) R.string.me_suggestion_mine else R.string.me_suggestion_voted),
+                pluralStringResource(R.plurals.suggest_votes, item.votes, item.votes),
+                Municipalities.byId(item.municipalityId)?.localizedName(),
+            ).joinToString(" · "),
+            leading = { KantaIconTile(icon = KantaIcons.Suggest) },
+            trailing = { StateBadge(item.state) },
+            onClick = { onClick(item) },
+            showDivider = false,
+            inset = true,
+        )
+    }
 }

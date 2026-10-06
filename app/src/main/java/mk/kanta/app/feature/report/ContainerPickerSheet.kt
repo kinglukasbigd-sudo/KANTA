@@ -1,13 +1,16 @@
 package mk.kanta.app.feature.report
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -36,6 +39,7 @@ import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaDistanceLabel
 import mk.kanta.app.core.designsystem.component.KantaDragHandle
+import mk.kanta.app.core.designsystem.component.KantaGroup
 import mk.kanta.app.core.designsystem.component.KantaListRow
 import mk.kanta.app.core.designsystem.component.KantaStatusDot
 import mk.kanta.app.core.designsystem.marker.MarkerBitmapFactory
@@ -71,16 +75,16 @@ fun ContainerPickerSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = KantaShape.bottomSheet,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.background,
         dragHandle = { KantaDragHandle() },
     ) {
         Column(Modifier.navigationBarsPadding()) {
             Text(
                 text = stringResource(R.string.report_pick_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
             )
-            Spacer(Modifier.height(Spacing.m))
+            Spacer(Modifier.height(Spacing.l))
 
             if (device != null) {
                 MiniMap(
@@ -92,7 +96,8 @@ fun ContainerPickerSheet(
                         .padding(horizontal = Spacing.screenHorizontal)
                         .fillMaxWidth()
                         .height(220.dp)
-                        .clip(KantaShape.card),
+                        .clip(KantaShape.card)
+                        .border(Spacing.hairline, KantaTheme.colors.outline, KantaShape.card),
                 )
                 Spacer(Modifier.height(Spacing.m))
             }
@@ -105,25 +110,33 @@ fun ContainerPickerSheet(
                     modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
                 )
             } else {
-                LazyColumn(Modifier.height(240.dp)) {
-                    items(candidates, key = { it.id }) { c ->
-                        val tooFar = c.distanceMetres > SendOutcomes.MAX_REPORT_DISTANCE_M
-                        KantaListRow(
-                            title = c.code,
-                            subtitle = if (tooFar) stringResource(R.string.report_pick_too_far) else null,
-                            leading = { KantaStatusDot(c.status, c.kind) },
-                            trailing = { KantaDistanceLabel(c.distanceMetres.roundToInt()) },
-                            onClick = { onPick(c) },
-                        )
+                KantaGroup {
+                    LazyColumn(Modifier.heightIn(max = 240.dp)) {
+                        itemsIndexed(candidates, key = { _, c -> c.id }) { index, c ->
+                            val tooFar = c.distanceMetres > SendOutcomes.MAX_REPORT_DISTANCE_M
+                            KantaListRow(
+                                title = c.code,
+                                subtitle = if (tooFar) stringResource(R.string.report_pick_too_far) else null,
+                                leading = { KantaStatusDot(c.status, c.kind, Modifier.size(28.dp)) },
+                                trailing = { KantaDistanceLabel(c.distanceMetres.roundToInt()) },
+                                onClick = { onPick(c) },
+                                showDivider = index < candidates.lastIndex,
+                                inset = true,
+                            )
+                        }
                     }
                 }
             }
 
             TextButton(
                 onClick = onAddNew,
-                modifier = Modifier.padding(horizontal = Spacing.m),
+                modifier = Modifier.padding(horizontal = Spacing.m, vertical = Spacing.s),
             ) {
-                Text(stringResource(R.string.report_not_on_map), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = stringResource(R.string.report_not_on_map),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = KantaTheme.colors.brand,
+                )
             }
             Spacer(Modifier.height(Spacing.l))
         }

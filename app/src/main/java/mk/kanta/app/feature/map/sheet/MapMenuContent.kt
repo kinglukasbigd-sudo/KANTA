@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import mk.kanta.app.R
@@ -26,6 +26,9 @@ import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaActionTile
 import mk.kanta.app.core.designsystem.component.KantaDistanceLabel
 import mk.kanta.app.core.designsystem.component.KantaDragHandle
+import mk.kanta.app.core.designsystem.component.KantaGroup
+import mk.kanta.app.core.designsystem.component.KantaGroupDivider
+import mk.kanta.app.core.designsystem.component.KantaIconTile
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaListRow
 import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
@@ -93,99 +96,106 @@ fun ColumnScope.MapMenuBody(
     showAdmin: Boolean,
     onAdmin: () -> Unit,
 ) {
-    // §3.3: separate with tone and 1dp hairlines, never cards or shadows.
-    Hairline()
-
     KantaSectionHeader(stringResource(R.string.menu_near_you))
 
-    when {
-        nearestLoading -> {
-            Column(
-                modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
-                verticalArrangement = Arrangement.spacedBy(Spacing.s),
-            ) {
-                KantaSkeleton(width = 200.dp, height = 16.dp)
-                KantaSkeleton(width = 140.dp, height = 12.dp)
+    // §4.1 "Near you": the nearest container that is not full, and the way to the ones with space.
+    KantaGroup {
+        when {
+            nearestLoading -> {
+                Column(
+                    modifier = Modifier.padding(Spacing.l),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.s),
+                ) {
+                    KantaSkeleton(width = 200.dp, height = 16.dp)
+                    KantaSkeleton(width = 140.dp, height = 12.dp)
+                }
+            }
+
+            nearest != null -> {
+                KantaListRow(
+                    title = nearest.code,
+                    subtitle = stringResource(R.string.menu_nearest_not_full),
+                    leading = { KantaStatusDot(nearest.status, nearest.kind, Modifier.size(28.dp)) },
+                    trailing = { KantaDistanceLabel(nearest.distanceMetres) },
+                    onClick = { onNearestClick(nearest.id) },
+                    showDivider = false,
+                    inset = true,
+                )
+            }
+
+            else -> {
+                // §8: an honest empty state, not a blank row.
+                Text(
+                    text = stringResource(R.string.menu_no_nearest),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = KantaTheme.colors.onSurfaceMuted,
+                    modifier = Modifier.padding(Spacing.l),
+                )
             }
         }
 
-        nearest != null -> {
-            KantaListRow(
-                title = nearest.code,
-                subtitle = stringResource(R.string.menu_nearest_not_full),
-                leading = { KantaStatusDot(nearest.status, nearest.kind) },
-                trailing = { KantaDistanceLabel(nearest.distanceMetres) },
-                onClick = { onNearestClick(nearest.id) },
-                showDivider = false,
-            )
-        }
-
-        else -> {
-            // §8: an honest empty state, not a blank row.
-            Text(
-                text = stringResource(R.string.menu_no_nearest),
-                style = MaterialTheme.typography.bodyLarge,
-                color = KantaTheme.colors.onSurfaceMuted,
-                modifier = Modifier.padding(horizontal = Spacing.screenHorizontal),
-            )
-        }
+        KantaGroupDivider(startInset = 0.dp)
+        KantaSecondaryButton(
+            text = stringResource(R.string.menu_where_to_throw),
+            onClick = onWhereToThrow,
+            icon = KantaIcons.Navigate,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.m),
+        )
     }
 
-    Spacer(Modifier.height(Spacing.m))
-
-    KantaSecondaryButton(
-        text = stringResource(R.string.menu_where_to_throw),
-        onClick = onWhereToThrow,
-        icon = KantaIcons.Navigate,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.screenHorizontal),
-    )
-
-    Spacer(Modifier.height(Spacing.l))
-    Hairline()
-
-    MenuRow(
-        title = stringResource(R.string.menu_my_reports),
-        subtitle = stringResource(R.string.menu_my_reports_subtitle),
-        icon = KantaIcons.Profile,
-        onClick = onMyReports,
-    )
-    // §4.6: "permanently available … under My reports & profile → Map your street".
-    MenuRow(
-        title = stringResource(R.string.menu_map_street),
-        subtitle = stringResource(R.string.menu_map_street_subtitle),
-        icon = KantaIcons.MapStreet,
-        onClick = onMapYourStreet,
-    )
-    Hairline()
-    MenuRow(
-        title = stringResource(R.string.menu_city_stats),
-        subtitle = stringResource(R.string.menu_city_stats_subtitle),
-        icon = KantaIcons.Stats,
-        onClick = onCityStats,
-    )
-    Hairline()
-    MenuRow(
-        title = stringResource(R.string.menu_suggestions),
-        subtitle = stringResource(R.string.menu_suggestions_subtitle),
-        icon = KantaIcons.Suggest,
-        onClick = onSuggestions,
-    )
-
-    // §4.6: hidden unless profiles.role = 'admin'. The server re-checks every call.
-    if (showAdmin) {
-        Hairline()
+    KantaSectionHeader(stringResource(R.string.menu_section_you))
+    KantaGroup {
         MenuRow(
-            title = stringResource(R.string.menu_admin),
-            subtitle = stringResource(R.string.menu_admin_subtitle),
-            icon = KantaIcons.Admin,
-            onClick = onAdmin,
+            title = stringResource(R.string.menu_my_reports),
+            subtitle = stringResource(R.string.menu_my_reports_subtitle),
+            icon = KantaIcons.Profile,
+            onClick = onMyReports,
         )
+        KantaGroupDivider(startInset = MenuRowTextInset)
+        // §4.6: "permanently available … under My reports & profile → Map your street".
+        MenuRow(
+            title = stringResource(R.string.menu_map_street),
+            subtitle = stringResource(R.string.menu_map_street_subtitle),
+            icon = KantaIcons.MapStreet,
+            onClick = onMapYourStreet,
+        )
+    }
+
+    KantaSectionHeader(stringResource(R.string.menu_section_city))
+    KantaGroup {
+        MenuRow(
+            title = stringResource(R.string.menu_city_stats),
+            subtitle = stringResource(R.string.menu_city_stats_subtitle),
+            icon = KantaIcons.Stats,
+            onClick = onCityStats,
+        )
+        KantaGroupDivider(startInset = MenuRowTextInset)
+        MenuRow(
+            title = stringResource(R.string.menu_suggestions),
+            subtitle = stringResource(R.string.menu_suggestions_subtitle),
+            icon = KantaIcons.Suggest,
+            onClick = onSuggestions,
+        )
+        // §4.6: hidden unless profiles.role = 'admin'. The server re-checks every call.
+        if (showAdmin) {
+            KantaGroupDivider(startInset = MenuRowTextInset)
+            MenuRow(
+                title = stringResource(R.string.menu_admin),
+                subtitle = stringResource(R.string.menu_admin_subtitle),
+                icon = KantaIcons.Admin,
+                onClick = onAdmin,
+                tint = KantaTheme.colors.accent,
+            )
+        }
     }
 
     Spacer(Modifier.height(Spacing.xl))
 }
+
+/** Where the row text starts: card padding + icon tile + gap, so dividers line up with it. */
+private val MenuRowTextInset = Spacing.l + 36.dp + Spacing.l
 
 @Composable
 private fun MenuRow(
@@ -193,35 +203,22 @@ private fun MenuRow(
     subtitle: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
+    tint: Color = KantaTheme.colors.brand,
 ) {
     KantaListRow(
         title = title,
         subtitle = subtitle,
-        leading = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = KantaTheme.colors.onSurfaceMuted,
-                modifier = Modifier.size(22.dp),
-            )
-        },
+        leading = { KantaIconTile(icon = icon, tint = tint) },
         trailing = {
             Icon(
                 imageVector = KantaIcons.ChevronRight,
                 contentDescription = null,
-                tint = KantaTheme.colors.outline,
+                tint = KantaTheme.colors.outlineStrong,
             )
         },
         onClick = onClick,
         showDivider = false,
-    )
-}
-
-@Composable
-private fun Hairline() {
-    HorizontalDivider(
-        thickness = Spacing.hairline,
-        color = KantaTheme.colors.outline,
+        inset = true,
     )
 }
 

@@ -77,7 +77,7 @@ fun KantaDragHandle(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(width = 36.dp, height = 4.dp)
                 .clip(KantaShape.pill),
-            color = KantaTheme.colors.outline,
+            color = KantaTheme.colors.outlineStrong,
             content = {},
         )
     }

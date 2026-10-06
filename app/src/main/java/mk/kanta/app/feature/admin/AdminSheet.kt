@@ -28,7 +28,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -44,6 +43,8 @@ import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.MarkerColors
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaBanner
+import mk.kanta.app.core.designsystem.component.KantaBannerTone
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaCompactAction
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
@@ -97,14 +98,13 @@ fun ColumnScope.AdminContent(
         // The last action's result, or the server's reason for refusing it.
         val line = state.error?.let { stringResource(it.messageRes) } ?: state.notice?.let { stringResource(it) }
         if (line != null) {
-            Spacer(Modifier.height(Spacing.s))
-            Text(
+            Spacer(Modifier.height(Spacing.m))
+            KantaBanner(
                 text = line,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (state.error != null) KantaTheme.colors.error else KantaTheme.colors.brand,
+                tone = if (state.error != null) KantaBannerTone.ERROR else KantaBannerTone.SUCCESS,
             )
         }
-        Spacer(Modifier.height(Spacing.s))
+        Spacer(Modifier.height(Spacing.m))
     }
 
     when (state.tab) {
@@ -198,9 +198,9 @@ private fun RequestCard(
 ) {
     Surface(
         shape = KantaShape.card,
-        color = if (focused) KantaTheme.colors.surfaceMuted else MaterialTheme.colorScheme.surface,
+        color = if (focused) KantaTheme.colors.brandContainer else MaterialTheme.colorScheme.surface,
         border = androidx.compose.foundation.BorderStroke(
-            Spacing.hairline,
+            if (focused) 1.5.dp else Spacing.hairline,
             if (focused) KantaTheme.colors.brand else KantaTheme.colors.outline,
         ),
     ) {
@@ -212,13 +212,12 @@ private fun RequestCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 10f)
-                    .clip(KantaShape.card),
+                    .aspectRatio(16f / 10f),
             )
             Column(Modifier.padding(Spacing.l)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    KantaStatusDot(ContainerStatus.OK, request.kind)
-                    Spacer(Modifier.width(Spacing.s))
+                    KantaStatusDot(ContainerStatus.OK, request.kind, Modifier.size(28.dp))
+                    Spacer(Modifier.width(Spacing.m))
                     Text(
                         text = kindLine(request.kind, request.category),
                         style = MaterialTheme.typography.titleSmall,
@@ -301,44 +300,59 @@ private fun UnverifiedTab(
         )
         else -> LazyColumn(
             modifier = Modifier.fillMaxWidth().fillMaxHeight(),
-            contentPadding = PaddingValues(bottom = ListBottomPadding),
+            contentPadding = PaddingValues(
+                start = Spacing.screenHorizontal,
+                end = Spacing.screenHorizontal,
+                bottom = ListBottomPadding,
+            ),
+            verticalArrangement = Arrangement.spacedBy(Spacing.s),
         ) {
             items(list.items, key = { it.id }) { container ->
                 val busy = container.id in state.busy
                 val focused = state.focusedId == container.id
-                KantaListRow(
-                    title = container.code,
-                    subtitle = listOf(
-                        kindLine(container.kind, container.category),
-                        pluralStringResource(
-                            R.plurals.admin_confirmations,
-                            container.confirmations,
-                            container.confirmations,
-                        ),
-                        ageLabel(container.createdAt),
-                    ).joinToString(" · "),
-                    leading = { KantaStatusDot(ContainerStatus.OK, container.kind) },
-                    trailing = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            KantaCompactAction(
-                                text = stringResource(R.string.admin_delete),
-                                onClick = { onDelete(container) },
-                                enabled = !busy,
-                                contentColor = KantaTheme.colors.error,
-                            )
-                            Spacer(Modifier.width(Spacing.s))
-                            KantaCompactAction(
-                                text = stringResource(R.string.admin_verify),
-                                onClick = { onVerify(container) },
-                                emphasis = true,
-                                enabled = !busy,
-                            )
-                        }
-                    },
-                    onClick = { onFocus(container.id, container.position) },
-                    // The row being looked at on the map is tinted, not boxed (§3.3).
-                    modifier = if (focused) Modifier.background(KantaTheme.colors.surfaceMuted) else Modifier,
-                )
+                // The bin being looked at on the map is mint with a brand border, as in §5.2.
+                Surface(
+                    shape = KantaShape.card,
+                    color = if (focused) KantaTheme.colors.brandContainer else MaterialTheme.colorScheme.surface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        if (focused) 1.5.dp else Spacing.hairline,
+                        if (focused) KantaTheme.colors.brand else KantaTheme.colors.outline,
+                    ),
+                ) {
+                    KantaListRow(
+                        title = container.code,
+                        subtitle = listOf(
+                            kindLine(container.kind, container.category),
+                            pluralStringResource(
+                                R.plurals.admin_confirmations,
+                                container.confirmations,
+                                container.confirmations,
+                            ),
+                            ageLabel(container.createdAt),
+                        ).joinToString(" · "),
+                        leading = { KantaStatusDot(ContainerStatus.OK, container.kind, Modifier.size(28.dp)) },
+                        trailing = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                KantaCompactAction(
+                                    text = stringResource(R.string.admin_delete),
+                                    onClick = { onDelete(container) },
+                                    enabled = !busy,
+                                    contentColor = KantaTheme.colors.error,
+                                )
+                                Spacer(Modifier.width(Spacing.s))
+                                KantaCompactAction(
+                                    text = stringResource(R.string.admin_verify),
+                                    onClick = { onVerify(container) },
+                                    emphasis = true,
+                                    enabled = !busy,
+                                )
+                            }
+                        },
+                        onClick = { onFocus(container.id, container.position) },
+                        showDivider = false,
+                        inset = true,
+                    )
+                }
             }
         }
     }

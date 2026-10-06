@@ -5,10 +5,19 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import mk.kanta.app.core.designsystem.Motion
+import mk.kanta.app.core.designsystem.component.KantaBanner
+import mk.kanta.app.core.designsystem.component.KantaBannerTone
+import mk.kanta.app.core.designsystem.component.KantaCard
 import org.maplibre.android.location.OnCameraTrackingChangedListener
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,17 +41,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -837,34 +842,50 @@ private fun MapOverlays(
 ) {
     Box(Modifier.fillMaxSize()) {
 
-        // Top-left wordmark (§4.1).
+        // Top-left wordmark (§4.1): a brand dot and the name on a floating chip.
         Surface(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .statusBarsPadding()
                 .padding(start = Spacing.l, top = Spacing.m)
-                .kantaSoftShadow(KantaShape.pill),
-            shape = KantaShape.pill,
+                .kantaSoftShadow(KantaShape.button),
+            shape = KantaShape.button,
             color = MaterialTheme.colorScheme.surface,
         ) {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.titleSmall,
-                color = KantaTheme.colors.brand,
-                modifier = Modifier.padding(horizontal = Spacing.l, vertical = Spacing.s),
-            )
+            Row(
+                modifier = Modifier
+                    .height(44.dp)
+                    .padding(horizontal = Spacing.m),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+            ) {
+                Box(
+                    Modifier
+                        .size(10.dp)
+                        .background(KantaTheme.colors.brand, KantaShape.chip),
+                )
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
 
-        // Top-right round profile button (§4.1).
-        MapCircleButton(
-            icon = KantaIcons.Profile,
-            contentDescription = stringResource(R.string.map_profile),
-            onClick = onProfileClick,
+        // Top-right profile button (§4.1), the same square as the map controls.
+        MapControlGroup(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
                 .padding(end = Spacing.l, top = Spacing.m),
-        )
+        ) {
+            MapControlButton(
+                icon = KantaIcons.Profile,
+                contentDescription = stringResource(R.string.map_profile),
+                onClick = onProfileClick,
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
 
         // §4.1 map buttons and §7 attribution ride on the sheet's top edge: 16 dp
         // above it while it moves, fading out as it rises past half height, when
@@ -873,7 +894,8 @@ private fun MapOverlays(
         var buttonsHeight by remember { mutableIntStateOf(0) }
         var attributionHeight by remember { mutableIntStateOf(0) }
 
-        Column(
+        // One grouped control, like a physical button bar: suggestions, compass, location.
+        MapControlGroup(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(end = Spacing.l)
@@ -882,39 +904,38 @@ private fun MapOverlays(
                     IntOffset(0, (sheetState.offset.value - Spacing.l.toPx() - buttonsHeight).roundToInt())
                 }
                 .graphicsLayer { alpha = 1f - sheetState.expansionAboveHalf },
-            verticalArrangement = Arrangement.spacedBy(Spacing.m),
         ) {
-            MapCircleButton(
+            MapControlButton(
                 icon = KantaIcons.Suggest,
                 contentDescription = stringResource(R.string.map_toggle_suggestions),
                 onClick = onToggleSuggestions,
                 enabled = !hidden,
-                tint = if (showSuggestions) {
-                    KantaTheme.colors.brand
-                } else {
-                    KantaTheme.colors.onSurfaceMuted
-                },
+                active = showSuggestions,
             )
             // §4.1: only while the map is rotated or tilted; fades once facing north.
             AnimatedVisibility(
                 visible = showCompass,
-                enter = fadeIn(Motion.tweenMedium()),
-                exit = fadeOut(Motion.tweenMedium()),
+                enter = fadeIn(Motion.tweenMedium()) + expandVertically(),
+                exit = fadeOut(Motion.tweenMedium()) + shrinkVertically(),
             ) {
-                MapCircleButton(
-                    contentDescription = stringResource(R.string.map_compass),
-                    onClick = onCompassClick,
-                    enabled = !hidden,
-                ) {
-                    CompassNeedle(
-                        bearing = bearing,
-                        north = KantaTheme.colors.brand,
-                        south = KantaTheme.colors.outline,
-                    )
+                Column {
+                    MapControlDivider()
+                    MapControlButton(
+                        contentDescription = stringResource(R.string.map_compass),
+                        onClick = onCompassClick,
+                        enabled = !hidden,
+                    ) {
+                        CompassNeedle(
+                            bearing = bearing,
+                            north = KantaTheme.colors.brand,
+                            south = KantaTheme.colors.outlineStrong,
+                        )
+                    }
                 }
             }
+            MapControlDivider()
             // §4.1: the icon says which mode is on.
-            MapCircleButton(
+            MapControlButton(
                 icon = when (locationMode) {
                     LocationMode.Off -> KantaIcons.MyLocationIdle
                     LocationMode.Centered -> KantaIcons.MyLocation
@@ -929,11 +950,7 @@ private fun MapOverlays(
                 ),
                 onClick = onMyLocationClick,
                 enabled = !hidden,
-                tint = if (locationMode == LocationMode.Off) {
-                    KantaTheme.colors.onSurfaceMuted
-                } else {
-                    KantaTheme.colors.brand
-                },
+                active = locationMode != LocationMode.Off,
             )
         }
 
@@ -949,7 +966,7 @@ private fun MapOverlays(
                 }
                 .graphicsLayer { alpha = 1f - sheetState.expansionAboveHalf },
             shape = KantaShape.chip,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.86f),
         ) {
             Text(
                 text = stringResource(R.string.map_attribution),
@@ -961,15 +978,43 @@ private fun MapOverlays(
     }
 }
 
+/** A floating white bar holding map buttons, with the app's one soft shadow (§3.3). */
 @Composable
-private fun MapCircleButton(
+private fun MapControlGroup(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        modifier = modifier.kantaSoftShadow(KantaShape.button),
+        shape = KantaShape.button,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(Spacing.hairline, KantaTheme.colors.outline),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
+    }
+}
+
+@Composable
+private fun MapControlDivider() {
+    HorizontalDivider(
+        thickness = Spacing.hairline,
+        color = KantaTheme.colors.outline,
+        modifier = Modifier
+            .width(48.dp)
+            .padding(horizontal = Spacing.s),
+    )
+}
+
+/** One button in a [MapControlGroup]. [active] tints it brand: suggestions shown, location on. */
+@Composable
+private fun MapControlButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    tint: Color = KantaTheme.colors.onSurfaceMuted,
     enabled: Boolean = true,
-) = MapCircleButton(contentDescription, onClick, modifier, enabled) {
+    active: Boolean = false,
+    tint: Color = if (active) KantaTheme.colors.brand else KantaTheme.colors.onSurfaceMuted,
+) = MapControlButton(contentDescription, onClick, enabled) {
     Icon(
         imageVector = icon,
         contentDescription = null,
@@ -979,29 +1024,23 @@ private fun MapCircleButton(
 }
 
 @Composable
-private fun MapCircleButton(
+private fun MapControlButton(
     contentDescription: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val haptics = rememberKantaHaptics()
-    Surface(
-        onClick = {
-            haptics.tick()
-            onClick()
-        },
-        enabled = enabled,
-        modifier = modifier
-            .size(Spacing.minTouchTarget)
-            .kantaSoftShadow(CircleShape)
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clickable(enabled = enabled, role = Role.Button) {
+                haptics.tick()
+                onClick()
+            }
             .semantics { this.contentDescription = contentDescription },
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surface,
-    ) {
-        Box(contentAlignment = Alignment.Center) { content() }
-    }
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1010,15 +1049,12 @@ private fun MapCircleButton(
 
 @Composable
 private fun MapLoadingSkeleton() {
-    Surface(
-        shape = KantaShape.card,
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.padding(Spacing.xl),
+    KantaCard(
+        modifier = Modifier
+            .padding(Spacing.xl)
+            .kantaSoftShadow(KantaShape.card),
     ) {
-        Column(
-            modifier = Modifier.padding(Spacing.l),
-            verticalArrangement = Arrangement.spacedBy(Spacing.s),
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(Spacing.s)) {
             KantaSkeleton(width = 160.dp, height = 16.dp)
             KantaSkeleton(width = 120.dp, height = 12.dp)
         }
@@ -1027,65 +1063,24 @@ private fun MapLoadingSkeleton() {
 
 @Composable
 private fun MapErrorBanner(error: KantaError, onDismiss: () -> Unit) {
-    Surface(
+    KantaBanner(
+        text = stringResource(error.messageRes),
+        tone = if (error == KantaError.Offline) KantaBannerTone.INFO else KantaBannerTone.ERROR,
+        icon = if (error == KantaError.Offline) KantaIcons.Offline else KantaIcons.Error,
+        onDismiss = onDismiss,
         modifier = Modifier
-            .fillMaxWidth()
             .padding(horizontal = Spacing.l)
             .kantaSoftShadow(KantaShape.card),
-        shape = KantaShape.card,
-        color = MaterialTheme.colorScheme.surface,
-    ) {
-        Row(
-            modifier = Modifier.padding(Spacing.l),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = if (error == KantaError.Offline) KantaIcons.Offline else KantaIcons.Error,
-                contentDescription = null,
-                tint = KantaTheme.colors.onSurfaceMuted,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(Spacing.m))
-            Text(
-                text = stringResource(error.messageRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onDismiss) {
-                Icon(
-                    imageVector = KantaIcons.Success,
-                    contentDescription = stringResource(R.string.action_dismiss),
-                    tint = KantaTheme.colors.onSurfaceMuted,
-                )
-            }
-        }
-    }
+    )
 }
 
 @Composable
 private fun MapNoticeBanner(textRes: Int) {
-    Surface(
+    KantaBanner(
+        text = stringResource(textRes),
+        tone = KantaBannerTone.SUCCESS,
         modifier = Modifier
-            .fillMaxWidth()
             .padding(horizontal = Spacing.l)
             .kantaSoftShadow(KantaShape.card),
-        shape = KantaShape.card,
-        color = MaterialTheme.colorScheme.surface,
-    ) {
-        Row(modifier = Modifier.padding(Spacing.l), verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = KantaIcons.Success,
-                contentDescription = null,
-                tint = KantaTheme.colors.brand,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(Spacing.m))
-            Text(
-                text = stringResource(textRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-        }
-    }
+    )
 }

@@ -40,49 +40,49 @@ OUT_DIR = Path("app/src/main/assets/map")
 # -------------------------------------------------------------------------------------------
 
 LIGHT = {
-    "background":        "#F3F5F2",   # matches the app background (§3.1)
-    "water":             "#C4D0D5",   # muted blue-grey
-    "waterway":          "#BCC9CF",
-    "waterLabel":        "#6A7F8A",
-    "park":              "#E4ECE3",   # very pale green (§3.4)
-    "wood":              "#DDE6DC",
-    "residential":       "#EDEEEA",
-    "building":          "#E7E8E3",
-    "buildingOutline":   "#DCDED8",
-    "aeroway":           "#EFEFEC",
-    "path":              "#E6E7E3",
-    "roadMinor":         "#FFFFFF",   # §3.4: white minor streets on the #F3F5F2 ground
-    "roadMain":          "#E6EAE5",   # primary / secondary / tertiary
-    "roadMotorway":      "#DDE3DC",   # motorway + trunk (e.g. Majka Tereza)
-    "pier":              "#EDEEEA",
-    "railway":           "#DEDFDA",
-    "railwayDash":       "#F5F6F3",
-    "boundary":          "#C3C8C1",
-    "labelText":         "#6B766F",   # every street and place name
-    "labelHalo":         "#F3F5F2",
+    "background":        "#F2EFE7",   # warm ivory ground, a step under the app's #FAF9F5 (§3.1)
+    "water":             "#C9D6D8",   # muted blue-grey with a green cast
+    "waterway":          "#BECDD0",
+    "waterLabel":        "#5F777C",
+    "park":              "#E2EBD9",   # pale sage green (§3.4)
+    "wood":              "#D9E4CF",
+    "residential":       "#EDE9DF",
+    "building":          "#E6E1D6",
+    "buildingOutline":   "#D9D3C6",
+    "aeroway":           "#EBE7DE",
+    "path":              "#E4DFD4",
+    "roadMinor":         "#FFFFFF",   # §3.4: white minor streets on the ivory ground
+    "roadMain":          "#E7E2D6",   # primary / secondary / tertiary
+    "roadMotorway":      "#DDD6C8",   # motorway + trunk (e.g. Majka Tereza)
+    "pier":              "#EDE9DF",
+    "railway":           "#D9D3C6",
+    "railwayDash":       "#F5F2EC",
+    "boundary":          "#C1BAAB",
+    "labelText":         "#6C5F51",   # driftwood, the app's own muted text (5.5:1 on the ground)
+    "labelHalo":         "#F2EFE7",
 }
 
 DARK = {
-    "background":        "#0F1411",   # app dark background (§3.1)
-    "water":             "#16242A",
-    "waterway":          "#1A2A31",
-    "waterLabel":        "#6E8B96",
-    "park":              "#16201A",
-    "wood":              "#141D18",
-    "residential":       "#131A16",
-    "building":          "#19211C",
-    "buildingOutline":   "#212B24",
-    "aeroway":           "#151C18",
-    "path":              "#1A211D",
-    "roadMinor":         "#1E2521",   # §3.4 dark roads: never white or bright
-    "roadMain":          "#26302A",
-    "roadMotorway":      "#2C3630",
-    "pier":              "#19211C",
-    "railway":           "#222B25",
-    "railwayDash":       "#161E19",
-    "boundary":          "#2B342E",
-    "labelText":         "#8A958E",   # every street and place name
-    "labelHalo":         "#0F1411",
+    "background":        "#161B13",   # carbon ink, the app's dark background (§3.1)
+    "water":             "#142226",
+    "waterway":          "#182A2E",
+    "waterLabel":        "#6C878B",
+    "park":              "#1A2416",   # dark forest
+    "wood":              "#182114",
+    "residential":       "#191F16",
+    "building":          "#1F261B",
+    "buildingOutline":   "#283023",
+    "aeroway":           "#1B2118",
+    "path":              "#20271C",
+    "roadMinor":         "#232A1F",   # §3.4 dark roads: never white or bright
+    "roadMain":          "#2B3326",
+    "roadMotorway":      "#323B2C",
+    "pier":              "#1F261B",
+    "railway":           "#262E21",
+    "railwayDash":       "#1B2118",
+    "boundary":          "#343C2E",
+    "labelText":         "#84907F",   # sage, the brightest thing the dark map shows
+    "labelHalo":         "#161B13",
 }
 
 # -------------------------------------------------------------------------------------------

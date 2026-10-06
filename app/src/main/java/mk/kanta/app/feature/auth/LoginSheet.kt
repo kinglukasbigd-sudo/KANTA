@@ -5,7 +5,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -23,8 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,11 +34,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import mk.kanta.app.R
@@ -51,8 +51,8 @@ import mk.kanta.app.core.designsystem.Spacing
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaDragHandle
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
+import mk.kanta.app.core.designsystem.component.KantaTextField
 import mk.kanta.app.core.designsystem.rememberKantaHaptics
-import mk.kanta.app.core.designsystem.tabularFigures
 
 /**
  * App-level host: renders the sheet over whatever screen asked the [AuthGate] for
@@ -104,7 +104,7 @@ fun LoginSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = KantaShape.bottomSheet,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = MaterialTheme.colorScheme.background,
         dragHandle = { KantaDragHandle() },
     ) {
         AnimatedContent(
@@ -118,7 +118,7 @@ fun LoginSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.xl)
+                    .padding(horizontal = Spacing.screenHorizontal)
                     .padding(top = Spacing.m, bottom = Spacing.xxl)
                     .navigationBarsPadding()
                     .imePadding(),
@@ -146,7 +146,7 @@ private fun EmailStep(
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
-    StepTitle(stringResource(R.string.login_title), stringResource(R.string.login_email_subtitle))
+    StepTitle(stringResource(R.string.login_title), stringResource(R.string.login_email_subtitle), step = 1)
 
     KantaTextField(
         value = state.email,
@@ -190,9 +190,14 @@ private fun CodeStep(
     StepTitle(
         stringResource(R.string.login_code_title),
         stringResource(R.string.login_code_sent_to, state.email),
+        step = 2,
     )
     TextButton(onClick = onChangeEmail, enabled = !state.loading) {
-        Text(stringResource(R.string.login_change_email), style = MaterialTheme.typography.labelLarge)
+        Text(
+            text = stringResource(R.string.login_change_email),
+            style = MaterialTheme.typography.labelLarge,
+            color = KantaTheme.colors.brand,
+        )
     }
 
     Spacer(Modifier.height(Spacing.m))
@@ -215,12 +220,16 @@ private fun CodeStep(
                     R.string.login_resend_in,
                     "0:%02d".format(state.resendSecondsLeft),
                 ),
-                style = MaterialTheme.typography.bodySmall.tabularFigures(),
+                style = MaterialTheme.typography.labelMedium,
                 color = KantaTheme.colors.onSurfaceMuted,
             )
         } else {
             TextButton(onClick = onResend, enabled = !state.loading) {
-                Text(stringResource(R.string.login_resend), style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = stringResource(R.string.login_resend),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = KantaTheme.colors.brand,
+                )
             }
         }
     }
@@ -245,7 +254,7 @@ private fun NameStep(
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
 
-    StepTitle(stringResource(R.string.login_name_title), stringResource(R.string.login_name_subtitle))
+    StepTitle(stringResource(R.string.login_name_title), stringResource(R.string.login_name_subtitle), step = 3)
 
     KantaTextField(
         value = state.displayName,
@@ -299,13 +308,39 @@ private fun NameStep(
 // Pieces
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * Where the person is in the three steps (email → code → name): a segmented bar and a mono
+ * caption, then the step's title and one line of explanation.
+ */
 @Composable
-private fun StepTitle(title: String, subtitle: String) {
-    Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+private fun StepTitle(title: String, subtitle: String, step: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.fillMaxWidth()) {
+        repeat(LOGIN_STEPS) { index ->
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(4.dp)
+                    .background(
+                        if (index < step) KantaTheme.colors.brand else KantaTheme.colors.outline,
+                        KantaShape.pill,
+                    ),
+            )
+        }
+    }
+    Spacer(Modifier.height(Spacing.l))
+    Text(
+        text = stringResource(R.string.login_step, step, LOGIN_STEPS).uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = KantaTheme.colors.brand,
+    )
+    Spacer(Modifier.height(Spacing.s))
+    Text(title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onSurface)
     Spacer(Modifier.height(Spacing.s))
     Text(subtitle, style = MaterialTheme.typography.bodyLarge, color = KantaTheme.colors.onSurfaceMuted)
     Spacer(Modifier.height(Spacing.xl))
 }
+
+private const val LOGIN_STEPS = 3
 
 @Composable
 private fun ErrorLine(error: KantaError?) {
@@ -315,47 +350,5 @@ private fun ErrorLine(error: KantaError?) {
         text = stringResource(error.messageRes),
         style = MaterialTheme.typography.bodySmall,
         color = KantaTheme.colors.error,
-    )
-}
-
-/**
- * The one text-field style in the app: muted fill, 12dp corners, no underline
- * (§3.3: separate with tone, not lines).
- */
-@Composable
-fun KantaTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    modifier: Modifier = Modifier,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    isError: Boolean = false,
-    enabled: Boolean = true,
-) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = true,
-        enabled = enabled,
-        isError = isError,
-        keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions,
-        shape = KantaShape.chip,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = KantaTheme.colors.surfaceMuted,
-            unfocusedContainerColor = KantaTheme.colors.surfaceMuted,
-            disabledContainerColor = KantaTheme.colors.surfaceMuted,
-            errorContainerColor = KantaTheme.colors.surfaceMuted,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent,
-            errorIndicatorColor = Color.Transparent,
-            focusedLabelColor = KantaTheme.colors.brand,
-            cursorColor = KantaTheme.colors.brand,
-        ),
-        modifier = modifier.fillMaxWidth(),
     )
 }

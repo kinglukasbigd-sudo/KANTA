@@ -1,7 +1,10 @@
 package mk.kanta.app.feature
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -11,7 +14,8 @@ import androidx.compose.ui.res.stringResource
 import mk.kanta.app.R
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaIcons
-import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
+import mk.kanta.app.core.designsystem.component.KantaPageTitle
+import mk.kanta.app.core.designsystem.component.KantaTopBar
 
 /**
  * Stand-in for a screen that has not been built yet (spec §4.5).
@@ -30,18 +34,16 @@ fun PlaceholderScreen(
         modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            KantaEmptyState(
-                title = title,
-                message = stringResource(R.string.placeholder_message),
-                icon = KantaIcons.Empty,
-                action = {
-                    KantaSecondaryButton(
-                        text = stringResource(R.string.action_back),
-                        onClick = onBack,
-                    )
-                },
-            )
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            KantaTopBar(onBack = onBack)
+            KantaPageTitle(title = title, eyebrow = stringResource(R.string.app_name))
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                KantaEmptyState(
+                    title = stringResource(R.string.placeholder_soon),
+                    message = stringResource(R.string.placeholder_message),
+                    icon = KantaIcons.Stats,
+                )
+            }
         }
     }
 }

@@ -14,12 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,13 +33,18 @@ import mk.kanta.app.core.auth.Municipalities
 import mk.kanta.app.core.designsystem.KantaShape
 import mk.kanta.app.core.designsystem.KantaTheme
 import mk.kanta.app.core.designsystem.Spacing
+import mk.kanta.app.core.designsystem.component.KantaBanner
+import mk.kanta.app.core.designsystem.component.KantaBannerTone
+import mk.kanta.app.core.designsystem.component.KantaCard
 import mk.kanta.app.core.designsystem.component.KantaChip
 import mk.kanta.app.core.designsystem.component.KantaEmptyState
 import mk.kanta.app.core.designsystem.component.KantaIcons
 import mk.kanta.app.core.designsystem.component.KantaListRowSkeleton
+import mk.kanta.app.core.designsystem.component.KantaPageTitle
 import mk.kanta.app.core.designsystem.component.KantaPrimaryButton
 import mk.kanta.app.core.designsystem.component.KantaSecondaryButton
-import mk.kanta.app.feature.auth.KantaTextField
+import mk.kanta.app.core.designsystem.component.KantaTextField
+import mk.kanta.app.core.designsystem.component.KantaTopBar
 
 @Composable
 fun ProfileScreen(
@@ -63,12 +63,7 @@ fun ProfileScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding(),
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.padding(Spacing.s)) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = stringResource(R.string.action_back),
-                )
-            }
+            KantaTopBar(onBack = onBack)
 
             when (val auth = state.auth) {
                 AuthState.Unknown -> Column(Modifier.padding(top = Spacing.xl)) {
@@ -124,91 +119,85 @@ private fun SignedInProfile(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = Spacing.screenHorizontal),
+            .verticalScroll(rememberScrollState()),
     ) {
-        Text(
-            text = stringResource(R.string.profile_title),
-            style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.onSurface,
+        KantaPageTitle(
+            title = stringResource(R.string.profile_title),
+            eyebrow = state.email,
         )
-        state.email?.let {
-            Spacer(Modifier.height(Spacing.xs))
-            Text(it, style = MaterialTheme.typography.bodyLarge, color = KantaTheme.colors.onSurfaceMuted)
-        }
+        Column(Modifier.padding(horizontal = Spacing.screenHorizontal)) {
+            if (state.loadingProfile) {
+                KantaListRowSkeleton()
+            } else {
+                KantaCard(Modifier.fillMaxWidth()) {
+                    KantaTextField(
+                        value = state.displayName,
+                        onValueChange = onNameChange,
+                        label = stringResource(R.string.login_name_label),
+                        enabled = !state.saving,
+                    )
+                    Spacer(Modifier.height(Spacing.s))
+                    Text(
+                        text = stringResource(R.string.login_name_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = KantaTheme.colors.onSurfaceMuted,
+                    )
 
-        Spacer(Modifier.height(Spacing.xxl))
+                    Spacer(Modifier.height(Spacing.l))
+                    Text(
+                        text = stringResource(R.string.profile_municipality).uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = KantaTheme.colors.onSurfaceMuted,
+                    )
+                    Spacer(Modifier.height(Spacing.s))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.s),
+                        verticalArrangement = Arrangement.spacedBy(Spacing.s),
+                    ) {
+                        Municipalities.all.forEach { m ->
+                            KantaChip(
+                                label = m.localizedName(),
+                                selected = state.municipalityId == m.id,
+                                onClick = { onMunicipality(m.id) },
+                            )
+                        }
+                    }
+                }
 
-        if (state.loadingProfile) {
-            KantaListRowSkeleton()
-        } else {
-            KantaTextField(
-                value = state.displayName,
-                onValueChange = onNameChange,
-                label = stringResource(R.string.login_name_label),
-                enabled = !state.saving,
-            )
-            Spacer(Modifier.height(Spacing.s))
-            Text(
-                text = stringResource(R.string.login_name_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = KantaTheme.colors.onSurfaceMuted,
-            )
+                state.error?.let {
+                    Spacer(Modifier.height(Spacing.m))
+                    KantaBanner(text = stringResource(it.messageRes), tone = KantaBannerTone.ERROR)
+                }
+
+                Spacer(Modifier.height(Spacing.xl))
+                KantaPrimaryButton(
+                    text = stringResource(if (state.justSaved) R.string.profile_saved else R.string.profile_save),
+                    onClick = onSave,
+                    enabled = state.canSave,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Spacer(Modifier.height(Spacing.xl))
-            Text(
-                text = stringResource(R.string.profile_municipality).uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = KantaTheme.colors.onSurfaceMuted,
-            )
-            Spacer(Modifier.height(Spacing.s))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.s),
-                verticalArrangement = Arrangement.spacedBy(Spacing.s),
-            ) {
-                Municipalities.all.forEach { m ->
-                    KantaChip(
-                        label = m.localizedName(),
-                        selected = state.municipalityId == m.id,
-                        onClick = { onMunicipality(m.id) },
+            KantaCard(Modifier.fillMaxWidth()) {
+                KantaSecondaryButton(
+                    text = stringResource(R.string.profile_sign_out),
+                    onClick = onSignOut,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(Spacing.s))
+                // Deliberately quiet: available and findable (Play Store requires it),
+                // never the loudest thing on the screen.
+                TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.profile_delete_account),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = KantaTheme.colors.error,
                     )
                 }
             }
-
-            state.error?.let {
-                Spacer(Modifier.height(Spacing.m))
-                Text(stringResource(it.messageRes), style = MaterialTheme.typography.bodySmall, color = KantaTheme.colors.error)
-            }
-
-            Spacer(Modifier.height(Spacing.xl))
-            KantaPrimaryButton(
-                text = stringResource(if (state.justSaved) R.string.profile_saved else R.string.profile_save),
-                onClick = onSave,
-                enabled = state.canSave,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Spacer(Modifier.height(Spacing.xxl))
         }
-
-        Spacer(Modifier.height(Spacing.xxl))
-        HorizontalDivider(thickness = Spacing.hairline, color = KantaTheme.colors.outline)
-        Spacer(Modifier.height(Spacing.xl))
-
-        KantaSecondaryButton(
-            text = stringResource(R.string.profile_sign_out),
-            onClick = onSignOut,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(Spacing.m))
-        // Deliberately quiet: available and findable (Play Store requires it),
-        // never the loudest thing on the screen.
-        TextButton(onClick = onDelete, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = stringResource(R.string.profile_delete_account),
-                style = MaterialTheme.typography.labelLarge,
-                color = KantaTheme.colors.error,
-            )
-        }
-        Spacer(Modifier.height(Spacing.xxl))
     }
 }
 

@@ -392,4 +392,14 @@
         <item quantity="one">+%d fqinj</item>
         <item quantity="other">+%d fqinj</item>
     </plurals>
+
+    <!-- Redesign: captions and steps -->
+    <string name="menu_section_you">Ti</string>
+    <string name="menu_section_city">Qyteti</string>
+    <string name="camera_hint">Fotografo koshin</string>
+    <string name="report_eyebrow">Raportim i ri</string>
+    <string name="add_eyebrow">Kosh i ri</string>
+    <string name="suggest_eyebrow">Propozim</string>
+    <string name="login_step">Hapi %1$d nga %2$d</string>
+    <string name="placeholder_soon">Së shpejti</string>
 </resources>
