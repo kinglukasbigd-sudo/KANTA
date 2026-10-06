@@ -47,8 +47,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Says only whether each value exists — never the value itself. A value saved under the
+      # Variables tab instead of Secrets is the usual mix-up, so that is reported too.
       - name: Check Supabase secrets
         run: |
+          echo "::notice::Secrets — SUPABASE_URL: ${{ secrets.SUPABASE_URL != '' }}, SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY != '' }}. Variables — SUPABASE_URL: ${{ vars.SUPABASE_URL != '' }}, SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY != '' }}."
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
             echo "::warning::SUPABASE_URL / SUPABASE_ANON_KEY secrets are not set — this APK will show 'No backend configured'."
           fi
