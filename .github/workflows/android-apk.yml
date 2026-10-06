@@ -54,7 +54,8 @@ jobs:
           fi
 
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace
+        shell: bash
+        run: ./gradlew :app:assembleDebug 2>&1 | tee build.log
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,7 +65,17 @@ jobs:
           retention-days: 30
 
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        shell: bash
+        run: ./gradlew :app:testDebugUnitTest 2>&1 | tee test.log
+
+      # Compiler errors and failing tests, collected at the very end of the log so they are easy
+      # to find (and to read from the API, which serves the tail).
+      - name: Summarise failures
+        if: failure()
+        shell: bash
+        run: |
+          grep -hE '^e: |^> Task .* FAILED|What went wrong' -A1 build.log 2>/dev/null | head -150 || true
+          grep -hE ' FAILED$' -A3 test.log 2>/dev/null | head -150 || true
 
       - uses: actions/upload-artifact@v4
         if: failure()
